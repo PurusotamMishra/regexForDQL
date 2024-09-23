@@ -10,6 +10,9 @@ const queryPattern = {
     all: /\btimeslice\b|\bduration\b|\blimit\b|\bfirst\b|\blast\b|\bgroupby\b|\bselect\b|\bhaving\b/i,
 }
 
+const pipes = ['stream', 'timeslice', 'duration', 'limit', 'first', 'last', 'groupby', 'having', 'select']
+const selectSubDirectives = ['distinct_count', 'count', 'count_if', 'distinct', 'length', 'avg']
+
 const checkLimitFirstLast = (query) => {
     let validity = {
         isValid: false,
@@ -113,34 +116,46 @@ distinct()
 length()
 avg()
 */
-
+const selectSubDirectiveCheck = (query, fun) => {
+    if (fun === 'count') {
+        // /\b[sS][eE][lL][eE][cC][tT]\b\s*((((\w+\s*,\s*\bcount\s*[\(]\s*\w+\s*[\)])|((\bcount\s*[\(]\s*\w+\s*[\)])))((\s+[aA][sS]\s+\w+)|(\s*)))|((\w+\s*)(?:,\s*\w+))|(\w+\s*))/
+        if (query.includes('count') && !/\b[sS][eE][lL][eE][cC][tT]\b\s*((\w+\s*(?:,\s*\w+))|(\bcount[\(]\s*\w+\s*[\)])((\s+[aA][sS]\s+\w+)|(\s*)))/.test(query)) {
+            return { isValid: false, message: 'Error at "count" function in "select"!' }
+        }
+    }
+}
 
 const checkSelect = (query) => {
     let validity = {
         isValid: false,
         message: "Invalid Query",
     }
+
+    // if groupby, either should matches with the ones selected in groupby or should be one of the functions 
     if (!/\b[sS][eE][lL][eE][cC][tT]\b\s*\w+(?:,\s*\w+)/.test(query)) {
         return { isValid: false, message: 'Error at "select"!' }
     }
-    else if (query.includes('distinct_count') && !/\b[sS][eE][lL][eE][cC][tT]\b\s*((\w+(?:,\s*\w+))|(distinct_count\(\w+\)\s*as\s*\w+))./.test(query)) {
-        return { isValid: false, message: 'Error at "distinct_count" function in "select"!' }
-    }
-    else if (query.includes('count') && !/\b[sS][eE][lL][eE][cC][tT]\b\s*((\w+(?:,\s*\w+))|(count\(\w+\)\s*as\s*\w+))./.test(query)) {
-        return { isValid: false, message: 'Error at "count" function in "select"!' }
-    }
-    else if (query.includes('count_if') && !/\b[sS][eE][lL][eE][cC][tT]\b\s*((\w+(?:,\s*\w+))|(count_if\(\w+\)\s*as\s*\w+))./.test(query)) {
-        return { isValid: false, message: 'Error at "count_if" function in "select"!' }
-    }
-    else if (query.includes('distinct') && !/\b[sS][eE][lL][eE][cC][tT]\b\s*((\w+(?:,\s*\w+))|(distinct\(\w+\)\s*as\s*\w+))./.test(query)) {
-        return { isValid: false, message: 'Error at "distinct" function in "select"!' }
-    }
-    else if (query.includes('length') && !/\b[sS][eE][lL][eE][cC][tT]\b\s*((\w+(?:,\s*\w+))|(length\(\w+\)\s*as\s*\w+))./.test(query)) {
-        return { isValid: false, message: 'Error at "length" function in "select"!' }
-    }
-    else if (query.includes('avg') && !/\b[sS][eE][lL][eE][cC][tT]\b\s*((\w+(?:,\s*\w+))|(avg\(\w+\)\s*as\s*\w+))./.test(query)) {
-        return { isValid: false, message: 'Error at "avg" function in "select"!' }
-    }
+    selectSubDirectives.forEach((fun) => (
+        query.includes(fun) ? selectSubDirectiveCheck(query, fun) : null
+    ))
+    // else if (query.includes('distinct_count') && !/\b[sS][eE][lL][eE][cC][tT]\b\s*((\w+(?:,\s*\w+))|(distinct_count\(\w+\)\s*as\s*\w+))./.test(query)) {
+    //     return { isValid: false, message: 'Error at "distinct_count" function in "select"!' }
+    // }
+    // else if (query.includes('count') && !/\b[sS][eE][lL][eE][cC][tT]\b\s*((\w+\s*(?:,\s*\w+))|(\bcount[\(]\s*\w+\s*[\)])((\s+[aA][sS]\s+\w+)|(\s*)))/.test(query)) {
+    //     return { isValid: false, message: 'Error at "count" function in "select"!' }
+    // }
+    // else if (query.includes('count_if') && !/\b[sS][eE][lL][eE][cC][tT]\b\s*((\w+(?:,\s*\w+))|(count_if\(\w+\)\s*as\s*\w+))./.test(query)) {
+    //     return { isValid: false, message: 'Error at "count_if" function in "select"!' }
+    // }
+    // else if (query.includes('distinct') && !/\b[sS][eE][lL][eE][cC][tT]\b\s*((\w+(?:,\s*\w+))|(distinct\(\w+\)\s*as\s*\w+))./.test(query)) {
+    //     return { isValid: false, message: 'Error at "distinct" function in "select"!' }
+    // }
+    // else if (query.includes('length') && !/\b[sS][eE][lL][eE][cC][tT]\b\s*((\w+(?:,\s*\w+))|(length\(\w+\)\s*as\s*\w+))./.test(query)) {
+    //     return { isValid: false, message: 'Error at "length" function in "select"!' }
+    // }
+    // else if (query.includes('avg') && !/\b[sS][eE][lL][eE][cC][tT]\b\s*((\w+(?:,\s*\w+))|(avg\(\w+\)\s*as\s*\w+))./.test(query)) {
+    //     return { isValid: false, message: 'Error at "avg" function in "select"!' }
+    // }
     // else {
     //     return { isValid: false, message: 'Error: the function is not defined in "select"!' }
     // }
@@ -176,11 +191,8 @@ const checkForIncorrectPipes = (queryArray) => {
         if (queryPattern.stream.test(queryArray[i]))
             continue
         let query = queryArray[i].trim().split(' ')
-        // console.log(query)
-        // console.log(queryPattern.all.test(query[0]))
-        if (!queryPattern.all.test('limit'))
-            return { isValid: false, message: `The pipe ${query[0]} does not exist` }
-
+        if (!queryPattern.all.test(query[0]))
+            return { isValid: false, message: `The pipe ${query[0]} is not a valid in DQL!` }
     }
     return { isValid: true, message: 'All pipe functions are' }
 }
@@ -198,7 +210,6 @@ function validateQuery(queryString) {
     if (queryPattern.stream.test(queryString)) {
         const queryArray = queryString.split("|")
         // console.log(queryArray)
-
 
         validQ = checkForIncorrectPipes(queryArray)
         if (!validQ.isValid) {
