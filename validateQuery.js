@@ -93,15 +93,15 @@ const checkForStreamsAndWhere = (query) => {
     streams = streams[0].trim().split(',')
 
     for (let i = 0; i < streams.length; i++) {
-        if (!/^\w+$/m.test(streams[i].trim())) {
+        if (!/^\w+$/m.test(streams[i]?.trim())) {
             return { isValid: false, message: `Error at 'streams': Invalid stream name, found ${streams[i]}` }
         }
     }
 
     //where clause validation
     const operators = ['<=', '>=', '=', '!=', '<>', '<', '>']
-    let whereQuery = queryArr[2].trim().split(/\sand\s|\sor\s/i)
-    for (let i = 0; i < whereQuery.length; i++) {
+    let whereQuery = queryArr[2]?.trim().split(/\sand\s|\sor\s/i) | []
+    for (let i = 0; i < whereQuery?.length; i++) {
         let opers = whereQuery[i].trim().split(/(<=|>=|=|!=|<>|<|>)/).filter((op) => (op !== undefined && op !== null && !/^\s*$/m.test(op)))
         if (opers.length === 0 || opers[0] === '') {
             return { isValid: false, message: `Error at 'where': Missing operand` }
@@ -221,7 +221,13 @@ const checkSelect = (query, gbyCol, selCol) => {
                 }
             } else if (/^[a-zA-Z]+$/.test(tempArr[0].trim())) {
                 continue
-            }
+            } else if (tempArr[0].trim() === '') {
+                return { isValid: false, message: `Error at 'select': column name is missing` }
+            } else if(tempArr[0].includes('@')){
+                if(!/^\w+(((\.\w+)|(\[\s*\d+\s*\]))+|)$/m.test(tempArr[0].trim().replace('@', ''))){
+                    return { isValid: false, message: `Error at 'select': column name "${tempArr[0].trim()}" is INVALID!` }
+                }
+            } 
             else {
                 return { isValid: false, message: `Error at 'select': column name "${tempArr[0].trim()}" is INVALID!` }
             }
