@@ -353,7 +353,7 @@ const checkForNonRepeatability = (queryString) => {
 }
 
 const checkForIncorrectPipes = (queryArray, pipesIndex) => {
-    for (const i in queryArray) {
+    for (let i = 0; i < queryArray.length; i++) {
         if (queryPattern.stream.test(queryArray[i]))
             continue
         let query = queryArray[i].trim().split(' ')
@@ -466,7 +466,7 @@ function validateQuery(queryString) {
 
         if (!validQ.isValid)
             return validQ
-        for (const ind in queryArray) {
+        for (let ind = 0; ind < queryArray.length; ind++) {
             if (queryPattern.stream.test(queryArray[ind]))
                 continue
             if (queryArray[ind].toLowerCase().includes('limit') || queryArray[ind].includes('first') || queryArray[ind].includes('last')) {
