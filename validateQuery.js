@@ -2,7 +2,7 @@
 const { pipes, aggregateFunctions, allFunctions, nonAggregateFunctions } = require('./consts')
 
 const queryPattern = {
-    stream: /\b[sS][tT][rR][eE][aA][mM]\b\s*=\s*\w+(?:,\s*\w+)*/,
+    stream: /\b[sS][tT][rR][eE][aA][mM]\b\s*=\s*(\*|\w+(?:,\s*\w+)*)/,
     timeslice: /\|\s*\btimeslice\b/ig,
     duration: /\|\s*\bduration\b/ig,
     limit_first_last: /\|\s*\blimit\b|\|\s*\bfirst\b|\|\s*\blast\b/ig,
@@ -40,7 +40,7 @@ const checkTimeslice = (query) => {
     }
     if (!/\b[tT][iI][mM][eE][sS][lL][iI][cC][eE]\b\s+(1m|1h)/.test(query))
         return { isValid: false, message: 'For timeslice pipe, please write "1m" or "1h"' }
-    else validity = { isValid: true, message: "Valid Query" }
+    else return { isValid: true, message: "Valid Query" }
 }
 
 const checkDuration = (query) => {
@@ -49,6 +49,10 @@ const checkDuration = (query) => {
         message: "Invalid Query",
     }
     let arr = query.trim().split(" ")
+    // console.log(/^duration$/i.test(arr[0].trim()), query)
+    if ((/duration/i.test(arr[0].trim()) && arr[1] === undefined) || arr.length === 0) {
+        return { isValid: false, message: `Error at 'duration': Invalid clause!` }
+    }
     if (/[a-zA-Z]/.test(arr[1][0])) {
         if (!/\b[dD][uU][rR][aA][tT][iI][oO][nN]\b\s+[fF][rR][oO][mM]\s+\d{4}-(((0[13578]|1[02])-([0-2][0-9]|3[0-1]))|((0[469]|11)-([0-2][0-9]|30))|(02-[0-2][0-9]))T([0-1][0-9]|2[0-3]):(0[0-9]|[1-5][0-9]):(0[0-9]|[1-5][0-9])\s+\b[tT][oO]\b\s+\d{4}-(((0[13578]|1[02])-([0-2][0-9]|3[0-1]))|((0[469]|11)-([0-2][0-9]|30))|(02-[0-2][0-9]))T([0-1][0-9]|2[0-3]):(0[0-9]|[1-5][0-9]):(0[0-9]|[1-5][0-9])/.test(query)) {
             if (!arr.includes('from')) {
@@ -78,7 +82,7 @@ const checkDuration = (query) => {
             return { isValid: false, message: 'For duration pipe, "1m", "1h", "1d", "1w", or "1M"' }
     }
     else {
-        return { isValid: false, message: "Syntax Error: duration!" }
+        return { isValid: false, message: "Error at 'duration': Invalid syntax" }
     }
     validity = { isValid: true, message: "Valid Query" }
 
@@ -86,37 +90,67 @@ const checkDuration = (query) => {
 }
 
 const checkForStreamsAndWhere = (query) => {
-    let queryArr = query.split(/(where)/i)
-
+    let queryArr = query.split(/\s(where)\s/i)
     // streams' name validation (multi streams)
     let streams = queryArr[0].trim().split(/stream\s*=/i).filter(str => str !== '' && str !== null && str !== undefined)
     streams = streams[0].trim().split(',')
 
     for (let i = 0; i < streams.length; i++) {
-        if (!/^\w+$/m.test(streams[i]?.trim())) {
+        if (streams.length === 1 && streams[0].trim() === '*') {
+            break
+        }
+        if (i > 0 && streams[i].trim() === '*') {
+            return { isValid: false, message: `Error at 'stream': Cannot have multiple stream name with "*" ` }
+        }
+        if (!/^[\w-]+|\*$/m.test(streams[i]?.trim())) {
             return { isValid: false, message: `Error at 'streams': Invalid stream name, found ${streams[i]}` }
         }
     }
 
     //where clause validation
+    // boolean functions, brackets
     const operators = ['<=', '>=', '=', '!=', '<>', '<', '>']
-    let whereQuery = queryArr[2]?.trim().split(/\sand\s|\sor\s/i) | []
+    let whereQuery = queryArr[2]?.trim().split(/\sand\s|\sor\s|\snot\s/i) || []
+    let conjuctions = queryArr[2]?.trim().match(/\sand\s|\sor\s|\snot\s/ig) || []
+    console.log(conjuctions)
     for (let i = 0; i < whereQuery?.length; i++) {
-        let opers = whereQuery[i].trim().split(/(<=|>=|=|!=|<>|<|>)/).filter((op) => (op !== undefined && op !== null && !/^\s*$/m.test(op)))
-        if (opers.length === 0 || opers[0] === '') {
-            return { isValid: false, message: `Error at 'where': Missing operand` }
-        } else if (!/^\w+$/m.test(opers[0].trim())) {
-            return { isValid: false, message: `Error at 'where': Invalid operand, found "${opers[0]}"` }
-        } else if (opers[1] === undefined) {
-            return { isValid: false, message: `Error at 'where': Missing 'Comparison Operators(= < > >= <= != <>)'` }
-        } else if (!operators.includes(opers[1].trim())) {
-            return { isValid: false, message: `Error at 'where': Missing 'Comparison Operators(= < > >= <= != <>)', found "${opers[1]}"` }
-        } else if (opers[2] === undefined) {
-            return { isValid: false, message: `Error at 'where': Missing operand` }
-        } else if (!/^(?:['"]|)\s*\w+\s*(?:['"]|)$/m.test(opers[2].trim())) {
-            return { isValid: false, message: `Error at 'where': Invalid operand, found "${opers[2]}"` }
+        if (whereQuery[i].toLowerCase().includes(' between ')) {
+            let cols = (whereQuery[i].trim() + ' ').split(/\sbetween\s/i)
+            if (conjuctions[i] === undefined || conjuctions[i] !== ' and ') {
+                return { isValid: false, message: `Error at 'where': Invalid 'between' operator, Missing 'and'` }
+            }
+            if (cols[0] === undefined || cols[0].trim() === '') {
+                return { isValid: false, message: `Error at 'where': Missing column name before 'between'` }
+            } else if (!/^(\(\s*)?\w+$/m.test(cols[0].trim())) {
+                return { isValid: false, message: `Error at 'where': Invalid operand, found "${cols[0]}" near 'between'` }
+            } else if (cols[1] === undefined || cols[1].trim() === '') {
+                return { isValid: false, message: `Error at 'where': Missing operand after 'between' and before 'and'` }
+            } else if (!/^(?:['"]|)\s*.+\s*(?:['"]|)$/m.test(cols[1].trim())) {
+                return { isValid: false, message: `Error at 'where': Invalid operand, found "${cols[1]}" near 'between'` }
+            } else if (whereQuery[i + 1] === undefined || whereQuery[i + 1].trim() === '') {
+                return { isValid: false, message: `Error at 'where': Missing operand after 'and' near between` }
+            } else if (!/^(?:['"]|)\s*.+\s*(?:['"]|)$/m.test(whereQuery[i + 1])) {
+                return { isValid: false, message: `Error at 'where': Missing operand after 'and' near between` }
+            }
+            i++;
+            continue
         }
-
+        else {
+            let opers = whereQuery[i].trim().split(/(<=|>=|=|!=|<>|<|>)/).filter((op) => (op !== undefined && op !== null && !/^\s*$/m.test(op)))
+            if (opers.length === 0 || opers[0] === '') {
+                return { isValid: false, message: `Error at 'where': Missing operand` }
+            } else if (!/^(\(\s*)?\w+$/m.test(opers[0].trim())) {
+                return { isValid: false, message: `Error at 'where': Invalid operand, found "${opers[0]}"` }
+            } else if (opers[1] === undefined) {
+                return { isValid: false, message: `Error at 'where': Missing 'Comparison Operators(= < > >= <= != <>)'` }
+            } else if (!operators.includes(opers[1].trim())) {
+                return { isValid: false, message: `Error at 'where': Missing 'Comparison Operators(= < > >= <= != <>)', found "${opers[1]}"` }
+            } else if (opers[2] === undefined) {
+                return { isValid: false, message: `Error at 'where': Missing operand` }
+            } else if (!/^(?:['"]|)\s*.+\s*(?:['"]|)$/m.test(opers[2].trim())) {
+                return { isValid: false, message: `Error at 'where': Invalid operand, found "${opers[2]}"` }
+            }
+        }
     }
     return { isValid: true, message: `Valid Query!` }
 }
@@ -127,7 +161,14 @@ const checkGroupby = (query, gbyCol) => {
         message: "Invalid Query",
     }
 
-    let gbyFields = query.trim().split(/groupby/i).join("").split(',')
+    let gbyFields = query.trim().split(/groupby/i).join("").split(',').filter(word => word !== undefined && word !== '')
+    if (gbyFields.length === 0) {
+        return { isValid: false, message: `Error at 'groupby': Missing column name(s)!` }
+    }
+    let repeatGroupby = query.trim().split(/(groupby\s)/i).filter(word => /^groupby$/i.test(word.trim()))
+    if (repeatGroupby.length > 1) {
+        return { isValid: false, message: `Error at 'groupby': 'groupby' clause is repeated` }
+    }
 
     for (let i = 0; i < gbyFields.length; i++) {
         if (/^([\w|~!=%&*+-\/<>^]+)\s*\(\s*.+\s*\)$/.test(gbyFields[i].trim())) {
@@ -200,7 +241,14 @@ const checkSelect = (query, gbyCol, selCol) => {
         message: "Invalid Query",
     }
 
-    let selFields = query.trim().split(/select/i).join(" ").trim().split(',')
+    let selFields = query.trim().split(/select/i).join(" ").trim().split(',').filter(word => word !== '' && word !== undefined)
+    if (selFields.length === 0) {
+        return { isValid: false, message: `Error at 'select': Missing column name(s)!` }
+    }
+    let repeatSelect = query.trim().split(/(select\s)/i).filter(word => /^select$/i.test(word.trim()))
+    if (repeatSelect.length > 1) {
+        return { isValid: false, message: `Error at 'select': 'select' clause is repeated` }
+    }
     if (gbyCol.length === 0) { //groupby clause is not present in the queryString
         let agg = []
         for (let i = 0; i < selFields.length; i++) {
@@ -223,11 +271,11 @@ const checkSelect = (query, gbyCol, selCol) => {
                 continue
             } else if (tempArr[0].trim() === '') {
                 return { isValid: false, message: `Error at 'select': column name is missing` }
-            } else if(tempArr[0].includes('@')){
-                if(!/^\w+(((\.\w+)|(\[\s*\d+\s*\]))+|)$/m.test(tempArr[0].trim().replace('@', ''))){
+            } else if (tempArr[0].includes('@')) {
+                if (!/^\w+(((\.\w+)|(\[\s*\d+\s*\]))+|)$/m.test(tempArr[0].trim().replace('@', ''))) {
                     return { isValid: false, message: `Error at 'select': column name "${tempArr[0].trim()}" is INVALID!` }
                 }
-            } 
+            }
             else {
                 return { isValid: false, message: `Error at 'select': column name "${tempArr[0].trim()}" is INVALID!` }
             }
@@ -257,7 +305,7 @@ const checkSelect = (query, gbyCol, selCol) => {
                     selCol[i].col = fun[2]
                 }
                 else {
-                    return { isValid: false, message: `Error at 'select': "${fun}" is not a valid function!` }
+                    return { isValid: false, message: `Error at 'select': "${fun[1]}" is not a valid function!` }
                 }
             } else if (/^[a-zA-Z]+$/.test(tempArr[0].trim())) {
                 continue
@@ -310,7 +358,7 @@ const checkForIncorrectPipes = (queryArray, pipesIndex) => {
             continue
         let query = queryArray[i].trim().split(' ')
         if (!queryPattern.all.test(query[0]))
-            return { isValid: false, message: `The pipe ${query[0]} is not a valid in DQL!` }
+            return { isValid: false, message: `The pipe "${query[0].toUpperCase()}" is not a valid in DQL!` }
         else if (queryArray[i].toLowerCase().includes('groupby')) {
             pipesIndex['groupby'] = i
         }
@@ -323,6 +371,41 @@ const checkForIncorrectPipes = (queryArray, pipesIndex) => {
     }
     return { isValid: true, message: 'All pipe functions are' }
 }
+
+const checkForBrackets = str => {
+    const stack = [];
+    const brackets = {
+        '(': ')',
+        '{': '}',
+        '[': ']'
+    };
+    const closingBrackets = new Set(Object.values(brackets));
+
+    for (let i = 0; i < str.length; i++) {
+        const char = str[i];
+
+        if (brackets[char]) {
+            stack.push({ char, index: i });
+        } else if (closingBrackets.has(char)) {
+            if (stack.length === 0) {
+                return { isValid: false, message: `Unexpected closing character: ${char} at position ${i}` }
+            }
+            const lastOpen = stack.pop();
+            if (brackets[lastOpen.char] !== char) {
+                return { isValid: false, message: `Mismatched characters: ${lastOpen.char} at position ${lastOpen.index} and ${char} at position ${i}` }
+            }
+        }
+    }
+
+    while (stack.length > 0) {
+        const unclosed = stack.pop();
+        return { isValid: false, message: `Unexpected opening character: ${unclosed.char} at position ${unclosed.index}` }
+    }
+
+    return { isValid: true, message: `Brackets Balanced` }
+}
+
+// validate all inside the brackets
 
 function validateQuery(queryString) {
 
@@ -337,6 +420,10 @@ function validateQuery(queryString) {
         'having': -1,
     }
 
+    validQ = checkForBrackets(queryString)
+    if (!validQ.isValid) {
+        return validQ
+    }
 
     if (queryPattern.stream.test(queryString)) {
         const queryArray = queryString.split("|")

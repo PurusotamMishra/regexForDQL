@@ -1,6 +1,8 @@
 
 const pipes = ['stream', 'timeslice', 'duration', 'limit', 'first', 'last', 'groupby', 'having', 'select']
 
+const boolean_functions = ['any', 'every', 'some', 'array_contains', 'arrays_overlap', 'equal_null', 'ilike', 'like', 'rlike', 'regexp_like', 'regexp', 'isnan', 'isnull', 'isnotnull', 'map_contains_key', 'bool_and', 'bool_or', 'xpath_boolean']
+
 const aggregateFunctions = [
     'any',
     'any_value',
@@ -63,7 +65,10 @@ const aggregateFunctions = [
     'try_sum',
     'var_pop',
     'var_samp',
-    'variance'
+    'variance',
+    'distinct_count',
+    'percentage_of',
+    'ratio_of'
 ]
 
 const allFunctions = [
@@ -502,7 +507,11 @@ const allFunctions = [
     'zip_with',
     '|',
     '||',
-    '~'
+    '~',
+    'distinct',
+    'distinct_count',
+    'percentage_of',
+    'ratio_of'
 ]
 
 const nonAggregateFunctions = [
@@ -888,5 +897,6 @@ module.exports = {
     pipes,
     aggregateFunctions,
     allFunctions,
-    nonAggregateFunctions
+    nonAggregateFunctions,
+    boolean_functions
 };
