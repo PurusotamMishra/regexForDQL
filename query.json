@@ -1,0 +1,69 @@
+
+{   "query":"stream=AUTHENTICATION where ((sourcetype='OFFICE') and action='LOGIN') and (status='FAILED' or isnotnull(system) and length(user) > 10 ) | duratin 5m | groupby system, length(col1, col2), srci p, user | limit 100 | select system, srcip as hohoho, user as hehehe",
+    "pipes":[137, 151, 181, 193],
+    "stream": {
+        "stream": [1, 7],
+        "=": [7,8],
+        "fields":
+        {
+            "authentication":[8,22],
+            "firewall":[22, 30]
+        }
+    },
+    "where": {
+        "where": [],
+        "conditions": [
+            {
+                "operands": {
+                        "(sourcetype": [],
+                        "=": [],
+                        "'OFFICE')":[]
+                    }
+            },
+            {
+                "operands": {
+                        "action": [],
+                        "=": [],
+                        "'LOGIN'":[]
+                    }
+            },
+            {
+                "operands": {
+                        "status": [],
+                        "=": [],
+                        "'FAILED'":[]
+                    }
+            }
+        ]
+    },
+    "duration": {
+        "duration": [],
+        "5m": []
+    },
+    "groupby": {
+        "groupby": [],
+        "fields": {
+                "system": [],
+                "srcip": [],
+                "user": []
+                }
+    },
+    "limit": {
+        "limit": [],
+        "100": []
+    },
+    "select": {
+        "select": [],
+        "fields": {
+            "system": [10, 20, ""],
+            "srcip": [20, 40, "hehehe"],
+            "user": [41, 55, "hohoho"]
+        },
+        "functions":{
+            "count": [58, 65, "cnt", "(*)"]
+        }
+    }, 
+    "having": {
+        "having": []
+    }
+}

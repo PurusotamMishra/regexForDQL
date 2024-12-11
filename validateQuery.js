@@ -1,5 +1,5 @@
 
-const { pipes, aggregateFunctions, allFunctions, nonAggregateFunctions } = require('./consts')
+const { pipes, aggregateFunctions, allFunctions, nonAggregateFunctions, boolean_functions } = require('./consts')
 
 const queryPattern = {
     stream: /\b[sS][tT][rR][eE][aA][mM]\b\s*=\s*(\*|\w+(?:,\s*\w+)*)/,
@@ -78,7 +78,7 @@ const checkDuration = (query) => {
         }
     }
     else if (/[0-9]/.test(arr[1][0])) {
-        if ((!/\b[dD][uU][rR][aA][tT][iI][oO][nN]\b\s+\d{1,}[mhdwM]/.test(query)))
+        if ((!/^\b[dD][uU][rR][aA][tT][iI][oO][nN]\b\s+\d{1,}[mhdwM]$/m.test(query)))
             return { isValid: false, message: 'For duration pipe, "1m", "1h", "1d", "1w", or "1M"' }
     }
     else {
@@ -94,7 +94,7 @@ const checkForStreamsAndWhere = (query) => {
     // streams' name validation (multi streams)
     let streams = queryArr[0].trim().split(/stream\s*=/i).filter(str => str !== '' && str !== null && str !== undefined)
     streams = streams[0].trim().split(',')
-
+    console.log(streams)
     for (let i = 0; i < streams.length; i++) {
         if (streams.length === 1 && streams[0].trim() === '*') {
             break
@@ -102,16 +102,22 @@ const checkForStreamsAndWhere = (query) => {
         if (i > 0 && streams[i].trim() === '*') {
             return { isValid: false, message: `Error at 'stream': Cannot have multiple stream name with "*" ` }
         }
-        if (!/^[\w-]+|\*$/m.test(streams[i]?.trim())) {
+        if (!/^([a-zA-Z-]+|\*)$/m.test(streams[i]?.trim())) {
             return { isValid: false, message: `Error at 'streams': Invalid stream name, found ${streams[i]}` }
         }
     }
 
+    // operators in select
+    // stream names from list
+    //  empty pipe per error  -> "| | groupby"
+
     //where clause validation
     // boolean functions, brackets
+    // multiply or add or subtract or divide ko include karna padega 
+    // between, like, in
     const operators = ['<=', '>=', '=', '!=', '<>', '<', '>']
-    let whereQuery = queryArr[2]?.trim().split(/\sand\s|\sor\s|\snot\s/i) || []
-    let conjuctions = queryArr[2]?.trim().match(/\sand\s|\sor\s|\snot\s/ig) || []
+    let whereQuery = queryArr[2]?.trim().split(/\sand\s+not\s|\sor\s+not\s|\sand\s|\sor\s/i) || []
+    let conjuctions = queryArr[2]?.trim().match(/\sand\s+not\s|\sor\s+not\s|\sand\s|\sor\s/ig) || []
     console.log(conjuctions)
     for (let i = 0; i < whereQuery?.length; i++) {
         if (whereQuery[i].toLowerCase().includes(' between ')) {
@@ -125,18 +131,28 @@ const checkForStreamsAndWhere = (query) => {
                 return { isValid: false, message: `Error at 'where': Invalid operand, found "${cols[0]}" near 'between'` }
             } else if (cols[1] === undefined || cols[1].trim() === '') {
                 return { isValid: false, message: `Error at 'where': Missing operand after 'between' and before 'and'` }
-            } else if (!/^(?:['"]|)\s*.+\s*(?:['"]|)$/m.test(cols[1].trim())) {
+            } else if (!/^('.+')|(".+"|[\d])$/m.test(cols[1].trim())) {
                 return { isValid: false, message: `Error at 'where': Invalid operand, found "${cols[1]}" near 'between'` }
             } else if (whereQuery[i + 1] === undefined || whereQuery[i + 1].trim() === '') {
                 return { isValid: false, message: `Error at 'where': Missing operand after 'and' near between` }
-            } else if (!/^(?:['"]|)\s*.+\s*(?:['"]|)$/m.test(whereQuery[i + 1])) {
-                return { isValid: false, message: `Error at 'where': Missing operand after 'and' near between` }
+            } else if (!/^('.+')|(".+"|[\d])$/m.test(whereQuery[i + 1])) {
+                return { isValid: false, message: `Error at 'where': Invalid operand after 'and' near between` }
             }
             i++;
             continue
-        }
-        else {
-            let opers = whereQuery[i].trim().split(/(<=|>=|=|!=|<>|<|>)/).filter((op) => (op !== undefined && op !== null && !/^\s*$/m.test(op)))
+        } else if (whereQuery[i].toLowerCase().includes(' like ')) {
+            let opers = whereQuery[i].trim().split(/( like )/i).filter((op) => (op !== undefined && op !== null && !/^\s*$/m.test(op)))
+            console.log(opers)
+        } else if ((whereQuery[i].toLowerCase().includes(' in '))) {
+            let opers = whereQuery[i].trim().split(/( in )/i).filter((op) => (op !== undefined && op !== null && !/^\s*$/m.test(op)))
+            // check for column name and then "(" and ")" after in
+            console.log(opers)
+        } else if (/^([\w|~!=%&*+-\/<>^]+)\s*\(\s*.+\s*\)$/.test(whereQuery[i].trim())) {
+            let fun = /^([\w|~!=%&*+-\/<>^]+)\s*\(\s*.+\s*\)$/.exec(whereQuery[i].trim())[1]
+            if (!boolean_functions.includes(fun))
+                return { isValid: false, message: `Error at 'where': Invalid function "${fun}"` }
+        } else {
+            let opers = whereQuery[i].trim().split(/(<=|>=|=|!=|<>|<|>| like | in )/i).filter((op) => (op !== undefined && op !== null && !/^\s*$/m.test(op)))
             if (opers.length === 0 || opers[0] === '') {
                 return { isValid: false, message: `Error at 'where': Missing operand` }
             } else if (!/^(\(\s*)?\w+$/m.test(opers[0].trim())) {
@@ -379,12 +395,19 @@ const checkForBrackets = str => {
         '{': '}',
         '[': ']'
     };
+    const invalidBrackets = {
+        '{': '}',
+        '[': ']'
+    }
     const closingBrackets = new Set(Object.values(brackets));
 
     for (let i = 0; i < str.length; i++) {
         const char = str[i];
 
         if (brackets[char]) {
+            if (invalidBrackets[char]) {
+                return { isValid: false, message: `Unexpected character: ${char} at position ${i}` }
+            }
             stack.push({ char, index: i });
         } else if (closingBrackets.has(char)) {
             if (stack.length === 0) {
