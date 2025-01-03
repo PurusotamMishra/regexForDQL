@@ -8222,6 +8222,966 @@ const activeStream = [
     "NTA-DHCP",
 ]
 
+const sourceNameDetails = {
+    "ACCOPS-HYSECURE": [
+      "AUTHENTICATION"
+    ],
+    "AKAMAI": [
+      "THREAT"
+    ],
+    "ALTEON-OS": [
+      "CONFIGURATION",
+      "AUTHENTICATION"
+    ],
+    "AMAZON-S3": [
+      "S3-ACCESS"
+    ],
+    "AMAZON-VPC": [
+      "FIREWALL"
+    ],
+    "APACHE2": [
+      "AUTHENTICATION",
+      "WEBSERVER"
+    ],
+    "ARBOR-NETWORKS-PRAVAIL": [
+      "THREAT"
+    ],
+    "ARCOS-DBEVT": [
+      "AUTHENTICATION",
+      "ARCOS-DBEVT"
+    ],
+    "ARUBA": [
+      "THREAT",
+      "AUTHENTICATION",
+      "IAM",
+      "CONFIGURATION"
+    ],
+    "ARUBA-CLEARPASS": [
+      "IAM",
+      "AUTHENTICATION"
+    ],
+    "ASMS": [
+      "AUTHENTICATION"
+    ],
+    "ATLASSIAN": [
+      "ATLASSIAN-EVENT",
+      "JIRA-PROJECT",
+      "AUDIT",
+      "CONFIGURATION",
+      "IAM",
+      "AUTHENTICATION"
+    ],
+    "ATLASSIAN-JIRA": [
+      "IAM",
+      "JIRA-PROJECT"
+    ],
+    "AUDITBEAT": [
+      "AUDITD",
+      "CONFIGURATION",
+      "AUDITBEAT",
+      "IAM",
+      "AUTHENTICATION"
+    ],
+    "AVAYA-SWITCH": [
+      "AUTHENTICATION"
+    ],
+    "AVAYA-VPN-GATEWAY": [
+      "AUTHENTICATION"
+    ],
+    "AWS-CLOUDTRAIL": [
+      "CLOUDTRAIL",
+      "CONFIGURATION",
+      "AUTHENTICATION",
+      "IAM"
+    ],
+    "AWS-NETWORK-FIREWALL": [
+      "FIREWALL"
+    ],
+    "AWS-SECURITY-HUB": [
+      "THREAT",
+      "CONFIGURATION",
+      "SECURITY-HUB",
+      "COMPLIANCE"
+    ],
+    "AWS-WAF": [
+      "THREAT",
+      "AWS-WAF"
+    ],
+    "AZURE": [
+      "AUTHENTICATION",
+      "FIREWALL",
+      "IAM",
+      "AZURE"
+    ],
+    "BARRACUDA-LOADBALANCER": [
+      "AUDITD",
+      "BARRACUDA-LOADBALANCER",
+      "WEBSERVER",
+      "CONFIGURATION",
+      "AUTHENTICATION"
+    ],
+    "BITDEFENDER": [
+      "SYSTEM",
+      "THREAT",
+      "CONFIGURATION"
+    ],
+    "BLUECOAT": [
+      "THREAT",
+      "AUTHENTICATION",
+      "WEBFILTER"
+    ],
+    "BOX": [
+      "CONFIGURATION",
+      "AUTHENTICATION",
+      "DOCUMENTS",
+      "BOX-EVENT"
+    ],
+    "BROCADE": [
+      "AUTHENTICATION"
+    ],
+    "CARBON-BLACK": [
+      "THREAT",
+      "CONFIGURATION",
+      "CARBON-BLACK",
+      "IAM",
+      "AUTHENTICATION"
+    ],
+    "CARBON-BLACK-DEFENSE": [
+      "THREAT",
+      "AUTHENTICATION"
+    ],
+    "CARBON-BLACK-RESPONSE": [
+      "THREAT"
+    ],
+    "CENTRIFY-AUDITTRAIL-LINUX": [
+      "AUDITD",
+      "CONFIGURATION",
+      "CENTRIFY-AUDITTRAIL-LINUX",
+      "IAM",
+      "AUTHENTICATION"
+    ],
+    "CENTRIFY-AUDITTRAIL-WINDOWS": [
+      "AUDITD",
+      "CENTRIFY-AUDITTRAIL-WINDOWS",
+      "CONFIGURATION",
+      "IAM",
+      "AUTHENTICATION"
+    ],
+    "CHECKPOINT-FIREWALL": [
+      "THREAT",
+      "FIREWALL",
+      "CONFIGURATION",
+      "IAM",
+      "AUTHENTICATION",
+      "CHECKPOINT-FIREWALL"
+    ],
+    "CHECKPOINT-MANAGEMENT-SERVER": [
+      "IAM",
+      "AUTHENTICATION"
+    ],
+    "CIENA": [
+      "THREAT",
+      "AUTHENTICATION",
+      "IAM"
+    ],
+    "CISCO": [
+      "THREAT",
+      "FIREWALL",
+      "CONFIGURATION",
+      "IAM",
+      "AUTHENTICATION"
+    ],
+    "CISCO-ACS": [
+      "AUTHENTICATION"
+    ],
+    "CISCO-AIR-CT5508-K9": [
+      "THREAT",
+      "AUTHENTICATION",
+      "IAM"
+    ],
+    "CISCO-ASA": [
+      "THREAT",
+      "FIREWALL",
+      "CONFIGURATION",
+      "IAM",
+      "AUTHENTICATION"
+    ],
+    "CISCO-DUO": [
+      "IAM",
+      "AUTHENTICATION",
+      "CISCO-DUO"
+    ],
+    "CISCO-FIREPOWER": [
+      "THREAT"
+    ],
+    "CISCO-FMC": [
+      "FIREWALL",
+      "THREAT",
+      "AUTHENTICATION",
+      "CONFIGURATION"
+    ],
+    "CISCO-FTD": [
+      "FIREWALL",
+      "THREAT",
+      "AUTHENTICATION",
+      "AUDITD"
+    ],
+    "CISCO-IRONPORT": [
+      "THREAT",
+      "EMAIL-GATEWAY"
+    ],
+    "CISCO-ISE": [
+      "THREAT",
+      "COMPLIANCE",
+      "CONFIGURATION",
+      "IAM",
+      "AUTHENTICATION"
+    ],
+    "CISCO-MERAKI": [
+      "FIREWALL",
+      "THREAT",
+      "WEBFILTER"
+    ],
+    "CISCO-UCS-C-SERIES-240": [
+      "AUTHENTICATION"
+    ],
+    "CITRIX-ADC": [
+      "FIREWALL",
+      "AUTHENTICATION"
+    ],
+    "CLOUDFLARE": [
+      "WEBFILTER",
+      "AUDIT",
+      "DNS",
+      "IAM",
+      "AUTHENTICATION"
+    ],
+    "CLOUDFLARE-AWS": [
+      "WEBFILTER",
+      "IAM",
+      "AUDIT",
+      "AUTHENTICATION",
+      "DNS"
+    ],
+    "CROWDSTRIKE-FALCON": [
+      "CROWDSTRIKE-FALCON",
+      "AUTHENTICATION"
+    ],
+    "CROWDSTRIKE-FALCON-CEF": [
+      "THREAT",
+      "AUTHENTICATION",
+      "IAM"
+    ],
+    "CYBERARK": [
+      "CYBERARK",
+      "THREAT",
+      "AUTHENTICATION",
+      "IAM"
+    ],
+    "CYBEROAM": [
+      "THREAT",
+      "FIREWALL",
+      "EMAIL-GATEWAY",
+      "CONFIGURATION",
+      "SOPHOS-CYBEROAM",
+      "AUTHENTICATION"
+    ],
+    "Cisco-AMP": [
+      "THREAT"
+    ],
+    "DARKTRACE": [
+      "THREAT",
+      "AUTHENTICATION",
+      "DARKTRACE",
+      "IAM"
+    ],
+    "DELL-CYLANCE": [
+      "DELL-CYLANCE",
+      "THREAT",
+      "AUTHENTICATION",
+      "IAM"
+    ],
+    "DELL-EMC": [
+      "CONFIGURATION",
+      "AUTHENTICATION"
+    ],
+    "DELL-EMC-UNITY": [
+      "AUTHENTICATION",
+      "AUDIT"
+    ],
+    "DISKSTATION-NAS": [
+      "IAM",
+      "AUTHENTICATION",
+      "DOCUMENTS"
+    ],
+    "Dell-EMC-SMARTFABRIC": [
+      "AUTHENTICATION",
+      "AUDITD"
+    ],
+    "ESET-REMOTE-ADMINISTRATOR": [
+      "THREAT",
+      "WEBFILTER",
+      "AUDIT",
+      "CONFIGURATION",
+      "IAM",
+      "AUTHENTICATION"
+    ],
+    "F5-APM": [
+      "AUTHENTICATION"
+    ],
+    "F5BIGIP": [
+      "FIREWALL",
+      "CONFIGURATION",
+      "AUTHENTICATION",
+      "AUDITD"
+    ],
+    "F5BIGIP-WAF": [
+      "THREAT"
+    ],
+    "FIREEYE": [
+      "CONFIGURATION",
+      "AUTHENTICATION"
+    ],
+    "FIREEYE-EDR": [
+      "THREAT"
+    ],
+    "FLASHARRAY": [
+      "AUTHENTICATION"
+    ],
+    "FORCEPOINT": [
+      "WEBFILTER"
+    ],
+    "FORCEPOINT-CLOUD-PROXY": [
+      "FORCEPOINT-CLOUD-PROXY",
+      "AUTHENTICATION",
+      "WEBFILTER"
+    ],
+    "FORCEPOINT-DLP": [
+      "THREAT"
+    ],
+    "FORCEPOINT-SDWAN": [
+      "FIREWALL",
+      "AUTHENTICATION",
+      "FORCEPOINT-SDWAN-EVENT"
+    ],
+    "FORESCOUT": [
+      "COMPLIANCE"
+    ],
+    "FORTIAUTHENTICATOR": [
+      "AUTHENTICATION"
+    ],
+    "FORTIEDR": [
+      "THREAT"
+    ],
+    "FORTIGATE": [
+      "THREAT",
+      "WEBFILTER",
+      "FORTIGATE",
+      "FIREWALL",
+      "DNS",
+      "CONFIGURATION",
+      "IAM",
+      "AUTHENTICATION",
+      "VPN"
+    ],
+    "FORTIMANAGER": [
+      "FORTIMANAGER",
+      "CONFIGURATION",
+      "AUTHENTICATION"
+    ],
+    "FORTISWITCH": [
+      "FORTISWITCH",
+      "IAM"
+    ],
+    "FORTIWAN-LOAD-BALANCER": [
+      "SYSTEM",
+      "FIREWALL",
+      "AUTHENTICATION"
+    ],
+    "FORTIWEB": [
+      "THREAT",
+      "FORTIWEB",
+      "FIREWALL",
+      "CONFIGURATION",
+      "IAM",
+      "AUTHENTICATION"
+    ],
+    "G-SUITE": [
+      "THREAT",
+      "CALENDAR",
+      "G-SUITE",
+      "IAM",
+      "AUTHENTICATION",
+      "DOCUMENTS"
+    ],
+    "GCP": [
+      "WEBFILTER"
+    ],
+    "GOANYWHERE-MFT": [
+      "CONFIGURATION",
+      "AUTHENTICATION",
+      "DOCUMENTS"
+    ],
+    "GOOGLE-APPS-AUDIT": [
+      "GOOGLE-AUDIT",
+      "IAM",
+      "AUTHENTICATION"
+    ],
+    "HALTDOS": [
+      "WEBFILTER"
+    ],
+    "HAPROXY": [
+      "WEBFILTER"
+    ],
+    "HITACHI": [
+      "AUTHENTICATION"
+    ],
+    "HP-ROUTER": [
+      "FIREWALL",
+      "AUTHENTICATION"
+    ],
+    "HPE-ARUBA": [
+      "IAM",
+      "AUTHENTICATION"
+    ],
+    "HYPERCLOUD": [
+      "IAM",
+      "AUTHENTICATION",
+      "HYPERCLOUD"
+    ],
+    "HYWORKS-CONTROLLER": [
+      "AUTHENTICATION"
+    ],
+    "IBM-API": [
+      "AUTHENTICATION"
+    ],
+    "IBM-DATAPOWER": [
+      "AUTHENTICATION"
+    ],
+    "IBM-GUARDIUM": [
+      "IBM-GUARDIUM",
+      "IAM",
+      "AUTHENTICATION"
+    ],
+    "IIS": [
+      "WEBSERVER"
+    ],
+    "IMPERVA-DAM": [
+      "AUTHENTICATION",
+      "DATABASE"
+    ],
+    "IMPERVA-WAF": [
+      "THREAT",
+      "AUTHENTICATION",
+      "CONFIGURATION"
+    ],
+    "INCAPSULA-WAF": [
+      "THREAT"
+    ],
+    "INDUSFACE-APPTRANA": [
+      "THREAT"
+    ],
+    "INFOBLOX": [
+      "DNS",
+      "THREAT"
+    ],
+    "INFOBLOX-NIOS": [
+      "AUTHENTICATION"
+    ],
+    "INTERSCAN-VIRUSWALL": [
+      "THREAT"
+    ],
+    "ISAM-AUDIT": [
+      "CONFIGURATION",
+      "AUTHENTICATION"
+    ],
+    "ISAM-WEBSEAL": [
+      "AUTHENTICATION",
+      "WEBSERVER"
+    ],
+    "JBOSS": [
+      "WEBSERVER"
+    ],
+    "JUNIPER": [
+      "FIREWALL",
+      "THREAT",
+      "AUTHENTICATION",
+      "CONFIGURATION"
+    ],
+    "JUNIPER-CORTEX-ATP": [
+      "THREAT",
+      "AUTHENTICATION",
+      "IAM",
+      "CONFIGURATION"
+    ],
+    "JUNOS": [
+      "FIREWALL",
+      "AUTHENTICATION",
+      "AUDITD"
+    ],
+    "KASPERSKY": [
+      "THREAT"
+    ],
+    "KASPERSKY-CYBERTRACE": [
+      "THREAT"
+    ],
+    "KEY-SECURE-HSM": [
+      "AUTHENTICATION"
+    ],
+    "LUNA-NETWORK-HSM": [
+      "AUTHENTICATION"
+    ],
+    "MANAGE-ENGINE-ADAUDIT-PLUS": [
+      "CONFIGURATION",
+      "WINDOWS-EVENT",
+      "WIN-AUDIT",
+      "IAM",
+      "AUTHENTICATION"
+    ],
+    "MCAFEE-EPO": [
+      "THREAT"
+    ],
+    "MCAFEE-IPS": [
+      "THREAT",
+      "CONFIGURATION"
+    ],
+    "MCAFEE-MVISION": [
+      "THREAT"
+    ],
+    "MCAFEE-WG": [
+      "THREAT",
+      "AUTHENTICATION",
+      "WEBFILTER"
+    ],
+    "MICROSOFT": [
+      "THREAT"
+    ],
+    "MIMECAST": [
+      "THREAT",
+      "EMAIL-GATEWAY",
+      "CONFIGURATION",
+      "IAM",
+      "AUTHENTICATION"
+    ],
+    "MIMECAST-EMAIL-GATEWAY": [
+      "AUTHENTICATION",
+      "EMAIL-GATEWAY",
+      "AUDIT-EVENT"
+    ],
+    "MORPHISEC": [
+      "THREAT"
+    ],
+    "MS-EXCHANGE": [
+      "EMAIL-GATEWAY"
+    ],
+    "MS-O365": [
+      "THREAT",
+      "EMAIL-GATEWAY",
+      "IAM",
+      "CONFIGURATION",
+      "MS-O365",
+      "AUTHENTICATION",
+      "DOCUMENTS"
+    ],
+    "MSSQL": [
+      "CONFIGURATION",
+      "AUTHENTICATION"
+    ],
+    "NETAPP": [
+      "AUTHENTICATION"
+    ],
+    "NETSCALER": [
+      "THREAT"
+    ],
+    "NETSKOPE": [
+      "THREAT",
+      "NETSKOPE"
+    ],
+    "NETSKOPE-DLP": [
+      "THREAT",
+      "AUTHENTICATION"
+    ],
+    "NGINX": [
+      "WEBSERVER"
+    ],
+    "NIX": [
+      "THREAT",
+      "EP-NETWORK",
+      "FIREWALL",
+      "AUDITD",
+      "EP-SERVICE",
+      "CONFIGURATION",
+      "EP-CONFIG",
+      "DHCP",
+      "EP-FILE",
+      "IAM",
+      "AUTHENTICATION"
+    ],
+    "NTA": [
+      "NTA-SSL",
+      "NTA-SMTP",
+      "NTA-RDP",
+      "NTA-DPD",
+      "NTA-FILES",
+      "NTA-IRC",
+      "NTA-HTTP",
+      "NTA-AUTHENTICATION-RFB",
+      "NTA-KERBEROS",
+      "NTA-DNS",
+      "NTA-MYSQL",
+      "NTA-DNP3",
+      "NTA-AUTHENTICATION-RADIUS",
+      "NTA-TUNNEL",
+      "NTA-AUTHENTICATION-NTLM",
+      "NTA-SMB",
+      "NTA-SNMP",
+      "NTA-MODBUS",
+      "NTA-SIP",
+      "NTA-FTP",
+      "NTA-DCE-RPC",
+      "NTA-CERTIFICATE",
+      "NTA-DHCP",
+      "NTA-NTP",
+      "NTA-SSH",
+      "NTA-CONNECTION"
+    ],
+    "OFFICESCAN-XG-WINEVT": [
+      "THREAT"
+    ],
+    "OKTA": [
+      "OKTA",
+      "THREAT",
+      "CONFIGURATION",
+      "IAM",
+      "AUTHENTICATION"
+    ],
+    "ORACLE": [
+      "IAM",
+      "AUTHENTICATION"
+    ],
+    "ORACLE-AUDIT-VAULT": [
+      "CONFIGURATION",
+      "AUTHENTICATION",
+      "ORACLE-AUDIT-VAULT"
+    ],
+    "ORACLE-WINEVT": [
+      "AUTHENTICATION"
+    ],
+    "ORCA": [
+      "THREAT"
+    ],
+    "PALOALTO": [
+      "FIREWALL",
+      "THREAT",
+      "AUTHENTICATION",
+      "CONFIGURATION"
+    ],
+    "PALOALTO-CORTEX": [
+      "THREAT",
+      "PALOALTO-CORTEX",
+      "CONFIGURATION",
+      "IAM",
+      "AUTHENTICATION"
+    ],
+    "PALOALTO-CORTEX-XDR": [
+      "THREAT"
+    ],
+    "PALOALTO-ESM": [
+      "THREAT",
+      "PALOALTO-ESM",
+      "CONFIGURATION",
+      "IAM",
+      "AUTHENTICATION"
+    ],
+    "PALOALTO-GLOBAL-PROTECT": [
+      "AUTHENTICATION"
+    ],
+    "PALOALTO-PRISMA-ACCESS": [
+      "FIREWALL",
+      "THREAT"
+    ],
+    "PFSENSE": [
+      "FIREWALL"
+    ],
+    "PRISMA-CLOUD": [
+      "PRISMA",
+      "CONFIGURATION"
+    ],
+    "PULSE-SECURE-VPN": [
+      "CONFIGURATION",
+      "AUTHENTICATION",
+      "IAM"
+    ],
+    "RADWARE": [
+      "THREAT",
+      "AUTHENTICATION"
+    ],
+    "RADWARE-DEFENSE-PRO": [
+      "THREAT",
+      "AUTHENTICATION"
+    ],
+    "SAFESQUID-SWG": [
+      "CONFIGURATION",
+      "WEBFILTER"
+    ],
+    "SAP-ETD": [
+      "THREAT",
+      "SAP-ETD",
+      "CONFIGURATION",
+      "IAM",
+      "AUTHENTICATION"
+    ],
+    "SECRET-SERVER": [
+      "SECRETSERVER",
+      "SECRETSERVER-DOMAIN",
+      "SECRETSERVER-SECRET",
+      "IAM",
+      "AUTHENTICATION"
+    ],
+    "SENTINELONE": [
+      "THREAT",
+      "SENTINELONE",
+      "CONFIGURATION",
+      "IAM",
+      "AUTHENTICATION"
+    ],
+    "SITEMINDER": [
+      "AUTHENTICATION"
+    ],
+    "SITEWALL": [
+      "THREAT",
+      "WEBFILTER"
+    ],
+    "SKYHIGH-CASB": [
+      "THREAT"
+    ],
+    "SLACK": [
+      "SLACK",
+      "SLACK-HUDDLE",
+      "SLACK-CANVAS",
+      "SLACK-WORKFLOW",
+      "SLACK-CHANNEL",
+      "IAM",
+      "AUTHENTICATION",
+      "DOCUMENTS"
+    ],
+    "SMOKESCREEN": [
+      "THREAT",
+      "AUTHENTICATION"
+    ],
+    "SNOWFLAKE": [
+      "AUTHENTICATION",
+      "SNOWFLAKE"
+    ],
+    "SOPHOS": [
+      "SOPHOS",
+      "THREAT",
+      "IAM"
+    ],
+    "SOPHOS-UTM": [
+      "FIREWALL",
+      "THREAT",
+      "AUTHENTICATION",
+      "WEBFILTER"
+    ],
+    "SSL-VPN": [
+      "AUTHENTICATION"
+    ],
+    "SYMANTEC": [
+      "THREAT",
+      "AUTHENTICATION",
+      "CONFIGURATION"
+    ],
+    "SYMANTEC-ATP": [
+      "THREAT"
+    ],
+    "TEAMCENTER-ENTERPRISE-PLM": [
+      "AUTHENTICATION"
+    ],
+    "TENABLE-OT": [
+      "THREAT",
+      "AUTHENTICATION"
+    ],
+    "TIPPINGPOINT": [
+      "THREAT",
+      "AUTHENTICATION"
+    ],
+    "TIPPINGPOINT-UNITYONE": [
+      "THREAT"
+    ],
+    "TOMCAT": [
+      "WEBSERVER"
+    ],
+    "TRELLIX-DLP": [
+      "FIREWALL",
+      "THREAT",
+      "AUTHENTICATION",
+      "CONFIGURATION"
+    ],
+    "TREND-MICRO": [
+      "THREAT",
+      "EMAIL-GATEWAY",
+      "TRENDMICRO-CLOUD",
+      "CONFIGURATION",
+      "IAM",
+      "AUTHENTICATION"
+    ],
+    "TREND-MICRO-DDEI": [
+      "THREAT",
+      "EMAIL-GATEWAY",
+      "CONFIGURATION",
+      "TREND-MICRO-DDEI",
+      "AUTHENTICATION"
+    ],
+    "TREND-MICRO-ENDPOINT": [
+      "THREAT",
+      "TREND-MICRO-ENDPOINT"
+    ],
+    "TREND-MICRO-NETWORK": [
+      "THREAT",
+      "AUTHENTICATION",
+      "CONFIGURATION"
+    ],
+    "TREND-MICRO-VISION-ONE": [
+      "CONFIGURATION",
+      "AUTHENTICATION",
+      "IAM",
+      "TREND-MICRO-VISION-ONE"
+    ],
+    "TREND-MICRO-VISION-ONE-CEF": [
+      "THREAT"
+    ],
+    "TRENDMICRO-EMAIL-SECURITY": [
+      "TRENDMICRO-EMAIL-SECURITY",
+      "THREAT",
+      "AUTHENTICATION",
+      "EMAIL-GATEWAY"
+    ],
+    "Trellix-EPO": [
+      "EMAIL-GATEWAY",
+      "IAM",
+      "AUDITD",
+      "TRELLIX-EPO-EVENT",
+      "AUTHENTICATION"
+    ],
+    "VERSA-NETWORKS": [
+      "FIREWALL",
+      "THREAT",
+      "WEBFILTER"
+    ],
+    "VMWARE": [
+      "VMWARE",
+      "WEBFILTER",
+      "AUDITD",
+      "CONFIGURATION",
+      "IAM",
+      "AUTHENTICATION"
+    ],
+    "WATCHGUARD": [
+      "FIREWALL",
+      "THREAT",
+      "AUTHENTICATION",
+      "CONFIGURATION"
+    ],
+    "WIN-DHCP": [
+      "DHCP"
+    ],
+    "WINDOWS": [
+      "THREAT",
+      "FIREWALL",
+      "WIN-AUDIT",
+      "AUTHENTICATION",
+      "EP-DRIVER-LOAD",
+      "WINDOWS-SYSMON",
+      "EP-DNS",
+      "EP-FILE",
+      "EP-NETWORK",
+      "EP-IMAGE-LOAD",
+      "WINDOWS-EVENT",
+      "EP-CONFIG",
+      "IAM",
+      "EP-WMI",
+      "EP-PIPE",
+      "EP-REGISTRY",
+      "EP-SERVICE",
+      "CONFIGURATION",
+      "EP-PROCESS"
+    ],
+    "WINDOWS-ADFS": [
+      "IAM",
+      "AUTHENTICATION"
+    ],
+    "WINDOWS-WINLOGBEAT": [
+      "THREAT",
+      "FIREWALL",
+      "WIN-AUDIT",
+      "AUTHENTICATION",
+      "EP-DRIVER-LOAD",
+      "WINDOWS-SYSMON",
+      "EP-DNS",
+      "EP-FILE",
+      "EP-NETWORK",
+      "EP-IMAGE-LOAD",
+      "EP-CONFIG",
+      "WINDOWS-EVENT",
+      "IAM",
+      "EP-WMI",
+      "EP-PIPE",
+      "EP-REGISTRY",
+      "EP-SERVICE",
+      "CONFIGURATION",
+      "EP-PROCESS"
+    ],
+    "XENSERVER": [
+      "AUTHENTICATION"
+    ],
+    "ZENDESK": [
+      "TICKET-REQUESTED",
+      "AUDIT",
+      "IAM",
+      "AUTHENTICATION",
+      "DOCUMENTS"
+    ],
+    "ZIMBRA": [
+      "THREAT",
+      "AUTHENTICATION",
+      "EMAIL-GATEWAY",
+      "CONFIGURATION"
+    ],
+    "ZOOM-API": [
+      "IAM",
+      "AUTHENTICATION",
+      "AUDIT-OPERATION"
+    ],
+    "ZSCALER": [
+      "AUTHENTICATION",
+      "THREAT",
+      "WEBFILTER",
+      "FIREWALL",
+      "DNS"
+    ],
+    "ZSCALER-DNS": [
+      "DNS"
+    ],
+    "ZSCALER-FIREWALL": [
+      "FIREWALL",
+      "THREAT",
+      "AUTHENTICATION"
+    ],
+    "ZSCALER-SPA": [
+      "ZPA-CONNECTOR",
+      "THREAT",
+      "AUTHENTICATION"
+    ],
+    "ZSCALER-WEBFILTER": [
+      "WEBFILTER"
+    ],
+    "ZSCALER-ZIA": [
+      "ZIA-TUNNEL",
+      "ZIA-AUDIT",
+      "AUTHENTICATION"
+    ]
+  }
 
 module.exports = {
     pipes,
@@ -8230,5 +9190,6 @@ module.exports = {
     nonAggregateFunctions,
     booleanFunctions, 
     streams,
-    activeStream
+    activeStream,
+    sourceNameDetails
 };
