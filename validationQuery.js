@@ -19,7 +19,7 @@ const extractfieldsFromOperators = (pipe, value) => {
   let fields = []
   let functions = []
   let matches = splitingQuery(value.trim(), '', false, false, 'ops').splittedArray
-  console.log(matches)
+  // console.log(matches)
   matches.forEach(item => {
     if (
       (/^\w+$/gm.test(item.trim()) && !/^\d+$/.test(item.trim())) ||
@@ -36,7 +36,7 @@ const extractfieldsFromOperators = (pipe, value) => {
 const functionsExtract = (value, str, pipe, fun, aggre) => {
   let fields = []
   let tmp = /^(\w+|[|~!=%&*+-\/<>^]+)\(\s*(.+)\s*\)$/.exec(value.trim())
-  console.log(tmp)
+  // console.log(tmp)
   if (pipe === 'groupby') {
     if (allFunctions.includes(tmp[1].toLowerCase())) {
       if (aggregateFunctions.includes(tmp[1].toLowerCase())) {
@@ -44,7 +44,7 @@ const functionsExtract = (value, str, pipe, fun, aggre) => {
       } else {
         fun.push(tmp[1].toLowerCase())
         let tmpRes = columnExtract(tmp[2].trim(), pipe, fun, aggre)
-        console.log(tmpRes)
+        // console.log(tmpRes)
         if (tmpRes.length === 0) return []
         else if (typeof tmpRes === 'string') return tmpRes
         fields = fields.concat(tmpRes)
@@ -62,7 +62,7 @@ const functionsExtract = (value, str, pipe, fun, aggre) => {
       if (tmp[1].toLowerCase() === 'count' && tmpRes.length === 0 && tmp[2].trim().includes('*')) {
         tmpRes.push('*')
       }
-      console.log(tmpRes)
+      // console.log(tmpRes)
       if (tmpRes.length === 0) return []
       else if (tmpRes === 'error') return 'error'
       fields = fields.concat(tmpRes)
@@ -73,7 +73,7 @@ const functionsExtract = (value, str, pipe, fun, aggre) => {
     if (booleanFunctions.includes(tmp[1].toLowerCase())) {
       fun.push(tmp[1].toLowerCase())
       let tmpRes = columnExtract(tmp[2].trim(), pipe, fun, aggre)
-      console.log(tmpRes)
+      // console.log(tmpRes)
       if (tmpRes.length === 0) return []
       fields = fields.concat(tmpRes)
     } else {
@@ -83,7 +83,7 @@ const functionsExtract = (value, str, pipe, fun, aggre) => {
     if (allFunctions.includes(tmp[1].toLowerCase())) {
       fun.push(tmp[1].toLowerCase())
       let tmpRes = columnExtract(tmp[2].trim(), pipe, fun, aggre)
-      console.log(tmpRes)
+      // console.log(tmpRes)
       if (tmpRes.length === 0) return []
       else if (typeof tmpRes === 'string') return tmpRes
       fields = fields.concat(tmpRes)
@@ -298,17 +298,17 @@ const sourcenameValidation = (
 }
 
 const columnExtract = (str, pipe, fun, aggre) => {
-  console.log(str)
+  // console.log(str)
   let fields = []
   let arr = splitingQuery(str, ',', false, true).splittedArray
   for (let i = 0; i < arr.length; i++) {
-    console.log(arr[i])
+    // console.log(arr[i])
     if (
       /^(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:(?:"[^\n"]*")|(?:'[^\n']*'))|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*(?:([+\-*\/%^&])\s*(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:(?:"[^\n"]*")|(?:'[^\n']*'))|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*?)+$/gm.test(
         arr[i].trim(),
       )
     ) {
-      console.log('expressions*******', arr[i])
+      // console.log('expressions*******', arr[i])
       let returnVal = extractfieldsFromOperators(pipe, arr[i])
 
       let tempFunFields = []
@@ -330,7 +330,7 @@ const columnExtract = (str, pipe, fun, aggre) => {
       fields.push(arr[i])
     } else if (/^(\w+|[|~!=%&*+-\/<>^]+)\([^\n]+\)$/gm.test(arr[i].trim())) {
       let tmp = /^(\w+|[|~!=%&*+-\/<>^]+)\(\s*(.+)\s*\)$/.exec(arr[i].trim())
-      console.log(tmp)
+      // console.log(tmp)
       if (pipe === 'groupby') {
         if (allFunctions.includes(tmp[1].toLowerCase())) {
           if (aggregateFunctions.includes(tmp[1].toLowerCase())) {
@@ -338,7 +338,7 @@ const columnExtract = (str, pipe, fun, aggre) => {
           } else {
             fun.push(tmp[1].toLowerCase())
             let tmpRes = columnExtract(tmp[2].trim(), pipe, fun, aggre)
-            console.log(tmpRes)
+            // console.log(tmpRes)
             if (tmpRes.length === 0) return []
             else if (typeof tmpRes === 'string') return tmpRes
             fields = fields.concat(tmpRes)
@@ -360,7 +360,7 @@ const columnExtract = (str, pipe, fun, aggre) => {
           ) {
             tmpRes.push('*')
           }
-          console.log(tmpRes)
+          // console.log(tmpRes)
           if (tmpRes.length === 0) return []
           else if (tmpRes === 'error') return 'error'
           fields = fields.concat(tmpRes)
@@ -371,7 +371,7 @@ const columnExtract = (str, pipe, fun, aggre) => {
         if (booleanFunctions.includes(tmp[1].toLowerCase())) {
           fun.push(tmp[1].toLowerCase())
           let tmpRes = columnExtract(tmp[2].trim(), pipe, fun, aggre)
-          console.log(tmpRes)
+          // console.log(tmpRes)
           if (tmpRes.length === 0) return []
           else if (typeof tmpRes === 'string') return tmpRes
           fields = fields.concat(tmpRes)
@@ -382,7 +382,7 @@ const columnExtract = (str, pipe, fun, aggre) => {
         if (allFunctions.includes(tmp[1].toLowerCase())) {
           fun.push(tmp[1].toLowerCase())
           let tmpRes = columnExtract(tmp[2].trim(), pipe, fun, aggre)
-          console.log(tmpRes)
+          // console.log(tmpRes)
           if (tmpRes.length === 0) return []
           else if (typeof tmpRes === 'string') return tmpRes
           fields = fields.concat(tmpRes)
@@ -393,9 +393,9 @@ const columnExtract = (str, pipe, fun, aggre) => {
     } else if (/^(\d+|'([^']+)'|\"([^\"]+)\")$/gm.test(arr[i].trim())) {
       continue
     } else if (/^\((.+)\)$/gm.test(arr[i].trim())) {
-      console.log(arr[i])
+      // console.log(arr[i])
       let tmpRes = columnExtract(/^\((.+)\)$/.exec(arr[i].trim())[1].trim(), pipe, fun, aggre)
-      console.log(tmpRes)
+      // console.log(tmpRes)
       if (tmpRes.length === 0) return []
       fields = fields.concat(tmpRes)
     }
@@ -414,7 +414,7 @@ const columnExtract = (str, pipe, fun, aggre) => {
         fields.push(temp[5].trim())
       } else if (temp && temp[1]) {
         let tmp = /^(\w+|[|~!=%&*+-\/<>^]+)\(\s*(.+)\s*\)$/.exec(temp[1].trim())
-        console.log(tmp)
+        // console.log(tmp)
         if (pipe === 'groupby') {
           if (allFunctions.includes(tmp[1].toLowerCase())) {
             if (aggregateFunctions.includes(tmp[1].toLowerCase())) {
@@ -422,7 +422,7 @@ const columnExtract = (str, pipe, fun, aggre) => {
             } else {
               fun.push(tmp[1].toLowerCase())
               let tmpRes = columnExtract(tmp[2].trim(), pipe, fun, aggre)
-              console.log(tmpRes)
+              // console.log(tmpRes)
               if (tmpRes.length === 0) return []
               fields = fields.concat(tmpRes)
             }
@@ -443,7 +443,7 @@ const columnExtract = (str, pipe, fun, aggre) => {
             ) {
               tmpRes.push('*')
             }
-            console.log(tmpRes)
+            // console.log(tmpRes)
             if (tmpRes.length === 0) return []
             fields = fields.concat(tmpRes)
           } else {
@@ -453,7 +453,7 @@ const columnExtract = (str, pipe, fun, aggre) => {
           if (booleanFunctions.includes(tmp[1].toLowerCase())) {
             fun.push(tmp[1].toLowerCase())
             let tmpRes = columnExtract(tmp[2].trim(), pipe, fun, aggre)
-            console.log(tmpRes)
+            // console.log(tmpRes)
             if (tmpRes.length === 0) return []
             fields = fields.concat(tmpRes)
           } else {
@@ -463,7 +463,7 @@ const columnExtract = (str, pipe, fun, aggre) => {
           if (allFunctions.includes(tmp[1].toLowerCase())) {
             fun.push(tmp[1].toLowerCase())
             let tmpRes = columnExtract(tmp[2].trim(), pipe, fun, aggre)
-            console.log(tmpRes)
+            // console.log(tmpRes)
             if (tmpRes.length === 0) return []
             fields = fields.concat(tmpRes)
           } else {
@@ -472,7 +472,7 @@ const columnExtract = (str, pipe, fun, aggre) => {
         }
       } else if (temp && temp[4]) {
         let tmp = /^(\w+|[|~!=%&*+-\/<>^]+)\(\s*(.+)\s*\)$/.exec(temp[4].trim())
-        console.log(tmp)
+        // console.log(tmp)
         if (pipe === 'groupby') {
           if (allFunctions.includes(tmp[1].toLowerCase())) {
             if (aggregateFunctions.includes(tmp[1].toLowerCase())) {
@@ -480,7 +480,7 @@ const columnExtract = (str, pipe, fun, aggre) => {
             } else {
               fun.push(tmp[1].toLowerCase())
               let tmpRes = columnExtract(tmp[2].trim(), pipe, fun, aggre)
-              console.log(tmpRes)
+              // console.log(tmpRes)
               if (tmpRes.length === 0) return []
               fields = fields.concat(tmpRes)
             }
@@ -501,7 +501,7 @@ const columnExtract = (str, pipe, fun, aggre) => {
             ) {
               tmpRes.push('*')
             }
-            console.log(tmpRes)
+            // console.log(tmpRes)
             if (tmpRes.length === 0) return []
             fields = fields.concat(tmpRes)
           } else {
@@ -511,7 +511,7 @@ const columnExtract = (str, pipe, fun, aggre) => {
           if (booleanFunctions.includes(tmp[1].toLowerCase())) {
             fun.push(tmp[1].toLowerCase())
             let tmpRes = columnExtract(tmp[2].trim(), pipe, fun, aggre)
-            console.log(tmpRes)
+            // console.log(tmpRes)
             if (tmpRes.length === 0) return []
             fields = fields.concat(tmpRes)
           } else {
@@ -521,7 +521,7 @@ const columnExtract = (str, pipe, fun, aggre) => {
           if (allFunctions.includes(tmp[1].toLowerCase())) {
             fun.push(tmp[1].toLowerCase())
             let tmpRes = columnExtract(tmp[2].trim(), pipe, fun, aggre)
-            console.log(tmpRes)
+            // console.log(tmpRes)
             if (tmpRes.length === 0) return []
             fields = fields.concat(tmpRes)
           } else {
@@ -541,7 +541,7 @@ const columnExtract = (str, pipe, fun, aggre) => {
       )
       if (temp && temp[1]) {
         let tmp = /^(\w+|[|~!=%&*+-\/<>^]+)\(\s*(.+)\s*\)$/.exec(temp[1].trim())
-        console.log(tmp)
+        // console.log(tmp)
         if (pipe === 'groupby') {
           if (allFunctions.includes(tmp[1].toLowerCase())) {
             if (aggregateFunctions.includes(tmp[1].toLowerCase())) {
@@ -549,7 +549,7 @@ const columnExtract = (str, pipe, fun, aggre) => {
             } else {
               fun.push(tmp[1].toLowerCase())
               let tmpRes = columnExtract(tmp[2].trim(), pipe, fun, aggre)
-              console.log(tmpRes)
+              // console.log(tmpRes)
               if (tmpRes.length === 0) return []
               fields = fields.concat(tmpRes)
             }
@@ -570,7 +570,7 @@ const columnExtract = (str, pipe, fun, aggre) => {
             ) {
               tmpRes.push('*')
             }
-            console.log(tmpRes)
+            // console.log(tmpRes)
             if (tmpRes.length === 0) return []
             fields = fields.concat(tmpRes)
           } else {
@@ -580,7 +580,7 @@ const columnExtract = (str, pipe, fun, aggre) => {
           if (booleanFunctions.includes(tmp[1].toLowerCase())) {
             fun.push(tmp[1].toLowerCase())
             let tmpRes = columnExtract(tmp[2].trim(), pipe, fun, aggre)
-            console.log(tmpRes)
+            // console.log(tmpRes)
             if (tmpRes.length === 0) return []
             fields = fields.concat(tmpRes)
           } else {
@@ -590,7 +590,7 @@ const columnExtract = (str, pipe, fun, aggre) => {
           if (allFunctions.includes(tmp[1].toLowerCase())) {
             fun.push(tmp[1].toLowerCase())
             let tmpRes = columnExtract(tmp[2].trim(), pipe, fun, aggre)
-            console.log(tmpRes)
+            // console.log(tmpRes)
             if (tmpRes.length === 0) return []
             fields = fields.concat(tmpRes)
           } else {
@@ -612,7 +612,7 @@ const columnExtract = (str, pipe, fun, aggre) => {
       )
       if (temp && temp[1]) {
         let tmp = /^(\w+|[|~!=%&*+-\/<>^]+)\(\s*(.+)\s*\)$/.exec(temp[1].trim())
-        console.log(tmp)
+        // console.log(tmp)
         if (pipe === 'groupby') {
           if (allFunctions.includes(tmp[1].toLowerCase())) {
             if (aggregateFunctions.includes(tmp[1].toLowerCase())) {
@@ -620,7 +620,7 @@ const columnExtract = (str, pipe, fun, aggre) => {
             } else {
               fun.push(tmp[1].toLowerCase())
               let tmpRes = columnExtract(tmp[2].trim(), pipe, fun, aggre)
-              console.log(tmpRes)
+              // console.log(tmpRes)
               if (tmpRes.length === 0) return []
               fields = fields.concat(tmpRes)
             }
@@ -641,7 +641,7 @@ const columnExtract = (str, pipe, fun, aggre) => {
             ) {
               tmpRes.push('*')
             }
-            console.log(tmpRes)
+            // console.log(tmpRes)
             if (tmpRes.length === 0) return []
             fields = fields.concat(tmpRes)
           } else {
@@ -651,7 +651,7 @@ const columnExtract = (str, pipe, fun, aggre) => {
           if (booleanFunctions.includes(tmp[1].toLowerCase())) {
             fun.push(tmp[1].toLowerCase())
             let tmpRes = columnExtract(tmp[2].trim(), pipe, fun, aggre)
-            console.log(tmpRes)
+            // console.log(tmpRes)
             if (tmpRes.length === 0) return []
             fields = fields.concat(tmpRes)
           } else {
@@ -661,7 +661,7 @@ const columnExtract = (str, pipe, fun, aggre) => {
           if (allFunctions.includes(tmp[1].toLowerCase())) {
             fun.push(tmp[1].toLowerCase())
             let tmpRes = columnExtract(tmp[2].trim(), pipe, fun, aggre)
-            console.log(tmpRes)
+            // console.log(tmpRes)
             if (tmpRes.length === 0) return []
             fields = fields.concat(tmpRes)
           } else {
@@ -688,11 +688,11 @@ const checkForGroupbyFunctions = (
   correctStr,
   remStr,
 ) => {
-  console.log(value)
+  // console.log(value)
   let fun = /^(\w+|[|~!=%&*+-\/<>^]+)\s*\(\s*(.+)\s*\)$/.exec(value.trim())
   let func = []
   let arr = columnExtract(fun[0], 'groupby', func)
-  console.log(arr)
+  // console.log(arr)
   if (func.length === 0 && arr === 'aggregate') {
     return [
       {
@@ -775,7 +775,7 @@ const checkForGroupbyFunctions = (
         arr,
       ],
     })
-    console.log(groupbyFields)
+    // console.log(groupbyFields)
   }
 }
 
@@ -798,11 +798,11 @@ const checkForSelectFunctions = (
   let fun = /^((\w+|[|~!=%&*+-\/<>^]+)\(\s*(.+)\s*\))(?:\s+[aA][sS]\s+([a-zA-Z0-9_&-]+))?$/.exec(
     value.trim(),
   )
-  console.log(fun)
+  // console.log(fun)
   let aggre = []
   let func = []
   let arr = columnExtract(fun[1], 'select', func, aggre)
-  console.log(arr, aggre, func)
+  // console.log(arr, aggre, func)
   if (fun[2].toLowerCase() === 'distinct') {
     if (i !== 0) {
       return [
@@ -950,7 +950,7 @@ const checkForSelectFunctions = (
           correctField,
         ],
       })
-      console.log(value, splittedArray, correctStr, fun)
+      // console.log(value, splittedArray, correctStr, fun)
       selectFullField.push([
         value,
         'nonAggregate',
@@ -1008,7 +1008,7 @@ const checkSelectAndGroupby = (
   selectFunction,
   selectFullField,
 ) => {
-  console.log(selectAggregate, selectFullField, selectFunction)
+  // console.log(selectAggregate, selectFullField, selectFunction)
   let selAl = selectAliases.map(obj => Object.keys(obj)[0])
   for (let i = 0; i < groupbyFields.length; i++) {
     let tempKey = Object.keys(groupbyFields[i])[0]
@@ -1090,7 +1090,7 @@ const checkSelectAndGroupby = (
     let funs = groupbyFields
       .filter(obj => Object.values(obj)[0].length > 3)
       .map(obj => Object.values(obj)[0][3])
-    console.log(selectFullField, selectFields)
+    // console.log(selectFullField, selectFields)
     for (let i = 0; i < selectFullField.length; i++) {
       if (selectFullField[i][1] === 'aggregate') {
         if (gbyAlias.includes(selectFullField[i][0]) || gbyField.includes(selectFullField[i][0])) {
@@ -1375,11 +1375,11 @@ const checkSelect = (
           'select',
           splittedArray[i].trim().slice(0, splittedArray[i].trim().length - selOps.length),
         )
-        console.log(
-          selOps,
-          splittedArray[i].trim(),
-          splittedArray[i].trim().slice(0, splittedArray[i].trim().length - selOps.length),
-        )
+        // console.log(
+        //   selOps,
+        //   splittedArray[i].trim(),
+        //   splittedArray[i].trim().slice(0, splittedArray[i].trim().length - selOps.length),
+        // )
       } else {
         returnVal = extractfieldsFromOperators('select', splittedArray[i].trim())
       }
@@ -1683,7 +1683,7 @@ const checkGroupby = (query, pos, fieldsList, groupbyFields, groupbyOps, lastPip
           }
         }
       }
-      console.log(returnVal, correctField)
+      // console.log(returnVal, correctField)
       for (let k = 0; k < returnVal.functions.length; k++) {
         let func = checkForGroupbyFunctions(
           returnVal.functions[k],
@@ -2729,7 +2729,7 @@ function splitingQuery(value, ch, addCh, addBrackets, word) {
 
     return { splittedArray, charPos }
   } else if (word === 'checkForWhereCond') {
-    console.log(value)
+    // console.log(value)
     let splittedArray = []
     let charPos = []
     let currentSegment = ''
@@ -3086,14 +3086,14 @@ function validatingWhereConditions(value, separator, query, strObj, fieldsList, 
         ]
       }
     } else if (operatorsSplit.operators === 'ops') {
-      console.log('ops-----------> ', operatorsSplit)
+      // console.log('ops-----------> ', operatorsSplit)
       if (operatorsSplit.splittedArray.length === 2) {
         if (
           /^\s*(?:\(?\s*not\s+)?(?:(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:(?:"[^\n"]*")|(?:'[^\n']*'))|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*(?:([+\-*\/%^&])\s*(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:(?:"[^\n"]*")|(?:'[^\n']*'))|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*?)*)$/gim.test(
             operatorsSplit.splittedArray[0].trim(),
           )
         ) {
-          console.log(value, operatorsSplit.splittedArray)
+          // console.log(value, operatorsSplit.splittedArray)
           let notCheck = /^(\s*not\s+)/.exec(operatorsSplit.splittedArray[0])
           let returnVal = {}
           if (notCheck && notCheck[1]) {
@@ -3128,7 +3128,7 @@ function validatingWhereConditions(value, separator, query, strObj, fieldsList, 
             let arr = []
             let func = []
             arr = columnExtract(returnVal.functions[i].trim(), 'where-all', func)
-            console.log('where-all', arr, returnVal.functions[i].trim(), fun)
+            // console.log('where-all', arr, returnVal.functions[i].trim(), fun)
             if (func.length === 0) {
               return [
                 {
@@ -3212,7 +3212,7 @@ function validatingWhereConditions(value, separator, query, strObj, fieldsList, 
             operatorsSplit.splittedArray[1].trim(),
           )
         ) {
-          console.log(value, operatorsSplit.splittedArray)
+          // console.log(value, operatorsSplit.splittedArray)
           let notCheck = /^(\s*not\s+)/.exec(operatorsSplit.splittedArray[1])
           let returnVal = {}
           if (notCheck && notCheck[1]) {
@@ -3247,7 +3247,7 @@ function validatingWhereConditions(value, separator, query, strObj, fieldsList, 
             let arr = []
             let func = []
             arr = columnExtract(returnVal.functions[i].trim(), 'where-all', func)
-            console.log('where-all', arr, returnVal.functions[i].trim(), fun)
+            // console.log('where-all', arr, returnVal.functions[i].trim(), fun)
             if (func.length === 0) {
               return [
                 {
@@ -3339,14 +3339,14 @@ function validatingWhereConditions(value, separator, query, strObj, fieldsList, 
         ]
       }
     } else if (operatorsSplit.operators === 'between-and') {
-      console.log('between-and-----------> ', operatorsSplit)
+      // console.log('between-and-----------> ', operatorsSplit)
       if (operatorsSplit.splittedArray.length === 3) {
         if (
           /^\s*(?:\(?\s*not\s+)?(?:(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:(?:"[^\n"]*")|(?:'[^\n']*'))|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*(?:([+\-*\/%^&])\s*(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:(?:"[^\n"]*")|(?:'[^\n']*'))|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*?)*)$/gim.test(
             operatorsSplit.splittedArray[0].trim(),
           )
         ) {
-          console.log(value, operatorsSplit.splittedArray)
+          // console.log(value, operatorsSplit.splittedArray)
           let notCheck = /^(\s*not\s+)/.exec(operatorsSplit.splittedArray[0])
           let returnVal = {}
           if (notCheck && notCheck[1]) {
@@ -3381,7 +3381,7 @@ function validatingWhereConditions(value, separator, query, strObj, fieldsList, 
             let arr = []
             let func = []
             arr = columnExtract(returnVal.functions[i].trim(), 'where-all', func)
-            console.log('where-all', arr, returnVal.functions[i].trim(), fun)
+            // console.log('where-all', arr, returnVal.functions[i].trim(), fun)
             if (func.length === 0) {
               return [
                 {
@@ -3465,7 +3465,7 @@ function validatingWhereConditions(value, separator, query, strObj, fieldsList, 
             operatorsSplit.splittedArray[1].trim(),
           )
         ) {
-          console.log(value, operatorsSplit.splittedArray)
+          // console.log(value, operatorsSplit.splittedArray)
           let notCheck = /^(\s*not\s+)/.exec(operatorsSplit.splittedArray[1])
           let returnVal = {}
           if (notCheck && notCheck[1]) {
@@ -3500,7 +3500,7 @@ function validatingWhereConditions(value, separator, query, strObj, fieldsList, 
             let arr = []
             let func = []
             arr = columnExtract(returnVal.functions[i].trim(), 'where-all', func)
-            console.log('where-all', arr, returnVal.functions[i].trim(), fun)
+            // console.log('where-all', arr, returnVal.functions[i].trim(), fun)
             if (func.length === 0) {
               return [
                 {
@@ -3584,7 +3584,7 @@ function validatingWhereConditions(value, separator, query, strObj, fieldsList, 
             operatorsSplit.splittedArray[2].trim(),
           )
         ) {
-          console.log(value, operatorsSplit.splittedArray)
+          // console.log(value, operatorsSplit.splittedArray)
           let notCheck = /^(\s*not\s+)/.exec(operatorsSplit.splittedArray[2])
           let returnVal = {}
           if (notCheck && notCheck[1]) {
@@ -3619,7 +3619,7 @@ function validatingWhereConditions(value, separator, query, strObj, fieldsList, 
             let arr = []
             let func = []
             arr = columnExtract(returnVal.functions[i].trim(), 'where-all', func)
-            console.log('where-all', arr, returnVal.functions[i].trim(), fun)
+            // console.log('where-all', arr, returnVal.functions[i].trim(), fun)
             if (func.length === 0) {
               return [
                 {
@@ -3711,14 +3711,14 @@ function validatingWhereConditions(value, separator, query, strObj, fieldsList, 
         ]
       }
     } else if (operatorsSplit.operators === 'like' || operatorsSplit.operators === 'not like') {
-      console.log('like-----------> ', operatorsSplit)
+      // console.log('like-----------> ', operatorsSplit)
       if (operatorsSplit.splittedArray.length === 2) {
         if (
           /^\s*(?:\(?\s*not\s+)?(?:(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:(?:"[^\n"]*")|(?:'[^\n']*'))|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*(?:([+\-*\/%^&])\s*(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:(?:"[^\n"]*")|(?:'[^\n']*'))|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*?)*)$/gim.test(
             operatorsSplit.splittedArray[0].trim(),
           )
         ) {
-          console.log(value, operatorsSplit.splittedArray)
+          // console.log(value, operatorsSplit.splittedArray)
           let notCheck = /^(\s*not\s+)/.exec(operatorsSplit.splittedArray[0])
           let returnVal = {}
           if (notCheck && notCheck[1]) {
@@ -3753,7 +3753,7 @@ function validatingWhereConditions(value, separator, query, strObj, fieldsList, 
             let arr = []
             let func = []
             arr = columnExtract(returnVal.functions[i].trim(), 'where-all', func)
-            console.log('where-all', arr, returnVal.functions[i].trim(), fun)
+            // console.log('where-all', arr, returnVal.functions[i].trim(), fun)
             if (func.length === 0) {
               return [
                 {
@@ -3837,7 +3837,7 @@ function validatingWhereConditions(value, separator, query, strObj, fieldsList, 
             operatorsSplit.splittedArray[1].trim(),
           )
         ) {
-          console.log(value, operatorsSplit.splittedArray)
+          // console.log(value, operatorsSplit.splittedArray)
           let notCheck = /^(\s*not\s+)/.exec(operatorsSplit.splittedArray[1])
           let returnVal = {}
           if (notCheck && notCheck[1]) {
@@ -3872,7 +3872,7 @@ function validatingWhereConditions(value, separator, query, strObj, fieldsList, 
             let arr = []
             let func = []
             arr = columnExtract(returnVal.functions[i].trim(), 'where-all', func)
-            console.log('where-all', arr, returnVal.functions[i].trim(), fun)
+            // console.log('where-all', arr, returnVal.functions[i].trim(), fun)
             if (func.length === 0) {
               return [
                 {
@@ -3964,14 +3964,14 @@ function validatingWhereConditions(value, separator, query, strObj, fieldsList, 
         ]
       }
     } else if (operatorsSplit.operators === 'in' || operatorsSplit.operators === 'not in') {
-      console.log('in-----------> ', operatorsSplit)
+      // console.log('in-----------> ', operatorsSplit)
       if (operatorsSplit.splittedArray.length === 2) {
         if (
           /^\s*(?:\(?\s*not\s+)?(?:(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:(?:"[^\n"]*")|(?:'[^\n']*'))|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*(?:([+\-*\/%^&])\s*(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:(?:"[^\n"]*")|(?:'[^\n']*'))|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*?)*)$/gim.test(
             operatorsSplit.splittedArray[0].trim(),
           )
         ) {
-          console.log(value, operatorsSplit.splittedArray)
+          // console.log(value, operatorsSplit.splittedArray)
           let notCheck = /^(\s*not\s+)/.exec(operatorsSplit.splittedArray[0])
           let returnVal = {}
           if (notCheck && notCheck[1]) {
@@ -4006,7 +4006,7 @@ function validatingWhereConditions(value, separator, query, strObj, fieldsList, 
             let arr = []
             let func = []
             arr = columnExtract(returnVal.functions[i].trim(), 'where-all', func)
-            console.log('where-all', arr, returnVal.functions[i].trim(), fun)
+            // console.log('where-all', arr, returnVal.functions[i].trim(), fun)
             if (func.length === 0) {
               return [
                 {
@@ -4271,7 +4271,7 @@ function validatingWhereConditions(value, separator, query, strObj, fieldsList, 
             if (fun && fun[1]) {
               arr = columnExtract(returnVal.functions[i].trim(), 'where-all', func)
             }
-            console.log('where-all', arr, fun)
+            // console.log('where-all', arr, fun)
             if (func.length === 0) {
               return [
                 {
@@ -4407,7 +4407,7 @@ function validatingHavingConditions(value, separator, query, strObj, pos, having
   } else {
     // let opers = value.trim().split(/(<=|>=|==|!=|<|>)/).filter((op) => (op !== undefined && op !== null && !/^\s*$/m.test(op)))
     let opers = splitingQuery(value, '', false, false, 'havingCond').splittedArray
-    console.log(opers)
+    // console.log(opers)
     const operators = ['<=', '>=', '==', '!=', '<', '>']
     if (opers.length === 0 || opers[0] === '') {
       return [
@@ -4747,7 +4747,7 @@ function validatingHavingWithSelectAndGroupby(
         }
       }
     }
-    console.log(fieldsListForHaving, selectFields, selectFullField)
+    // console.log(fieldsListForHaving, selectFields, selectFullField)
     for (let i = 0; i < havingFullFields.length; i++) {
       if (!fieldsListForHaving.includes(havingFullFields[i][1].toLowerCase().trim())) {
         return [
@@ -4851,8 +4851,8 @@ function validateQuery(model, streams, streamList) {
   }
   let valueArr = model.split(/\n/g)
   let value = valueArr.join('')
-  // console.log('^^^^^^^^^^', value)
-  // console.log(valueArr)
+  // // console.log('^^^^^^^^^^', value)
+  // // console.log(valueArr)
   let markers = []
   let pipePos = []
   let queryArray = []
@@ -4874,15 +4874,15 @@ function validateQuery(model, streams, streamList) {
   // if (!validQ.isValid) {
   //   return validQ
   // }
-  // console.log(queryPattern['stream'].test(value), /^\s*\bstream\s*=.+/gi.test(value))
+  // // console.log(queryPattern['stream'].test(value), /^\s*\bstream\s*=.+/gi.test(value))
   if (/^(\s*\bstream\s*=.+)|(\s*\bsourcename\s*=.+)/gi.test(value)) {
     // const queryArray = value.split('|')
     // const queryArray = value.split('|')
-    console.log(queryArray)
+    // console.log(queryArray)
     let bracketsErr = validateBrackets(value)
     if (bracketsErr.length > 0) {
       let end = process.hrtime(start);
-      console.log(bracketsErr)
+      // console.log(bracketsErr)
       return { markers: bracketsErr[0], time: Math.round((end[0] * 1000 + end[1] / 1000000) * 10000) / 10000 }
     }
 
@@ -4908,7 +4908,7 @@ function validateQuery(model, streams, streamList) {
     }
     if (streamErrors.length > 0) {
       markers.push(streamErrors[0])
-      console.log(streamErrors)
+      // console.log(streamErrors)
     }
 
     if (selectedStream.length > 0 && streamErrors.length === 0) {
@@ -4927,7 +4927,7 @@ function validateQuery(model, streams, streamList) {
 
     // checkForIncorrectAndRepeatedPipes(value, markers, pipes, model, pipePos, pipeArr)
     // checkfor incorrect/repeated pipes, if correct pipes found -> check for full syntax
-    console.log(pipePos, 'pipeArr', pipeArr, 'pipes:', pipes)
+    // console.log(pipePos, 'pipeArr', pipeArr, 'pipes:', pipes)
     for (let k = 0; k < pipeArr.length && markers.length === 0; k++) {
       let matches = [
         ...pipeArr[k].matchAll(
@@ -4935,7 +4935,7 @@ function validateQuery(model, streams, streamList) {
         ),
       ]
       if (matches.length > 0) {
-        console.log(matches[0][2], 'matchemaa', matches, pipePos[k])
+        // console.log(matches[0][2], 'matchemaa', matches, pipePos[k])
         if (pipes[matches[0][2]][0] === -1) {
           pipes[matches[0][2]][0] = pipePos[k]
           pipes[matches[0][2]][1] = matches[0][1].length
@@ -5167,12 +5167,12 @@ function validateQuery(model, streams, streamList) {
     }
   }
 
-  // console.log('MARKERS', markers)
-  // console.log('newMarkers', newMark)
+  // // console.log('MARKERS', markers)
+  // // console.log('newMarkers', newMark)
   // monaco.editor.setModelMarkers(model, 'Pipe position', newMark)
   // console.timeEnd('validateQuery')
   let end = process.hrtime(start);
-  console.log("ELAPSED TIME", Math.round((end - start) * 10000) / 10000);
+  // console.log("ELAPSED TIME", Math.round((end - start) * 10000) / 10000);
   return { markers: newMark[0], time: Math.round((end[0] * 1000 + end[1] / 1000000) * 10000) / 10000 }
 }
 
