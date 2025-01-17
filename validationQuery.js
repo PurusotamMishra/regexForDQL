@@ -8,6 +8,91 @@ const monaco = {
   }
 }
 
+const extractfieldsFromOperators = (pipe, value) => {
+  if (/^\(([^\n]+)\)$/gm.test(value.trim())) {
+    let { fields, functions } = extractfieldsFromOperators(
+      pipe,
+      /^\(([^\n]+)\)$/gm.exec(value.trim())[1].trim(),
+    )
+    return { fields, functions }
+  }
+  let fields = []
+  let functions = []
+  let matches = splitingQuery(value.trim(), '', false, false, 'ops').splittedArray
+  console.log(matches)
+  matches.forEach(item => {
+    if (
+      (/^\w+$/gm.test(item.trim()) && !/^\d+$/.test(item.trim())) ||
+      (/^\(\s*\w+\s*\)$/.test(item.trim()) && !/^\(\s*\d+\s*\)$/.test(item.trim()))
+    ) {
+      fields.push(item.trim())
+    } else if (/^(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\))$/gm.test(item.trim())) {
+      functions.push(item.trim())
+    }
+  })
+  return { fields, functions }
+}
+
+const functionsExtract = (value, str, pipe, fun, aggre) => {
+  let fields = []
+  let tmp = /^(\w+|[|~!=%&*+-\/<>^]+)\(\s*(.+)\s*\)$/.exec(value.trim())
+  console.log(tmp)
+  if (pipe === 'groupby') {
+    if (allFunctions.includes(tmp[1].toLowerCase())) {
+      if (aggregateFunctions.includes(tmp[1].toLowerCase())) {
+        return 'aggregate'
+      } else {
+        fun.push(tmp[1].toLowerCase())
+        let tmpRes = columnExtract(tmp[2].trim(), pipe, fun, aggre)
+        console.log(tmpRes)
+        if (tmpRes.length === 0) return []
+        else if (typeof tmpRes === 'string') return tmpRes
+        fields = fields.concat(tmpRes)
+      }
+    } else {
+      return 'error'
+    }
+  } else if (pipe === 'select') {
+    if (allFunctions.includes(tmp[1].toLowerCase())) {
+      fun.push(tmp[1].toLowerCase())
+      if (aggregateFunctions.includes(tmp[1].toLowerCase())) {
+        aggre.push(tmp[1])
+      }
+      let tmpRes = columnExtract(tmp[2].trim(), pipe, fun, aggre)
+      if (tmp[1].toLowerCase() === 'count' && tmpRes.length === 0 && tmp[2].trim().includes('*')) {
+        tmpRes.push('*')
+      }
+      console.log(tmpRes)
+      if (tmpRes.length === 0) return []
+      else if (tmpRes === 'error') return 'error'
+      fields = fields.concat(tmpRes)
+    } else {
+      return 'error'
+    }
+  } else if (pipe === 'where-boolean') {
+    if (booleanFunctions.includes(tmp[1].toLowerCase())) {
+      fun.push(tmp[1].toLowerCase())
+      let tmpRes = columnExtract(tmp[2].trim(), pipe, fun, aggre)
+      console.log(tmpRes)
+      if (tmpRes.length === 0) return []
+      fields = fields.concat(tmpRes)
+    } else {
+      return []
+    }
+  } else if (pipe === 'where-all') {
+    if (allFunctions.includes(tmp[1].toLowerCase())) {
+      fun.push(tmp[1].toLowerCase())
+      let tmpRes = columnExtract(tmp[2].trim(), pipe, fun, aggre)
+      console.log(tmpRes)
+      if (tmpRes.length === 0) return []
+      else if (typeof tmpRes === 'string') return tmpRes
+      fields = fields.concat(tmpRes)
+    } else {
+      return 'error'
+    }
+  }
+  return fields
+}
 
 const validateBrackets = model => {
   const value = model
@@ -71,7 +156,6 @@ const sourcenameValidation = (
 ) => {
   let whereSplit = splitingQuery(query, '', true, true, 'streamsWhere')
   let queryArr = whereSplit.splittedArray
-  console.log(queryArr, whereSplit)
   let correctStr = ''
   let remStr = ''
   let arr = [...queryArr[0].matchAll(/^(\s*sourcename\s*=\s*)?/gim)][0]
@@ -85,7 +169,6 @@ const sourcenameValidation = (
       if (sourcenames.includes(remStr.trim().toUpperCase())) {
         let tempStream = JSON.parse(JSON.stringify(sourceNameDetails[remStr.trim().toUpperCase()]))
         tempStream.forEach(stream => selectedStream.push(stream.toLowerCase()))
-        console.log(selectedStream, sourceNameDetails[remStr.trim().toUpperCase()])
       } else {
         return [
           {
@@ -118,21 +201,10 @@ const sourcenameValidation = (
           startColumn: correctStr.length,
           // endLineNumber: model.getPositionAt(i).lineNumber,
           endColumn: correctStr.length + remStr?.length + 1,
-          message: `SOURCENAME: Write sourcename`,
+          message: `SOURCENAME: Write a sourcename`,
           severity: monaco.MarkerSeverity.Warning,
         },
       ]
-      // } else {
-      //   return [
-      //     {
-      //       // startLineNumber: model.getPositionAt(i).lineNumber,
-      //       startColumn: 1,
-      //       // endLineNumber: model.getPositionAt(i).lineNumber,
-      //       endColumn: correctStr.length + 1,
-      //       message: `STREAM: Empty stream clause`,
-      //       severity: monaco.MarkerSeverity.Error,
-      //     },
-      //   ]
     } else {
       return [
         {
@@ -140,7 +212,7 @@ const sourcenameValidation = (
           startColumn: correctStr.length,
           // endLineNumber: model.getPositionAt(i).lineNumber,
           endColumn: correctStr.length + remStr?.length + 1,
-          message: `SOURCENAME: Write sourcename`,
+          message: `SOURCENAME: Write a sourcename`,
           severity: monaco.MarkerSeverity.Error,
         },
       ]
@@ -154,7 +226,7 @@ const sourcenameValidation = (
         startColumn: correctStr.length + 1,
         // endLineNumber: model.getPositionAt(i).lineNumber,
         endColumn: correctStr.length + remStr?.length + 2,
-        message: `STREAM: write after "WHERE"`,
+        message: `SOURCENAME: Write after "WHERE"`,
         severity: monaco.MarkerSeverity.Warning,
       },
     ]
@@ -178,10 +250,8 @@ const sourcenameValidation = (
       correctStr = queryArr[0] + ' where '
       remStr = query.slice(correctStr.length)
       let res = separatingFromBrackets(remStr, false)
-      console.log(res)
       let errorMsg = []
       let strObj = { correctStr: correctStr, remStr: remStr }
-      console.log('fieldsList', fieldsList)
       for (let k = 0; k < res.splittedArray.length; k++) {
         let err = validatingWhereConditions(
           res.splittedArray[k],
@@ -195,7 +265,6 @@ const sourcenameValidation = (
           errorMsg = errorMsg.concat(err)
         }
         if (errorMsg.length > 0) {
-          console.log(query, errorMsg)
           let ind = getIndexOfSubstring(query, errorMsg[0].query)
           errorMsg[0].startColumn = ind + 1
           errorMsg[0].endColumn = ind + errorMsg[0].query.length + 1
@@ -219,7 +288,7 @@ const sourcenameValidation = (
         startColumn: correctStr.length + 1,
         // endLineNumber: model.getPositionAt(i).lineNumber,
         endColumn: correctStr.length + remStr?.length + 2,
-        message: `STREAM: repeated WHERE`,
+        message: `SOURCENAME: repeated WHERE`,
         severity: monaco.MarkerSeverity.Error,
       },
     ]
@@ -234,26 +303,48 @@ const columnExtract = (str, pipe, fun, aggre) => {
   let arr = splitingQuery(str, ',', false, true).splittedArray
   for (let i = 0; i < arr.length; i++) {
     console.log(arr[i])
-    if (/^[a-zA-Z0-9_]+$/.test(arr[i].trim()) && !/^\d+$/.test(arr[i].trim())) {
+    if (
+      /^(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:(?:"[^\n"]*")|(?:'[^\n']*'))|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*(?:([+\-*\/%^&])\s*(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:(?:"[^\n"]*")|(?:'[^\n']*'))|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*?)+$/gm.test(
+        arr[i].trim(),
+      )
+    ) {
+      console.log('expressions*******', arr[i])
+      let returnVal = extractfieldsFromOperators(pipe, arr[i])
+
+      let tempFunFields = []
+      if (returnVal.functions.length > 0 && pipe !== 'where-boolean') {
+        for (let i = 0; i < returnVal.functions?.length; i++) {
+          let tempF = functionsExtract(returnVal.functions[i], str, pipe, fun, aggre)
+          if (tempF.length === 0) {
+            return 'error'
+          }
+          if (typeof tempF === 'string') return tempF
+          tempFunFields = tempFunFields.concat(tempF)
+        }
+        fields = fields.concat(tempFunFields)
+      }
+      fields = fields.concat(returnVal.fields)
+    } else if (/^[a-zA-Z0-9_]+$/.test(arr[i].trim()) && !/^\d+$/.test(arr[i].trim())) {
       fields.push(arr[i])
     } else if (/^@\w+(((\.\w+)|(\[\s*\d+\s*\]))+)?$/gm.test(arr[i].trim())) {
       fields.push(arr[i])
-    } else if (/^(\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)$/.test(arr[i].trim())) {
+    } else if (/^(\w+|[|~!=%&*+-\/<>^]+)\([^\n]+\)$/gm.test(arr[i].trim())) {
       let tmp = /^(\w+|[|~!=%&*+-\/<>^]+)\(\s*(.+)\s*\)$/.exec(arr[i].trim())
       console.log(tmp)
       if (pipe === 'groupby') {
         if (allFunctions.includes(tmp[1].toLowerCase())) {
           if (aggregateFunctions.includes(tmp[1].toLowerCase())) {
-            return []
+            return 'aggregate'
           } else {
             fun.push(tmp[1].toLowerCase())
             let tmpRes = columnExtract(tmp[2].trim(), pipe, fun, aggre)
             console.log(tmpRes)
             if (tmpRes.length === 0) return []
+            else if (typeof tmpRes === 'string') return tmpRes
             fields = fields.concat(tmpRes)
           }
         } else {
-          return []
+          return 'error'
         }
       } else if (pipe === 'select') {
         if (allFunctions.includes(tmp[1].toLowerCase())) {
@@ -271,9 +362,10 @@ const columnExtract = (str, pipe, fun, aggre) => {
           }
           console.log(tmpRes)
           if (tmpRes.length === 0) return []
+          else if (tmpRes === 'error') return 'error'
           fields = fields.concat(tmpRes)
         } else {
-          return []
+          return 'error'
         }
       } else if (pipe === 'where-boolean') {
         if (booleanFunctions.includes(tmp[1].toLowerCase())) {
@@ -281,6 +373,7 @@ const columnExtract = (str, pipe, fun, aggre) => {
           let tmpRes = columnExtract(tmp[2].trim(), pipe, fun, aggre)
           console.log(tmpRes)
           if (tmpRes.length === 0) return []
+          else if (typeof tmpRes === 'string') return tmpRes
           fields = fields.concat(tmpRes)
         } else {
           return []
@@ -291,32 +384,613 @@ const columnExtract = (str, pipe, fun, aggre) => {
           let tmpRes = columnExtract(tmp[2].trim(), pipe, fun, aggre)
           console.log(tmpRes)
           if (tmpRes.length === 0) return []
+          else if (typeof tmpRes === 'string') return tmpRes
           fields = fields.concat(tmpRes)
         } else {
-          return []
+          return 'error'
         }
       }
-    } else if (/\d+|'([^']+)'|\"([^\"]+)\"/.test(arr[i].trim())) {
+    } else if (/^(\d+|'([^']+)'|\"([^\"]+)\")$/gm.test(arr[i].trim())) {
       continue
-    } else if (/^\((.+)\)$/.test(arr[i].trim())) {
+    } else if (/^\((.+)\)$/gm.test(arr[i].trim())) {
       console.log(arr[i])
       let tmpRes = columnExtract(/^\((.+)\)$/.exec(arr[i].trim())[1].trim(), pipe, fun, aggre)
       console.log(tmpRes)
       if (tmpRes.length === 0) return []
       fields = fields.concat(tmpRes)
+    }
+    // like
+    else if (
+      /^(?:\(?\s*not\s+)?\(*\s*(?:(("[^\n"]*")|('[^\n']*'))|(@\w+(((\.\w+)|(\[\s*\d+\s*\]))+)?)|((\w+|[|~!=%&*+-\/<>^]+)\([^\n]+\))|(([a-zA-Z0-9_-]+))|(\d+))\s*\)?\s+(not\s*like|like)\s*\(?\s*(?:(("[^\n"]*")|('[^\n']*'))|(@\w+(((\.\w+)|(\[\s*\d+\s*\]))+)?)|((\w+|[|~!=%&*+-\/<>^]+)\([^\n]+\))|(([a-zA-Z0-9_-]+))|(\d+))\s*\)?\s*\)?$/gim.test(
+        arr[i].trim(),
+      )
+    ) {
+      let temp = /^(?:\(?\s*not\s+)?\(*\s*(?:(?:(?:"[^\n"]*")|(?:'[^\n']*'))|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|((?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\))|((?:[a-zA-Z0-9_-]+))|(?:\d+))\s*\)?\s+(not\s*like|like)\s*\(?\s*(?:(?:(?:"[^\n"]*")|(?:'[^\n']*'))|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|((?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\))|((?:[a-zA-Z0-9_-]+))|(?:\d+))\s*\)?\s*\)?$/gim.exec(
+        arr[i].trim(),
+      )
+      if (temp && temp[2] && !/^\d+$/.test(temp[2].trim())) {
+        fields.push(temp[2].trim())
+      } else if (temp && temp[5] && !/^\d+$/.test(temp[5].trim())) {
+        fields.push(temp[5].trim())
+      } else if (temp && temp[1]) {
+        let tmp = /^(\w+|[|~!=%&*+-\/<>^]+)\(\s*(.+)\s*\)$/.exec(temp[1].trim())
+        console.log(tmp)
+        if (pipe === 'groupby') {
+          if (allFunctions.includes(tmp[1].toLowerCase())) {
+            if (aggregateFunctions.includes(tmp[1].toLowerCase())) {
+              return []
+            } else {
+              fun.push(tmp[1].toLowerCase())
+              let tmpRes = columnExtract(tmp[2].trim(), pipe, fun, aggre)
+              console.log(tmpRes)
+              if (tmpRes.length === 0) return []
+              fields = fields.concat(tmpRes)
+            }
+          } else {
+            return []
+          }
+        } else if (pipe === 'select') {
+          if (allFunctions.includes(tmp[1].toLowerCase())) {
+            fun.push(tmp[1].toLowerCase())
+            if (aggregateFunctions.includes(tmp[1].toLowerCase())) {
+              aggre.push(tmp[1])
+            }
+            let tmpRes = columnExtract(tmp[2].trim(), pipe, fun, aggre)
+            if (
+              tmp[1].toLowerCase() === 'count' &&
+              tmpRes.length === 0 &&
+              tmp[2].trim().includes('*')
+            ) {
+              tmpRes.push('*')
+            }
+            console.log(tmpRes)
+            if (tmpRes.length === 0) return []
+            fields = fields.concat(tmpRes)
+          } else {
+            return []
+          }
+        } else if (pipe === 'where-boolean') {
+          if (booleanFunctions.includes(tmp[1].toLowerCase())) {
+            fun.push(tmp[1].toLowerCase())
+            let tmpRes = columnExtract(tmp[2].trim(), pipe, fun, aggre)
+            console.log(tmpRes)
+            if (tmpRes.length === 0) return []
+            fields = fields.concat(tmpRes)
+          } else {
+            return []
+          }
+        } else if (pipe === 'where-all') {
+          if (allFunctions.includes(tmp[1].toLowerCase())) {
+            fun.push(tmp[1].toLowerCase())
+            let tmpRes = columnExtract(tmp[2].trim(), pipe, fun, aggre)
+            console.log(tmpRes)
+            if (tmpRes.length === 0) return []
+            fields = fields.concat(tmpRes)
+          } else {
+            return []
+          }
+        }
+      } else if (temp && temp[4]) {
+        let tmp = /^(\w+|[|~!=%&*+-\/<>^]+)\(\s*(.+)\s*\)$/.exec(temp[4].trim())
+        console.log(tmp)
+        if (pipe === 'groupby') {
+          if (allFunctions.includes(tmp[1].toLowerCase())) {
+            if (aggregateFunctions.includes(tmp[1].toLowerCase())) {
+              return []
+            } else {
+              fun.push(tmp[1].toLowerCase())
+              let tmpRes = columnExtract(tmp[2].trim(), pipe, fun, aggre)
+              console.log(tmpRes)
+              if (tmpRes.length === 0) return []
+              fields = fields.concat(tmpRes)
+            }
+          } else {
+            return []
+          }
+        } else if (pipe === 'select') {
+          if (allFunctions.includes(tmp[1].toLowerCase())) {
+            fun.push(tmp[1].toLowerCase())
+            if (aggregateFunctions.includes(tmp[1].toLowerCase())) {
+              aggre.push(tmp[1])
+            }
+            let tmpRes = columnExtract(tmp[2].trim(), pipe, fun, aggre)
+            if (
+              tmp[1].toLowerCase() === 'count' &&
+              tmpRes.length === 0 &&
+              tmp[2].trim().includes('*')
+            ) {
+              tmpRes.push('*')
+            }
+            console.log(tmpRes)
+            if (tmpRes.length === 0) return []
+            fields = fields.concat(tmpRes)
+          } else {
+            return []
+          }
+        } else if (pipe === 'where-boolean') {
+          if (booleanFunctions.includes(tmp[1].toLowerCase())) {
+            fun.push(tmp[1].toLowerCase())
+            let tmpRes = columnExtract(tmp[2].trim(), pipe, fun, aggre)
+            console.log(tmpRes)
+            if (tmpRes.length === 0) return []
+            fields = fields.concat(tmpRes)
+          } else {
+            return []
+          }
+        } else if (pipe === 'where-all') {
+          if (allFunctions.includes(tmp[1].toLowerCase())) {
+            fun.push(tmp[1].toLowerCase())
+            let tmpRes = columnExtract(tmp[2].trim(), pipe, fun, aggre)
+            console.log(tmpRes)
+            if (tmpRes.length === 0) return []
+            fields = fields.concat(tmpRes)
+          } else {
+            return []
+          }
+        }
+      }
+    }
+    // in
+    else if (
+      /^(?:\(?\s*not\s+)?\(??\s*(?:(?:(?:"[^\n"]*")|(?:'[^\n']*'))|(@\w+(((\.\w+)|(\[\s*\d+\s*\]))+)?)|((\w+|[|~!=%&*+-\/<>^]+)\([^\n]+\))|(([a-zA-Z0-9_-]+))|(\d+))\s*(not\s+in|in)\s*(?:\(*(?:(?:"[^\n"]*")|(?:'[^\n']*'))(?:\s*,\s*(?:(?:"[^\n"]*")|(?:'[^\n']*')))*\s*\)*)\s*?$/gim.test(
+        arr[i].trim(),
+      )
+    ) {
+      let temp = /^(?:\(?\s*not\s+)?\(??\s*(?:(?:(?:"[^\n"]*")|(?:'[^\n']*'))|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|((?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\))|(?:([a-zA-Z0-9_-]+))|(?:\d+))\s*(not\s+in|in)\s*(?:\(*(?:(?:"[^\n"]*")|(?:'[^\n']*'))(?:\s*,\s*(?:(?:"[^\n"]*")|(?:'[^\n']*')))*\s*\)*)\s*?$/gim.exec(
+        arr[i].trim(),
+      )
+      if (temp && temp[1]) {
+        let tmp = /^(\w+|[|~!=%&*+-\/<>^]+)\(\s*(.+)\s*\)$/.exec(temp[1].trim())
+        console.log(tmp)
+        if (pipe === 'groupby') {
+          if (allFunctions.includes(tmp[1].toLowerCase())) {
+            if (aggregateFunctions.includes(tmp[1].toLowerCase())) {
+              return []
+            } else {
+              fun.push(tmp[1].toLowerCase())
+              let tmpRes = columnExtract(tmp[2].trim(), pipe, fun, aggre)
+              console.log(tmpRes)
+              if (tmpRes.length === 0) return []
+              fields = fields.concat(tmpRes)
+            }
+          } else {
+            return []
+          }
+        } else if (pipe === 'select') {
+          if (allFunctions.includes(tmp[1].toLowerCase())) {
+            fun.push(tmp[1].toLowerCase())
+            if (aggregateFunctions.includes(tmp[1].toLowerCase())) {
+              aggre.push(tmp[1])
+            }
+            let tmpRes = columnExtract(tmp[2].trim(), pipe, fun, aggre)
+            if (
+              tmp[1].toLowerCase() === 'count' &&
+              tmpRes.length === 0 &&
+              tmp[2].trim().includes('*')
+            ) {
+              tmpRes.push('*')
+            }
+            console.log(tmpRes)
+            if (tmpRes.length === 0) return []
+            fields = fields.concat(tmpRes)
+          } else {
+            return []
+          }
+        } else if (pipe === 'where-boolean') {
+          if (booleanFunctions.includes(tmp[1].toLowerCase())) {
+            fun.push(tmp[1].toLowerCase())
+            let tmpRes = columnExtract(tmp[2].trim(), pipe, fun, aggre)
+            console.log(tmpRes)
+            if (tmpRes.length === 0) return []
+            fields = fields.concat(tmpRes)
+          } else {
+            return []
+          }
+        } else if (pipe === 'where-all') {
+          if (allFunctions.includes(tmp[1].toLowerCase())) {
+            fun.push(tmp[1].toLowerCase())
+            let tmpRes = columnExtract(tmp[2].trim(), pipe, fun, aggre)
+            console.log(tmpRes)
+            if (tmpRes.length === 0) return []
+            fields = fields.concat(tmpRes)
+          } else {
+            return []
+          }
+        }
+      } else if (temp && temp[2] && !/^\d+$/.test(temp[2].trim())) {
+        fields.push(temp[2].trim())
+      }
+    }
+    // . is null | . is not null
+    else if (
+      /^(?:\(?\s*not\s+)?\(?\s*(?:(("[^\n"]*")|('[^\n']*'))|(@\w+(((\.\w+)|(\[\s*\d+\s*\]))+)?)|((\w+|[|~!=%&*+-\/<>^]+)\([^\n]+\))|(([a-zA-Z0-9_-]+))|(\d+))\s*(?:is|is\s+not)\s+null\s*\)?$/gim.test(
+        arr[i].trim(),
+      )
+    ) {
+      let temp = /^(?:\(?\s*not\s+)?\(?\s*(?:(?:(?:"[^\n"]*")|(?:'[^\n']*'))|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|((?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\))|((?:[a-zA-Z0-9_-]+))|(?:\d+))\s*(?:is|is\s+not)\s+null\s*\)?$/gim.exec(
+        arr[i].trim(),
+      )
+      if (temp && temp[1]) {
+        let tmp = /^(\w+|[|~!=%&*+-\/<>^]+)\(\s*(.+)\s*\)$/.exec(temp[1].trim())
+        console.log(tmp)
+        if (pipe === 'groupby') {
+          if (allFunctions.includes(tmp[1].toLowerCase())) {
+            if (aggregateFunctions.includes(tmp[1].toLowerCase())) {
+              return []
+            } else {
+              fun.push(tmp[1].toLowerCase())
+              let tmpRes = columnExtract(tmp[2].trim(), pipe, fun, aggre)
+              console.log(tmpRes)
+              if (tmpRes.length === 0) return []
+              fields = fields.concat(tmpRes)
+            }
+          } else {
+            return []
+          }
+        } else if (pipe === 'select') {
+          if (allFunctions.includes(tmp[1].toLowerCase())) {
+            fun.push(tmp[1].toLowerCase())
+            if (aggregateFunctions.includes(tmp[1].toLowerCase())) {
+              aggre.push(tmp[1])
+            }
+            let tmpRes = columnExtract(tmp[2].trim(), pipe, fun, aggre)
+            if (
+              tmp[1].toLowerCase() === 'count' &&
+              tmpRes.length === 0 &&
+              tmp[2].trim().includes('*')
+            ) {
+              tmpRes.push('*')
+            }
+            console.log(tmpRes)
+            if (tmpRes.length === 0) return []
+            fields = fields.concat(tmpRes)
+          } else {
+            return []
+          }
+        } else if (pipe === 'where-boolean') {
+          if (booleanFunctions.includes(tmp[1].toLowerCase())) {
+            fun.push(tmp[1].toLowerCase())
+            let tmpRes = columnExtract(tmp[2].trim(), pipe, fun, aggre)
+            console.log(tmpRes)
+            if (tmpRes.length === 0) return []
+            fields = fields.concat(tmpRes)
+          } else {
+            return []
+          }
+        } else if (pipe === 'where-all') {
+          if (allFunctions.includes(tmp[1].toLowerCase())) {
+            fun.push(tmp[1].toLowerCase())
+            let tmpRes = columnExtract(tmp[2].trim(), pipe, fun, aggre)
+            console.log(tmpRes)
+            if (tmpRes.length === 0) return []
+            fields = fields.concat(tmpRes)
+          } else {
+            return []
+          }
+        }
+      } else if (temp && temp[2] && !/^\d+$/.test(temp[2].trim())) {
+        fields.push(temp[2].trim())
+      }
     } else return []
   }
   return fields
 }
 
+const checkForGroupbyFunctions = (
+  value,
+  splittedArray,
+  i,
+  query,
+  pos,
+  fieldsList,
+  groupbyFields,
+  lastPip,
+  correctStr,
+  remStr,
+) => {
+  console.log(value)
+  let fun = /^(\w+|[|~!=%&*+-\/<>^]+)\s*\(\s*(.+)\s*\)$/.exec(value.trim())
+  let func = []
+  let arr = columnExtract(fun[0], 'groupby', func)
+  console.log(arr)
+  if (func.length === 0 && arr === 'aggregate') {
+    return [
+      {
+        // startLineNumber: model.getPositionAt(i).lineNumber,
+        startColumn: pos + correctStr.length + 1,
+        // endLineNumber: model.getPositionAt(i).lineNumber,
+        endColumn: pos + correctStr.length + splittedArray[i].length + 2,
+        message: `Aggregate function "${fun[1]?.trim()}" is not allowed with "GROUPBY"!`,
+        severity: monaco.MarkerSeverity.Error,
+      },
+    ]
+  } else if (func.length > 0 && arr === 'aggregate') {
+    return [
+      {
+        // startLineNumber: model.getPositionAt(i).lineNumber,
+        startColumn: pos + correctStr.length + 1,
+        // endLineNumber: model.getPositionAt(i).lineNumber,
+        endColumn: pos + correctStr.length + splittedArray[i].length + 2,
+        message: `Aggregate function is not allowed with "GROUPBY"!`,
+        severity: monaco.MarkerSeverity.Error,
+      },
+    ]
+  } else if (func.length === 0 && (arr.length === 0 || arr === 'error')) {
+    return [
+      {
+        // startLineNumber: model.getPositionAt(i).lineNumber,
+        startColumn: pos + correctStr.length + 1,
+        // endLineNumber: model.getPositionAt(i).lineNumber,
+        endColumn: pos + correctStr.length + splittedArray[i].length + 2,
+        message: `GROUPBY: function "${value.trim()}" is INVALID!`,
+        severity: monaco.MarkerSeverity.Error,
+      },
+    ]
+  } else if (func.length > 0 && arr === 'error') {
+    return [
+      {
+        // startLineNumber: model.getPositionAt(i).lineNumber,
+        startColumn: pos + correctStr.length + 1,
+        // endLineNumber: model.getPositionAt(i).lineNumber,
+        endColumn: pos + correctStr.length + splittedArray[i].length + 2,
+        message: `GROUPBY: function "${func[0].trim()}" syntax is INVALID!`,
+        severity: monaco.MarkerSeverity.Error,
+      },
+    ]
+  } else {
+    for (let j = 0; j < arr.length; j++) {
+      arr[j] = arr[j].trim()
+      if (fieldsList.includes(arr[j].trim().toLowerCase())) {
+        continue
+        // } else if (
+        //   selectFields.length > 0 &&
+        //   selectFields[arr[j].trim()] &&
+        //   selectFields[arr[j].trim()][1] === arr[j].trim()
+        // ) {
+        //   // check for aliases
+        //   continue
+      } else if (/^@\w+(((\.\w+)|(\[\s*\d+\s*\]))+)?$/gm.test(arr[j].trim())) {
+        continue
+      } else {
+        return [
+          {
+            // startLineNumber: model.getPositionAt(i).lineNumber,
+            startColumn: pos + correctStr.length + 1,
+            // endLineNumber: model.getPositionAt(i).lineNumber,
+            endColumn: pos + correctStr.length + splittedArray[i].length + 2,
+            message: `GROUPBY: column name "${arr[j].trim()}" DOES NOT EXISTS!`,
+            severity: monaco.MarkerSeverity.Warning,
+          },
+        ]
+      }
+    }
+    correctStr += i > 0 ? ',' + splittedArray[i] : '' + splittedArray[i]
+    remStr = query.slice(correctStr.length)
+    groupbyFields.push({
+      [splittedArray[i].trim()]: [
+        pos + correctStr.length - splittedArray[i].length,
+        pos + correctStr.length,
+        false,
+        fun[1],
+        arr,
+      ],
+    })
+    console.log(groupbyFields)
+  }
+}
+
+const checkForSelectFunctions = (
+  value,
+  splittedArray,
+  i,
+  pos,
+  fieldsList,
+  selectAggregate,
+  selectAliases,
+  selectFunction,
+  selectFullField,
+  starUsed,
+  query,
+  correctStr,
+  remStr,
+  agg,
+) => {
+  let fun = /^((\w+|[|~!=%&*+-\/<>^]+)\(\s*(.+)\s*\))(?:\s+[aA][sS]\s+([a-zA-Z0-9_&-]+))?$/.exec(
+    value.trim(),
+  )
+  console.log(fun)
+  let aggre = []
+  let func = []
+  let arr = columnExtract(fun[1], 'select', func, aggre)
+  console.log(arr, aggre, func)
+  if (fun[2].toLowerCase() === 'distinct') {
+    if (i !== 0) {
+      return [
+        {
+          // startLineNumber: model.getPositionAt(i).lineNumber,
+          startColumn: pos + correctStr.length + 1,
+          // endLineNumber: model.getPositionAt(i).lineNumber,
+          endColumn: pos + correctStr.length + splittedArray[i].length + 2,
+          message: `SELECT: 'DISTINCT' must follow 'SELECT' directly unless used within an aggregation function. It cannot be inside or after other functions.`,
+          severity: monaco.MarkerSeverity.Error,
+        },
+      ]
+    }
+  }
+  // if (aggre.length > 1) {
+  //   return [
+  //     {
+  //       // startLineNumber: model.getPositionAt(i).lineNumber,
+  //       startColumn: pos + correctStr.length + 1,
+  //       // endLineNumber: model.getPositionAt(i).lineNumber,
+  //       endColumn: pos + correctStr.length + splittedArray[i].length + 2,
+  //       message: `SELECT: function "${splittedArray[i].trim()}": 'It is not allowed to use an aggregate function in the argument of another aggregate function'`,
+  //       severity: monaco.MarkerSeverity.Error,
+  //     },
+  //   ]
+  // }
+
+  if (func.length === 0 && (arr.length === 0 || arr === 'error')) {
+    return [
+      {
+        // startLineNumber: model.getPositionAt(i).lineNumber,
+        startColumn: pos + correctStr.length + 1,
+        // endLineNumber: model.getPositionAt(i).lineNumber,
+        endColumn: pos + correctStr.length + splittedArray[i].length + 2,
+        message: `SELECT: function "${value.trim()}" is INVALID!`,
+        severity: monaco.MarkerSeverity.Error,
+      },
+    ]
+  } else if (arr === 'error' && func.length > 0) {
+    return [
+      {
+        // startLineNumber: model.getPositionAt(i).lineNumber,
+        startColumn: pos + correctStr.length + 1,
+        // endLineNumber: model.getPositionAt(i).lineNumber,
+        endColumn: pos + correctStr.length + splittedArray[i].length + 2,
+        message: `SELECT: function "${func[0].trim()}" syntax is INVALID!`,
+        severity: monaco.MarkerSeverity.Error,
+      },
+    ]
+  } else {
+    if ((agg.length > 0 || aggre.length > 0) && starUsed[0]) {
+      return [
+        {
+          // startLineNumber: model.getPositionAt(i).lineNumber,
+          startColumn: pos + correctStr.length + 1,
+          // endLineNumber: model.getPositionAt(i).lineNumber,
+          endColumn: pos + correctStr.length + splittedArray[i].length + 2,
+          message: `SELECT: "*" cannot be used along with GROUPBY Clause or aggregate function`,
+          severity: monaco.MarkerSeverity.Error,
+        },
+      ]
+    }
+    let correctField = []
+    for (let j = 0; j < arr.length; j++) {
+      if (fieldsList.includes(arr[j].trim().toLowerCase())) {
+        correctField.push(arr[j].trim().toLowerCase())
+        continue
+      } else if (
+        aggre.some(w => /^count$/i.test(w.trim())) &&
+        arr[j].trim().toLowerCase() === '*'
+      ) {
+        correctField.push(arr[j].trim().toLowerCase())
+        continue
+      } else if (/^@\w+(((\.\w+)|(\[\s*\d+\s*\]))+)?$/gm.test(arr[j].trim())) {
+        correctField.push(arr[j].trim().toLowerCase())
+        continue
+      } else {
+        return [
+          {
+            // startLineNumber: model.getPositionAt(i).lineNumber,
+            startColumn: pos + correctStr.length + 1,
+            // endLineNumber: model.getPositionAt(i).lineNumber,
+            endColumn: pos + correctStr.length + splittedArray[i].length + 2,
+            message: `SELECT: column name "${arr[j].trim()}" DOES NOT EXISTS!`,
+            severity: monaco.MarkerSeverity.Warning,
+          },
+        ]
+      }
+    }
+    correctStr += i > 0 ? ',' + splittedArray[i] : '' + splittedArray[i]
+    remStr = query.slice(correctStr.length)
+    if (aggre.length > 0 && func.length === aggre.length) {
+      agg.push({
+        [fun[1]]: [
+          pos + correctStr.length - splittedArray[i].length,
+          pos + correctStr.length,
+          fun[4] || '',
+          ...aggre,
+        ],
+      })
+      selectAggregate.push({
+        [fun[1]]: [
+          pos + correctStr.length - splittedArray[i].length,
+          pos + correctStr.length,
+          fun[4] || '',
+          ...aggre,
+        ],
+      })
+      selectFullField.push([
+        fun[2],
+        'aggregate',
+        [
+          pos + correctStr.length - splittedArray[i].length,
+          pos + correctStr.length,
+          fun[4] || '',
+          ...aggre,
+        ],
+      ])
+      // if (fun[4]) agg.push({
+      //   [fun[4]]: [pos + correctStr.length - splittedArray[i].length,
+      //   pos + correctStr.length,
+      //   fun[1],
+      //   ...aggre]
+      // })
+    }
+    // if (aggre.length > 0) {
+    // selectFields.push({[value.trim()] : [
+    //   pos + correctStr.length - splittedArray[i].length,
+    //   pos + correctStr.length,
+    //   (fun[4] || '').trim(),
+    // ]})
+    // if (fun[4])
+    // selectFields.push({[fun[4]] : [
+    // pos + correctStr.length - splittedArray[i].length,
+    // pos + correctStr.length,
+    //   value.trim(),
+    // ]})
+    // } else {
+    if (aggre.length === 0) {
+      selectFunction.push({
+        [value.trim()]: [
+          pos + correctStr.length - splittedArray[i].length,
+          pos + correctStr.length,
+          (fun[4] || '').trim(),
+          correctField,
+        ],
+      })
+      console.log(value, splittedArray, correctStr, fun)
+      selectFullField.push([
+        value,
+        'nonAggregate',
+        fun[2],
+        [
+          pos + correctStr.length - splittedArray[i].length,
+          pos + correctStr.length,
+          (fun[4] || '').trim().toLowerCase(),
+          correctField,
+        ],
+      ])
+      if (fun[4])
+        selectAliases.push({
+          [fun[4].trim().toLowerCase()]: [
+            pos + correctStr.length - splittedArray[i].length,
+            pos + correctStr.length,
+            value.trim(),
+            ...correctField,
+          ],
+        })
+      // correctField.forEach(fd => {
+      //   selectFields.push({
+      //     [fd.trim()]: [
+      //       pos + correctStr.length - splittedArray[i].length,
+      //       pos + correctStr.length,
+      //       (fun[4] || '').trim(),
+      //     ],
+      //   })
+      // })
+    }
+    // }
+  }
+}
+
 const checkForGbySelFun = (funName, arr, gbyFun, funs) => {
-  console.log(funName, arr, gbyFun, funs)
   if (funs.includes(funName)) {
     let indices = gbyFun
       .map((subarr, ind) => (subarr.includes(funName) ? ind : -1))
       .filter(ind => ind !== -1)
     for (let i = 0; i < indices.length; i++) {
-      console.log(gbyFun[indices[i]][4], arr, indices)
       return _.isEqual(_.sortBy(gbyFun[indices[i]][4]), _.sortBy(arr))
     }
   }
@@ -327,23 +1001,17 @@ const checkSelectAndGroupby = (
   pipes,
   fieldsList,
   groupbyFields,
+  groupbyOps,
   selectFields,
   selectAggregate,
   selectAliases,
   selectFunction,
   selectFullField,
 ) => {
-  console.log('gby:', groupbyFields)
-  console.log('selectF', selectFields)
-  console.log('selectAgg', selectAggregate)
-  console.log('selectAlias', selectAliases)
-  console.log('selectFun', selectFunction)
-  console.log('selectFull', selectFullField)
-
+  console.log(selectAggregate, selectFullField, selectFunction)
   let selAl = selectAliases.map(obj => Object.keys(obj)[0])
   for (let i = 0; i < groupbyFields.length; i++) {
     let tempKey = Object.keys(groupbyFields[i])[0]
-    console.log(selectAliases.includes(tempKey), selectAliases, groupbyFields, selAl)
     if (groupbyFields[i][tempKey][2] && !selAl.includes(tempKey))
       return [
         {
@@ -383,7 +1051,6 @@ const checkSelectAndGroupby = (
     if (selectAggregate.length > 0) {
       if (selectFields.length > 0) {
         let tempKey = Object.keys(selectFields[0])[0]
-        console.log(tempKey)
         return [
           {
             // startLineNumber: model.getPositionAt(i).lineNumber,
@@ -396,7 +1063,6 @@ const checkSelectAndGroupby = (
         ]
       } else if (selectFunction.length > 0) {
         let tempKey = Object.keys(selectFunction[0])[0]
-        console.log(selectFunction[0])
         return [
           {
             // startLineNumber: model.getPositionAt(i).lineNumber,
@@ -424,9 +1090,7 @@ const checkSelectAndGroupby = (
     let funs = groupbyFields
       .filter(obj => Object.values(obj)[0].length > 3)
       .map(obj => Object.values(obj)[0][3])
-    console.log(gbyAlias, gbyField, gbyFun)
-    console.log(funs)
-
+    console.log(selectFullField, selectFields)
     for (let i = 0; i < selectFullField.length; i++) {
       if (selectFullField[i][1] === 'aggregate') {
         if (gbyAlias.includes(selectFullField[i][0]) || gbyField.includes(selectFullField[i][0])) {
@@ -443,15 +1107,6 @@ const checkSelectAndGroupby = (
           ]
         }
       } else if (selectFullField[i][1] === 'nonAggregate') {
-        // check for directly the function or eachFields or aliases(?)
-        console.log(selectFullField[i])
-        console.log(
-          'Hahahaa',
-          gbyAlias.includes(selectFullField[i][3][2]),
-          gbyField.includes(selectFullField[i][3][2]),
-          checkForGbySelFun(selectFullField[i][2], selectFullField[i][3][3], gbyFun, funs),
-          selectFullField[i][3][3].every(item => gbyField.includes(item)),
-        )
         // alias check
         // each of fields check
         // directly function check
@@ -507,6 +1162,8 @@ const checkSelectAndGroupby = (
             severity: monaco.MarkerSeverity.Error,
           },
         ]
+      } else if (selectFullField[i][1] === 'selectOps') {
+        // to be done
       }
     }
   }
@@ -521,11 +1178,8 @@ const checkHaving = (query, pos, havingFullFields, lastPipe) => {
     correctStr += arr[0]
     remStr = query.slice(correctStr.length) || ''
   }
-  let splittedArray = splitingQuery(remStr, '', true, true, 'having')
-  console.log(remStr, splittedArray)
 
   let res = separatingFromBrackets(remStr, true)
-  console.log(res)
   let errorMsg = []
   let strObj = { correctStr: correctStr, remStr: remStr }
   for (let k = 0; k < res.splittedArray.length; k++) {
@@ -544,7 +1198,6 @@ const checkHaving = (query, pos, havingFullFields, lastPipe) => {
     }
   }
   if (errorMsg.length > 0) {
-    console.log(errorMsg, query)
     let ind = getIndexOfSubstring(query, errorMsg[0].query)
     errorMsg[0].startColumn = pos + ind + 1
     errorMsg[0].endColumn = pos + ind + errorMsg[0].query.length + 1
@@ -567,6 +1220,24 @@ const checkHaving = (query, pos, havingFullFields, lastPipe) => {
   return []
 }
 
+const stringToTree = str => {
+  let ops = splitingQuery(str, '', true, true, 'stringToTree').splittedArray
+  let treeArr = []
+  for (let i = 0; i < ops.length; i++) {
+    if (/^(\w+|[|~!=%&*+-\/<>^]+)\([^\n]+\)$/gim.test(ops[i].trim())) {
+      let arr = []
+      let fun = /^(\w+|[|~!=%&*+-\/<>^]+)\(([^\n]+)\)$/gim.exec(ops[i].trim())
+      arr.push(fun[1].trim().toLowerCase())
+      let items = splitingQuery(fun[2], ',', true, true).splittedArray
+      items.forEach(it => arr.push(stringToTree(it.trim())))
+      treeArr.push(arr)
+    } else {
+      treeArr.push(ops[i].trim().toLowerCase())
+    }
+  }
+  return treeArr
+}
+
 const checkSelect = (
   query,
   pos,
@@ -586,7 +1257,6 @@ const checkSelect = (
     remStr = query.slice(correctStr.length) || ''
   }
   let splittedArray = splitingQuery(remStr, ',', false, true).splittedArray
-  console.log(splittedArray)
   let agg = []
   let starUsed = [false, -1, -1]
   for (let i = 0; i < splittedArray.length; i++) {
@@ -620,193 +1290,35 @@ const checkSelect = (
         [pos + correctStr.length - splittedArray[i].length, pos + correctStr.length, ''],
       ])
     } else if (
-      /^(\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)(?:\s+[aA][sS]\s+[a-zA-Z0-9_]+)?$/gm.test(
+      /^(\w+|[|~!=%&*+-\/<>^]+)\([^\n]+\)(?:\s+[aA][sS]\s+[a-zA-Z0-9_&-]+)?$/gm.test(
         splittedArray[i].trim(),
       )
     ) {
-      let fun = /^((\w+|[|~!=%&*+-\/<>^]+)\(\s*(.+)\s*\))(?:\s+[aA][sS]\s+([a-zA-Z0-9_]+))?$/.exec(
-        splittedArray[i].trim(),
+      let func = checkForSelectFunctions(
+        splittedArray[i],
+        splittedArray,
+        i,
+        pos,
+        fieldsList,
+        selectAggregate,
+        selectAliases,
+        selectFunction,
+        selectFullField,
+        starUsed,
+        query,
+        correctStr,
+        remStr,
+        agg,
       )
-      console.log(fun)
-      let aggre = []
-      let func = []
-      let arr = columnExtract(fun[1], 'select', func, aggre)
-      console.log(arr, aggre, func)
-      if (fun[2].toLowerCase() === 'distinct') {
-        if (i !== 0) {
-          return [
-            {
-              // startLineNumber: model.getPositionAt(i).lineNumber,
-              startColumn: pos + correctStr.length + 1,
-              // endLineNumber: model.getPositionAt(i).lineNumber,
-              endColumn: pos + correctStr.length + splittedArray[i].length + 2,
-              message: `SELECT: 'DISTINCT' must follow 'SELECT' directly unless used within an aggregation function. It cannot be inside or after other functions.`,
-              severity: monaco.MarkerSeverity.Error,
-            },
-          ]
-        }
-      }
-      // if (aggre.length > 1) {
-      //   return [
-      //     {
-      //       // startLineNumber: model.getPositionAt(i).lineNumber,
-      //       startColumn: pos + correctStr.length + 1,
-      //       // endLineNumber: model.getPositionAt(i).lineNumber,
-      //       endColumn: pos + correctStr.length + splittedArray[i].length + 2,
-      //       message: `SELECT: function "${splittedArray[
-      //         i
-      //       ].trim()}": 'It is not allowed to use an aggregate function in the argument of another aggregate function'`,
-      //       severity: monaco.MarkerSeverity.Error,
-      //     },
-      //   ]
-      // }
-
-      if (arr.length === 0 && func.length === 0) {
-        return [
-          {
-            // startLineNumber: model.getPositionAt(i).lineNumber,
-            startColumn: pos + correctStr.length + 1,
-            // endLineNumber: model.getPositionAt(i).lineNumber,
-            endColumn: pos + correctStr.length + splittedArray[i].length + 2,
-            message: `SELECT: function "${splittedArray[i].trim()}" is INVALID!`,
-            severity: monaco.MarkerSeverity.Error,
-          },
-        ]
-      } else {
-        if ((agg.length > 0 || aggre.length > 0) && starUsed[0]) {
-          return [
-            {
-              // startLineNumber: model.getPositionAt(i).lineNumber,
-              startColumn: pos + correctStr.length + 1,
-              // endLineNumber: model.getPositionAt(i).lineNumber,
-              endColumn: pos + correctStr.length + splittedArray[i].length + 2,
-              message: `SELECT: "*" cannot be used along with GROUPBY Clause or aggregate function`,
-              severity: monaco.MarkerSeverity.Error,
-            },
-          ]
-        }
-        let correctField = []
-        for (let j = 0; j < arr.length; j++) {
-          if (fieldsList.includes(arr[j].trim().toLowerCase())) {
-            correctField.push(arr[j].trim().toLowerCase())
-            continue
-          } else if (
-            aggre.some(w => /^count$/i.test(w.trim())) &&
-            arr[j].trim().toLowerCase() === '*'
-          ) {
-            correctField.push(arr[j].trim().toLowerCase())
-            continue
-          } else if (/^@\w+(((\.\w+)|(\[\s*\d+\s*\]))+)?$/gm.test(arr[j].trim())) {
-            correctField.push(arr[j].trim().toLowerCase())
-            continue
-          } else {
-            return [
-              {
-                // startLineNumber: model.getPositionAt(i).lineNumber,
-                startColumn: pos + correctStr.length + 1,
-                // endLineNumber: model.getPositionAt(i).lineNumber,
-                endColumn: pos + correctStr.length + splittedArray[i].length + 2,
-                message: `SELECT: column name "${arr[j].trim()}" is DOES NOT EXISTS!`,
-                severity: monaco.MarkerSeverity.Warning,
-              },
-            ]
-          }
-        }
-        correctStr += i > 0 ? ',' + splittedArray[i] : '' + splittedArray[i]
-        remStr = query.slice(correctStr.length)
-        if (aggre.length > 0) {
-          agg.push({
-            [fun[1]]: [
-              pos + correctStr.length - splittedArray[i].length,
-              pos + correctStr.length,
-              fun[4] || '',
-              ...aggre,
-            ],
-          })
-          selectAggregate.push({
-            [fun[1]]: [
-              pos + correctStr.length - splittedArray[i].length,
-              pos + correctStr.length,
-              fun[4] || '',
-              ...aggre,
-            ],
-          })
-          selectFullField.push([
-            fun[2],
-            'aggregate',
-            [
-              pos + correctStr.length - splittedArray[i].length,
-              pos + correctStr.length,
-              fun[4] || '',
-              ...aggre,
-            ],
-          ])
-          // if (fun[4]) agg.push({
-          //   [fun[4]]: [pos + correctStr.length - splittedArray[i].length,
-          //   pos + correctStr.length,
-          //   fun[1],
-          //   ...aggre]
-          // })
-        }
-        console.log(arr, aggre, `\n`, agg)
-        // if (aggre.length > 0) {
-        // selectFields.push({[splittedArray[i].trim()] : [
-        //   pos + correctStr.length - splittedArray[i].length,
-        //   pos + correctStr.length,
-        //   (fun[4] || '').trim(),
-        // ]})
-        // if (fun[4])
-        // selectFields.push({[fun[4]] : [
-        // pos + correctStr.length - splittedArray[i].length,
-        // pos + correctStr.length,
-        //   splittedArray[i].trim(),
-        // ]})
-        // } else {
-        if (aggre.length === 0) {
-          selectFunction.push({
-            [splittedArray[i].trim()]: [
-              pos + correctStr.length - splittedArray[i].length,
-              pos + correctStr.length,
-              (fun[4] || '').trim(),
-              correctField,
-            ],
-          })
-          selectFullField.push([
-            splittedArray[i],
-            'nonAggregate',
-            fun[2],
-            [
-              pos + correctStr.length - splittedArray[i].length,
-              pos + correctStr.length,
-              (fun[4] || '').trim().toLowerCase(),
-              correctField,
-            ],
-          ])
-          if (fun[4])
-            selectAliases.push({
-              [fun[4].trim().toLowerCase()]: [
-                pos + correctStr.length - splittedArray[i].length,
-                pos + correctStr.length,
-                splittedArray[i].trim(),
-                ...correctField,
-              ],
-            })
-          // correctField.forEach(fd => {
-          //   selectFields.push({
-          //     [fd.trim()]: [
-          //       pos + correctStr.length - splittedArray[i].length,
-          //       pos + correctStr.length,
-          //       (fun[4] || '').trim(),
-          //     ],
-          //   })
-          // })
-        }
-        // }
-      }
+      if (func) return func
+      correctStr += i > 0 ? ',' + splittedArray[i] : '' + splittedArray[i]
+      remStr = query.slice(correctStr.length)
     }
     // else if (Object.keys(agg).length === 0) {
     else if (
-      /^\s*(?:([a-zA-Z]+\s+[aA][sS]\s+[a-zA-Z0-9_]+)|([a-zA-Z]+))$/gm.test(splittedArray[i].trim())
+      /^\s*(?:([a-zA-Z0-9]+\s+[aA][sS]\s+[a-zA-Z0-9_&-]+)|([a-zA-Z]+))$/gm.test(
+        splittedArray[i].trim(),
+      )
     ) {
       let sel = splittedArray[i].split(/\s+as\s+/i)
       if (fieldsList.includes(sel[0].trim().toLowerCase())) {
@@ -850,21 +1362,55 @@ const checkSelect = (
       }
       // gbyCol.push(splittedArray[i].trim())
     } else if (
-      /^\s*(?:([a-zA-Z]+(?:\s*[+\-*\/]\s*(?:[a-zA-Z]+|\d|\S+))\s+[aA][sS]\s+[a-zA-Z0-9_]+)|([a-zA-Z]+(?:\s*[+\-*\/]\s*(?:[a-zA-Z]+|\d|\S+))))$/gm.test(
+      /^\s*(?:(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:(?:"[^\n"]*")|(?:'[^\n']*'))|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*(?:([+\-*\/%^&])\s*(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:(?:"[^\n"]*")|(?:'[^\n']*'))|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*?)+)(?:\s+[aA][sS]\s+[a-zA-Z0-9_&-]+){0,1}$/gm.test(
         splittedArray[i].trim(),
       )
     ) {
-      let selOps = splittedArray[i].split(/\s+as\s+/i)
-      let sel = selOps[0].split(/\s*[+\-*\/]\s*/i)
-      // using splitingQuery
-      // let selOps = splitingQuery(splittedArray[i], 'as', false, true).splittedArray
-      // let sel = splittingQuery(splittedArray[i], 'as', false, true).splittedArray
-      console.log(sel, selOps)
+      let selOps = /^\s*(?:(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:(?:"[^\n"]*")|(?:'[^\n']*'))|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*(?:([+\-*\/%^&])\s*(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:(?:"[^\n"]*")|(?:'[^\n']*'))|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*?)+)(\s+[aA][sS]\s+[a-zA-Z0-9_&-]+){0,1}$/gm.exec(
+        splittedArray[i].trim(),
+      )[4]
+      let returnVal = {}
+      if (selOps) {
+        returnVal = extractfieldsFromOperators(
+          'select',
+          splittedArray[i].trim().slice(0, splittedArray[i].trim().length - selOps.length),
+        )
+        console.log(
+          selOps,
+          splittedArray[i].trim(),
+          splittedArray[i].trim().slice(0, splittedArray[i].trim().length - selOps.length),
+        )
+      } else {
+        returnVal = extractfieldsFromOperators('select', splittedArray[i].trim())
+      }
+      if (returnVal.functions.length > 0) {
+        for (let k = 0; k < returnVal.functions?.length; k++) {
+          let func = checkForSelectFunctions(
+            returnVal.functions[k],
+            splittedArray,
+            i,
+            pos,
+            fieldsList,
+            selectAggregate,
+            selectAliases,
+            selectFunction,
+            selectFullField,
+            starUsed,
+            query,
+            correctStr,
+            remStr,
+            agg,
+          )
+          if (func) {
+            return func
+          }
+        }
+      }
       let correctField = []
-      for (let k = 0; k < sel.length; k++) {
-        if (/^[a-zA-Z]+$/.test(sel[k].trim())) {
-          if (fieldsList.includes(sel[k].trim().toLowerCase())) {
-            correctField.push(sel[k].trim())
+      for (let k = 0; k < returnVal.fields.length; k++) {
+        if (/^[a-zA-Z0-9]+$/.test(returnVal.fields[k].trim())) {
+          if (fieldsList.includes(returnVal.fields[k].trim().toLowerCase())) {
+            correctField.push(returnVal.fields[k].trim())
           } else {
             return [
               {
@@ -872,7 +1418,7 @@ const checkSelect = (
                 startColumn: pos + correctStr.length + 1,
                 // endLineNumber: model.getPositionAt(i).lineNumber,
                 endColumn: pos + correctStr.length + splittedArray[i].length + 2,
-                message: `SELECT: column name "${sel[0].trim()}" DOES NOT EXISTS!`,
+                message: `SELECT: column name "${returnVal.fields[k].trim()}" DOES NOT EXISTS!`,
                 severity: monaco.MarkerSeverity.Warning,
               },
             ]
@@ -886,22 +1432,22 @@ const checkSelect = (
           [fd.trim().toLowerCase()]: [
             pos + correctStr.length - splittedArray[i].length,
             pos + correctStr.length,
-            (selOps[1] || '').trim().toLowerCase(),
+            (selOps || '').trim().toLowerCase(),
           ],
         })
       })
       selectFullField.push([
         splittedArray[i].toLowerCase().trim(),
-        'fields',
+        'selectOps',
         [
           pos + correctStr.length - splittedArray[i].length,
           pos + correctStr.length,
-          (selOps[1] || '').trim().toLowerCase(),
+          (selOps || '').trim().toLowerCase(),
         ],
       ])
-      if (selOps[1])
+      if (selOps)
         selectAliases.push({
-          [selOps[1].trim().toLowerCase()]: [
+          [selOps.trim().toLowerCase()]: [
             pos + correctStr.length - splittedArray[i].length,
             pos + correctStr.length,
             correctField,
@@ -909,7 +1455,7 @@ const checkSelect = (
         })
     } else if (/^@/.test(splittedArray[i].trim())) {
       if (
-        /^@\w+(((\.\w+)|(\[\s*\d+\s*\]))+)?(?:\s+[aA][sS]\s+[a-zA-Z0-9_]+)?$/gm.test(
+        /^@\w+(((\.\w+)|(\[\s*\d+\s*\]))+)?(?:\s+[aA][sS]\s+[a-zA-Z0-9_&-]+)?$/gm.test(
           splittedArray[i].trim(),
         )
       ) {
@@ -947,7 +1493,7 @@ const checkSelect = (
             startColumn: pos + correctStr.length + 1,
             // endLineNumber: model.getPositionAt(i).lineNumber,
             endColumn: pos + correctStr.length + splittedArray[i].length + 2,
-            message: `SELECT: column name "${splittedArray[i].trim()}" is Incomplete!`,
+            message: `SELECT: column name "${splittedArray[i].trim()}" is incomplete!`,
             severity: monaco.MarkerSeverity.Warning,
           },
         ]
@@ -963,6 +1509,10 @@ const checkSelect = (
           },
         ]
       }
+    } else if (/^(?:(?:"[^\n"]*")|(?:'[^\n']*'))$|^(?:\d+)$/gm.test(splittedArray[i].trim())) {
+      correctStr += i > 0 ? ',' + splittedArray[i] : '' + splittedArray[i]
+      remStr = query.slice(correctStr.length)
+      continue
     } else {
       return [
         {
@@ -988,14 +1538,10 @@ const checkSelect = (
     //   ]
     // }
   }
-  // check for arithmatic operations
-  console.log('selectFields', selectFields)
-  console.log('select Alias', selectAliases)
-  console.log(selectAggregate, 'selFun', selectFunction)
   return []
 }
 
-const checkGroupby = (query, pos, fieldsList, groupbyFields, lastPip) => {
+const checkGroupby = (query, pos, fieldsList, groupbyFields, groupbyOps, lastPip) => {
   let correctStr = ''
   let remStr = ''
   let arr = [...query.matchAll(/^(\|\s*groupby\s*)/gim)][0]
@@ -1004,65 +1550,25 @@ const checkGroupby = (query, pos, fieldsList, groupbyFields, lastPip) => {
     remStr = query.slice(correctStr.length) || ''
   }
   let splittedArray = splitingQuery(remStr, ',', false, true).splittedArray
-  console.log('gropuby:', splittedArray)
   for (let i = 0; i < splittedArray.length; i++) {
     if (/^(\w+|[|~!=%&*+-\/<>^]+)\s*\(\s*.+\s*\)$/.test(splittedArray[i].trim())) {
       //check if the function is not a aggregate function but is present in all function
-      let fun = /^(\w+|[|~!=%&*+-\/<>^]+)\s*\(\s*(.+)\s*\)$/.exec(splittedArray[i].trim())
-      let func = []
-      let arr = columnExtract(fun[0], 'groupby', func)
-      console.log('groupby: fun, arr', fun, arr, func)
-      if (arr.length === 0 && func.length === 0) {
-        return [
-          {
-            // startLineNumber: model.getPositionAt(i).lineNumber,
-            startColumn: pos + correctStr.length + 1,
-            // endLineNumber: model.getPositionAt(i).lineNumber,
-            endColumn: pos + correctStr.length + splittedArray[i].length + 2,
-            message: `GROUPBY: function "${splittedArray[i].trim()}" is INVALID!`,
-            severity: monaco.MarkerSeverity.Error,
-          },
-        ]
-      } else {
-        for (let j = 0; j < arr.length; j++) {
-          arr[j] = arr[j].trim()
-          if (fieldsList.includes(arr[j].trim().toLowerCase())) {
-            continue
-            // } else if (
-            //   selectFields.length > 0 &&
-            //   selectFields[arr[j].trim()] &&
-            //   selectFields[arr[j].trim()][1] === arr[j].trim()
-            // ) {
-            //   // check for aliases
-            //   continue
-          } else if (/^@\w+(((\.\w+)|(\[\s*\d+\s*\]))+)?$/gm.test(arr[j].trim())) {
-            continue
-          } else {
-            return [
-              {
-                // startLineNumber: model.getPositionAt(i).lineNumber,
-                startColumn: pos + correctStr.length + 1,
-                // endLineNumber: model.getPositionAt(i).lineNumber,
-                endColumn: pos + correctStr.length + splittedArray[i].length + 2,
-                message: `GROUPBY: column name "${arr[j].trim()}" is DOES NOT EXISTS!`,
-                severity: monaco.MarkerSeverity.Warning,
-              },
-            ]
-          }
-        }
-        correctStr += i > 0 ? ',' + splittedArray[i] : '' + splittedArray[i]
-        remStr = query.slice(correctStr.length)
-        groupbyFields.push({
-          [splittedArray[i].trim()]: [
-            pos + correctStr.length - splittedArray[i].length,
-            pos + correctStr.length,
-            false,
-            fun[1],
-            arr,
-          ],
-        })
-      }
-    } else if (/^\s*[a-zA-Z]+$/gm.test(splittedArray[i].trim())) {
+      let func = checkForGroupbyFunctions(
+        splittedArray[i],
+        splittedArray,
+        i,
+        query,
+        pos,
+        fieldsList,
+        groupbyFields,
+        lastPip,
+        correctStr,
+        remStr,
+      )
+      if (func) return func
+      correctStr += i > 0 ? ',' + splittedArray[i] : '' + splittedArray[i]
+      remStr = query.slice(correctStr.length)
+    } else if (/^\s*[a-zA-Z0-9]+$/gm.test(splittedArray[i].trim())) {
       if (fieldsList.includes(splittedArray[i].trim().toLowerCase())) {
         correctStr += i > 0 ? ',' + splittedArray[i] : '' + splittedArray[i]
         remStr = query.slice(correctStr.length)
@@ -1094,7 +1600,7 @@ const checkGroupby = (query, pos, fieldsList, groupbyFields, lastPip) => {
         //   },
         // ]
       }
-    } else if (/^\s*[a-zA-Z0-9_]+$/gm.test(splittedArray[i].trim())) {
+    } else if (/^\s*[a-zA-Z0-9_&-]+$/gm.test(splittedArray[i].trim())) {
       correctStr += i > 0 ? ',' + splittedArray[i] : '' + splittedArray[i]
       remStr = query.slice(correctStr.length)
       groupbyFields.push({
@@ -1136,7 +1642,7 @@ const checkGroupby = (query, pos, fieldsList, groupbyFields, lastPip) => {
             startColumn: pos + correctStr.length + 1,
             // endLineNumber: model.getPositionAt(i).lineNumber,
             endColumn: pos + correctStr.length + splittedArray[i].length + 2,
-            message: `GROUPBY: column name "${splittedArray[i].trim()}" is Incomplete!`,
+            message: `GROUPBY: column name "${splittedArray[i].trim()}" is incomplete!`,
             severity: monaco.MarkerSeverity.Warning,
           },
         ]
@@ -1152,6 +1658,50 @@ const checkGroupby = (query, pos, fieldsList, groupbyFields, lastPip) => {
           },
         ]
       }
+    } else if (
+      /^(?:(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:(?:"[^\n"]*")|(?:'[^\n']*'))|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*(?:([+\-*\/%^&])\s*(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:(?:"[^\n"]*")|(?:'[^\n']*'))|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*?)*)$/gim.test(
+        splittedArray[i].trim(),
+      )
+    ) {
+      let returnVal = extractfieldsFromOperators('groupby', splittedArray[i].trim())
+      let correctField = []
+      for (let k = 0; k < returnVal.fields.length; k++) {
+        if (/^[a-zA-Z0-9]+$/.test(returnVal.fields[k].trim())) {
+          if (fieldsList.includes(returnVal.fields[k].trim().toLowerCase())) {
+            correctField.push(returnVal.fields[k].trim())
+          } else {
+            return [
+              {
+                // startLineNumber: model.getPositionAt(i).lineNumber,
+                startColumn: pos + correctStr.length + 1,
+                // endLineNumber: model.getPositionAt(i).lineNumber,
+                endColumn: pos + correctStr.length + splittedArray[i].length + 2,
+                message: `GROUPBY: column name "${returnVal.fields[k].trim()}" DOES NOT EXISTS!`,
+                severity: monaco.MarkerSeverity.Warning,
+              },
+            ]
+          }
+        }
+      }
+      console.log(returnVal, correctField)
+      for (let k = 0; k < returnVal.functions.length; k++) {
+        let func = checkForGroupbyFunctions(
+          returnVal.functions[k],
+          splittedArray,
+          i,
+          query,
+          pos,
+          fieldsList,
+          [],
+          lastPip,
+          correctStr,
+          remStr,
+        )
+        if (func) return func
+      }
+      correctStr += i > 0 ? ',' + splittedArray[i] : '' + splittedArray[i]
+      remStr = query.slice(correctStr.length)
+      groupbyOps = groupbyOps.concat(stringToTree(splittedArray[i].trim()))
     } else {
       return [
         {
@@ -1165,7 +1715,6 @@ const checkGroupby = (query, pos, fieldsList, groupbyFields, lastPip) => {
       ]
     }
   }
-  console.log('groupbyFields', groupbyFields)
 
   return []
 }
@@ -1351,10 +1900,6 @@ const checkDuration = (query, pos, lastPipe) => {
     }
   }
 
-  // let arr = remStr?.trim().split(" ").filter(w => w !== undefined && w !== null && w !== '')
-
-  // console.log(/^duration$/i.test(arr[0].trim()), query)
-  // if remStr[0] is an alphabet or a digit
   if (/[a-zA-Z]/.test(remStr[0])) {
     let arr = splitingQuery(remStr, ' ', true).splittedArray
     let indSp = []
@@ -1363,7 +1908,6 @@ const checkDuration = (query, pos, lastPipe) => {
         indSp.push(i)
       }
     }
-    console.log(indSp, arr)
     let nowIsUsed = false
 
     // from
@@ -1384,7 +1928,6 @@ const checkDuration = (query, pos, lastPipe) => {
         correctStr += ' '.repeat(indSp[1] - 1)
       }
       remStr = query.slice(correctStr.length)
-      console.log(remStr, correctStr)
     }
 
     // arr[1] === YYYY-MM-DDThh:mm:ss || @now-[d][mhdwM]
@@ -1414,7 +1957,7 @@ const checkDuration = (query, pos, lastPipe) => {
                   // endLineNumber: model.getPositionAt(i).lineNumber,
                   endColumn: pos + correctStr.length + remStr?.length + 1,
                   message:
-                    'Syntax Error: DURATION: after "from" at date-time using "@now" --- cannot have "0" value',
+                    'Syntax Error: DURATION: after "from" at date-time using "@now", cannot have "0" value',
                   severity: monaco.MarkerSeverity.Error,
                 },
               ]
@@ -1425,7 +1968,6 @@ const checkDuration = (query, pos, lastPipe) => {
               correctStr += ' '.repeat(indSp[2] - indSp[1] - 1)
             }
             remStr = query.slice(correctStr.length)
-            console.log(remStr, correctStr)
           }
         } else {
           return [
@@ -1462,7 +2004,6 @@ const checkDuration = (query, pos, lastPipe) => {
               correctStr += ' '.repeat(indSp[2] - indSp[1] - 1)
             }
             remStr = query.slice(correctStr.length)
-            console.log(remStr, correctStr)
           }
         } else {
           return [
@@ -1512,7 +2053,6 @@ const checkDuration = (query, pos, lastPipe) => {
           correctStr += ' '.repeat(indSp[3] - indSp[2] - 1)
         }
         remStr = query.slice(correctStr.length)
-        console.log(remStr, correctStr)
       }
     }
     // arr[3] === YYYY-MM-DDThh:mm:ss || @now-[d][mhdwM]
@@ -1543,7 +2083,7 @@ const checkDuration = (query, pos, lastPipe) => {
                 // endLineNumber: model.getPositionAt(i).lineNumber,
                 endColumn: pos + correctStr.length + remStr?.length + 1,
                 message:
-                  'Syntax Error: DURATION: after "to" at date-time using "@now" -- cannot give "0"',
+                  'Syntax Error: DURATION: after "to" at date-time using "@now", cannot give "0"',
                 severity: monaco.MarkerSeverity.Error,
               },
             ]
@@ -1551,8 +2091,6 @@ const checkDuration = (query, pos, lastPipe) => {
           correctStr += arr[indSp[3]]
           correctStr += ' '.repeat(arr.length - indSp[3] - 1)
           remStr = query.slice(correctStr.length)
-          console.log(remStr, 'HEHEHEHE', correctStr)
-          console.log(correctStr === query)
         }
       } else {
         if (
@@ -1576,8 +2114,6 @@ const checkDuration = (query, pos, lastPipe) => {
           correctStr += ' '.repeat(arr.length - indSp[3] - 1)
           // }
           remStr = query.slice(correctStr.length)
-          console.log(remStr, 'HEHEHEHE', correctStr)
-          console.log(correctStr === query)
         }
       }
       // else not needed
@@ -1590,7 +2126,7 @@ const checkDuration = (query, pos, lastPipe) => {
           startColumn: pos + correctStr.length + 1,
           // endLineNumber: model.getPositionAt(i).lineNumber,
           endColumn: pos + query.length + 2,
-          message: 'Syntax Error: DURATION: after "to" and date-time ::: unwanted',
+          message: 'Syntax Error: DURATION: after "to" and date-time -> INVALID!',
           severity: monaco.MarkerSeverity.Error,
         },
       ]
@@ -1627,7 +2163,7 @@ const checkDuration = (query, pos, lastPipe) => {
         startColumn: pos + correctStr.length + 1,
         // endLineNumber: model.getPositionAt(i).lineNumber,
         endColumn: pos + correctStr.length + remStr?.length + 1,
-        message: 'Syntax Error: DURATION :: Unwanted',
+        message: 'Syntax Error: DURATION INVALID!',
         severity: monaco.MarkerSeverity.Error,
       },
     ]
@@ -1747,7 +2283,6 @@ const checkForStreamsAndWhere = (
 ) => {
   let whereSplit = splitingQuery(query, '', true, true, 'streamsWhere')
   let queryArr = whereSplit.splittedArray
-  console.log(queryArr, whereSplit)
   let correctStr = ''
   let remStr = ''
   let arr = [...queryArr[0].matchAll(/^(\s*stream\s*=\s*)?/gim)][0]
@@ -1759,7 +2294,10 @@ const checkForStreamsAndWhere = (
     let streams = splitingQuery(remStr, ',', false).splittedArray
 
     for (let i = 0; i < streams.length; i++) {
-      if (streams.length === 1 && streams[0].trim() === '*') {
+      if (
+        streams.length === 1 &&
+        (streams[0].trim() === '*' || streams[0].trim().toLowerCase() === 'signals')
+      ) {
         correctStr += streams[0]
         remStr = query.slice(correctStr.length)
         selectedStream.push(streams[i])
@@ -1773,6 +2311,19 @@ const checkForStreamsAndWhere = (
             // endLineNumber: model.getPositionAt(i).lineNumber,
             endColumn: correctStr.length + streams[i].length + 2,
             message: 'Syntax Error: STREAM :: cannot have multiple stream name with "*"',
+            severity: monaco.MarkerSeverity.Error,
+          },
+        ]
+      }
+      if (streams[i].trim().toLowerCase() === 'signals') {
+        return [
+          {
+            // startLineNumber: model.getPositionAt(i).lineNumber,
+            startColumn: correctStr.length + 1,
+            // endLineNumber: model.getPositionAt(i).lineNumber,
+            endColumn: correctStr.length + streams[i].length + 2,
+            message:
+              'Syntax Error: STREAM :: cannot have multiple stream name with stream "SIGNALS"',
             severity: monaco.MarkerSeverity.Error,
           },
         ]
@@ -1843,6 +2394,17 @@ const checkForStreamsAndWhere = (
       //       severity: monaco.MarkerSeverity.Error,
       //     },
       //   ]
+    } else {
+      return [
+        {
+          // startLineNumber: model.getPositionAt(i).lineNumber,
+          startColumn: correctStr.length,
+          // endLineNumber: model.getPositionAt(i).lineNumber,
+          endColumn: correctStr.length + remStr?.length + 1,
+          message: `STREAM: Write stream name`,
+          severity: monaco.MarkerSeverity.Error,
+        },
+      ]
     }
   }
 
@@ -1878,10 +2440,8 @@ const checkForStreamsAndWhere = (
       correctStr = queryArr[0] + ' where '
       remStr = query.slice(correctStr.length)
       let res = separatingFromBrackets(remStr, false)
-      console.log(res)
       let errorMsg = []
       let strObj = { correctStr: correctStr, remStr: remStr }
-      console.log('fieldsList', fieldsList)
       for (let k = 0; k < res.splittedArray.length; k++) {
         let err = validatingWhereConditions(
           res.splittedArray[k],
@@ -1895,7 +2455,6 @@ const checkForStreamsAndWhere = (
           errorMsg = errorMsg.concat(err)
         }
         if (errorMsg.length > 0) {
-          console.log(query, errorMsg)
           let ind = getIndexOfSubstring(query, errorMsg[0].query)
           errorMsg[0].startColumn = ind + 1
           errorMsg[0].endColumn = ind + errorMsg[0].query.length + 1
@@ -1939,10 +2498,22 @@ function splitingQuery(value, ch, addCh, addBrackets, word) {
       let str = ''
       let splittedArray = []
       for (let i = 0; i < value.length; i++) {
-        if (value[i] === "'") {
-          quotes["'"] = !quotes["'"]
-        } else if (value[i] === '"') {
-          quotes['"'] = !quotes['"']
+        if (value[i] === "'" && !quotes['"']) {
+          if (i > 1 && /^\\\\'$/gm.test(value[i - 2] + value[i - 1] + value[i])) {
+            quotes["'"] = !quotes["'"]
+          } else if (i > 0 && !/^\\'$/gm.test(value[i - 1] + value[i])) {
+            quotes["'"] = !quotes["'"]
+          } else if (i === 0) {
+            quotes["'"] = !quotes["'"]
+          }
+        } else if (value[i] === '"' && !quotes["'"]) {
+          if (i > 1 && /^\\\\"$/gm.test(value[i - 2] + value[i - 1] + value[i])) {
+            quotes['"'] = !quotes['"']
+          } else if (i > 0 && !/^\\"$/gm.test(value[i - 1] + value[i])) {
+            quotes['"'] = !quotes['"']
+          } else if (i === 0) {
+            quotes['"'] = !quotes['"']
+          }
         }
 
         if (value[i] === ch && !quotes['"'] && !quotes["'"]) {
@@ -1973,10 +2544,22 @@ function splitingQuery(value, ch, addCh, addBrackets, word) {
       let str = ''
       let splittedArray = []
       for (let i = 0; i < value.length; i++) {
-        if (value[i] === "'") {
-          quotes["'"] = !quotes["'"]
-        } else if (value[i] === '"') {
-          quotes['"'] = !quotes['"']
+        if (value[i] === "'" && !quotes['"']) {
+          if (i > 1 && /^\\\\'$/gm.test(value[i - 2] + value[i - 1] + value[i])) {
+            quotes["'"] = !quotes["'"]
+          } else if (i > 0 && !/^\\'$/gm.test(value[i - 1] + value[i])) {
+            quotes["'"] = !quotes["'"]
+          } else if (i === 0) {
+            quotes["'"] = !quotes["'"]
+          }
+        } else if (value[i] === '"' && !quotes["'"]) {
+          if (i > 1 && /^\\\\"$/gm.test(value[i - 2] + value[i - 1] + value[i])) {
+            quotes['"'] = !quotes['"']
+          } else if (i > 0 && !/^\\"$/gm.test(value[i - 1] + value[i])) {
+            quotes['"'] = !quotes['"']
+          } else if (i === 0) {
+            quotes['"'] = !quotes['"']
+          }
         }
 
         if (value[i] === '(' && !quotes["'"] && !quotes['"']) {
@@ -2000,201 +2583,7 @@ function splitingQuery(value, ch, addCh, addBrackets, word) {
       return { splittedArray, charPos }
     }
   }
-  if (word === 'having') {
-    if (!addBrackets) {
-      let splittedArray = []
-      let charPos = []
-      let currentSegment = ''
-      let quotes = {
-        "'": false,
-        '"': false,
-      }
-
-      for (let i = 0; i < value.length; i++) {
-        const char = value[i]
-        if (char === "'" && !quotes['"']) {
-          quotes["'"] = !quotes["'"]
-          currentSegment += char
-          continue
-        }
-
-        if (char === '"' && !quotes["'"]) {
-          quotes['"'] = !quotes['"']
-          currentSegment += char
-          continue
-        }
-
-        if (!quotes["'"] && !quotes['"']) {
-          if (/^\sand\s$/m.test(value.slice(i, i + 5))) {
-            charPos.push(i)
-            splittedArray.push(currentSegment)
-            currentSegment = ''
-            i += 4
-            continue
-          } else if (/^\sor\s$/m.test(value.slice(i, i + 4))) {
-            charPos.push(i)
-            splittedArray.push(currentSegment)
-            currentSegment = ''
-            i += 3
-            continue
-          }
-        }
-
-        currentSegment += char
-      }
-
-      if (currentSegment) {
-        splittedArray.push(currentSegment)
-      }
-
-      return { splittedArray, charPos }
-    } else {
-      let splittedArray = []
-      let charPos = []
-      let currentSegment = ''
-      let bracketCount = 0
-      let quotes = {
-        "'": false,
-        '"': false,
-      }
-
-      for (let i = 0; i < value.length; i++) {
-        const char = value[i]
-        if (char === "'" && !quotes['"']) {
-          quotes["'"] = !quotes["'"]
-          currentSegment += char
-          continue
-        }
-
-        if (char === '"' && !quotes["'"]) {
-          quotes['"'] = !quotes['"']
-          currentSegment += char
-          continue
-        }
-
-        if (value[i] === '(' && !quotes["'"] && !quotes['"']) {
-          bracketCount++
-        } else if (value[i] === ')' && !quotes["'"] && !quotes['"']) {
-          bracketCount--
-        }
-
-        if (!quotes["'"] && !quotes['"'] && bracketCount === 0) {
-          if (/^\sand\s$/m.test(value.slice(i, i + 5))) {
-            charPos.push(i)
-            splittedArray.push(currentSegment)
-            currentSegment = ''
-            i += 4
-            continue
-          } else if (/^\sor\s$/m.test(value.slice(i, i + 4))) {
-            charPos.push(i)
-            splittedArray.push(currentSegment)
-            currentSegment = ''
-            i += 3
-            continue
-          }
-        }
-
-        currentSegment += char
-      }
-
-      if (currentSegment) {
-        splittedArray.push(currentSegment)
-      }
-
-      return { splittedArray, charPos }
-    }
-  } else if (word === 'streamsWhere') {
-    if (!addBrackets) {
-      let splittedArray = []
-      let charPos = []
-      let currentSegment = ''
-      let quotes = {
-        "'": false,
-        '"': false,
-      }
-
-      for (let i = 0; i < value.length; i++) {
-        const char = value[i]
-        if (char === "'" && !quotes['"']) {
-          quotes["'"] = !quotes["'"]
-          currentSegment += char
-          continue
-        }
-
-        if (char === '"' && !quotes["'"]) {
-          quotes['"'] = !quotes['"']
-          currentSegment += char
-          continue
-        }
-
-        if (!quotes["'"] && !quotes['"']) {
-          if (/^\swhere\s$/im.test(value.slice(i, i + 7))) {
-            charPos.push(i)
-            splittedArray.push(currentSegment)
-            currentSegment = ''
-            i += 6
-            continue
-          }
-        }
-
-        currentSegment += char
-      }
-
-      if (currentSegment.trim()) {
-        splittedArray.push(currentSegment)
-      }
-
-      return { splittedArray, charPos }
-    } else {
-      let splittedArray = []
-      let charPos = []
-      let currentSegment = ''
-      let bracketCount = 0
-      let quotes = {
-        "'": false,
-        '"': false,
-      }
-
-      for (let i = 0; i < value.length; i++) {
-        const char = value[i]
-        if (char === "'" && !quotes['"']) {
-          quotes["'"] = !quotes["'"]
-          currentSegment += char
-          continue
-        }
-
-        if (char === '"' && !quotes["'"]) {
-          quotes['"'] = !quotes['"']
-          currentSegment += char
-          continue
-        }
-
-        if (value[i] === '(' && !quotes["'"] && !quotes['"']) {
-          bracketCount++
-        } else if (value[i] === ')' && !quotes["'"] && !quotes['"']) {
-          bracketCount--
-        }
-
-        if (!quotes["'"] && !quotes['"'] && bracketCount === 0) {
-          if (/^\swhere\s$/im.test(value.slice(i, i + 7))) {
-            charPos.push(i)
-            splittedArray.push(currentSegment)
-            currentSegment = ''
-            i += 6
-            continue
-          }
-        }
-
-        currentSegment += char
-      }
-
-      if (currentSegment.trim()) {
-        splittedArray.push(currentSegment)
-      }
-
-      return { splittedArray, charPos }
-    }
-  } else if (word === 'havingCond') {
+  if (word === 'streamsWhere') {
     let splittedArray = []
     let charPos = []
     let currentSegment = ''
@@ -2225,26 +2614,112 @@ function splitingQuery(value, ch, addCh, addBrackets, word) {
       }
 
       if (!quotes["'"] && !quotes['"'] && bracketCount === 0) {
-        // /(<=|>=|==|!=|<|>)/
-        if (/^(<=|>=|==|!=)$/m.test(value.slice(i, i + 2))) {
-          let char = /^(<=|>=|==|!=)$/m.exec(value.slice(i, i + 2))[0]
+        if (/^\swhere\s$/im.test(value.slice(i, i + 7))) {
           charPos.push(i)
           splittedArray.push(currentSegment)
-          splittedArray.push(char)
           currentSegment = ''
-          i += 1
-          continue
-        } else if (/^(<|>)$/m.test(value.slice(i, i + 1))) {
-          let char = /^(<|>)$/m.exec(value.slice(i, i + 1))[0]
-          charPos.push(i)
-          splittedArray.push(currentSegment)
-          splittedArray.push(char)
-          currentSegment = ''
-          i += 0
+          i += 6
           continue
         }
       }
 
+      currentSegment += char
+    }
+
+    if (currentSegment.trim()) {
+      splittedArray.push(currentSegment)
+    }
+
+    return { splittedArray, charPos }
+  } else if (['ops', 'havingCond', 'stringToTree'].includes(word)) {
+    let splittedArray = []
+    let charPos = []
+    let currentSegment = ''
+    let bracketCount = 0
+    let quotes = {
+      "'": false,
+      '"': false,
+    }
+
+    for (let i = 0; i < value.length; i++) {
+      const char = value[i]
+      if (char === "'" && !quotes['"']) {
+        if (i > 1 && /^\\\\'$/gm.test(value[i - 2] + value[i - 1] + value[i])) {
+          quotes["'"] = !quotes["'"]
+          currentSegment += char
+        } else if (i > 0 && !/^\\'$/gm.test(value[i - 1] + value[i])) {
+          quotes["'"] = !quotes["'"]
+          currentSegment += char
+        } else if (i === 0) {
+          quotes["'"] = !quotes["'"]
+          currentSegment += char
+        }
+        continue
+      }
+
+      if (char === '"' && !quotes["'"]) {
+        if (i > 1 && /^\\\\"$/gm.test(value[i - 2] + value[i - 1] + value[i])) {
+          quotes['"'] = !quotes['"']
+          currentSegment += char
+        } else if (i > 0 && !/^\\"$/gm.test(value[i - 1] + value[i])) {
+          quotes['"'] = !quotes['"']
+          currentSegment += char
+        } else if (i === 0) {
+          quotes['"'] = !quotes['"']
+          currentSegment += char
+        }
+        continue
+      }
+
+      if (value[i] === '(' && !quotes["'"] && !quotes['"']) {
+        bracketCount++
+      } else if (value[i] === ')' && !quotes["'"] && !quotes['"']) {
+        bracketCount--
+      }
+
+      if (!quotes["'"] && !quotes['"'] && bracketCount === 0) {
+        if (word === 'ops') {
+          // /[+\-*\/%^&]/
+          if (/^[+\-*\/%^&]$/m.test(value.slice(i, i + 1))) {
+            let char = /^[+\-*\/%^&]$/m.exec(value.slice(i, i + 1))[0]
+            charPos.push(i)
+            splittedArray.push(currentSegment)
+            // splittedArray.push(char)
+            currentSegment = ''
+            i += 0
+            continue
+          }
+        } else if (word === 'havingCond') {
+          // /(<=|>=|==|!=|<|>)/
+          if (/^(<=|>=|==|!=)$/m.test(value.slice(i, i + 2))) {
+            let char = /^(<=|>=|==|!=)$/m.exec(value.slice(i, i + 2))[0]
+            charPos.push(i)
+            splittedArray.push(currentSegment)
+            splittedArray.push(char)
+            currentSegment = ''
+            i += 1
+            continue
+          } else if (/^(<|>)$/m.test(value.slice(i, i + 1))) {
+            let char = /^(<|>)$/m.exec(value.slice(i, i + 1))[0]
+            charPos.push(i)
+            splittedArray.push(currentSegment)
+            splittedArray.push(char)
+            currentSegment = ''
+            i += 0
+            continue
+          }
+        } else if (word === 'stringToTree') {
+          if (/^[+\-*\/%^&]$/m.test(value.slice(i, i + 1))) {
+            let char = /^[+\-*\/%^&]$/m.exec(value.slice(i, i + 1))[0]
+            charPos.push(i)
+            splittedArray.push(currentSegment)
+            currentSegment = ''
+            splittedArray.push(char)
+            i += 0
+            continue
+          }
+        }
+      }
       currentSegment += char
     }
 
@@ -2253,6 +2728,119 @@ function splitingQuery(value, ch, addCh, addBrackets, word) {
     }
 
     return { splittedArray, charPos }
+  } else if (word === 'checkForWhereCond') {
+    console.log(value)
+    let splittedArray = []
+    let charPos = []
+    let currentSegment = ''
+    let bracketCount = 0
+    let quotes = {
+      "'": false,
+      '"': false,
+    }
+    let operators = ''
+
+    for (let i = 0; i < value.length; i++) {
+      const char = value[i]
+      if (char === "'" && !quotes['"']) {
+        quotes["'"] = !quotes["'"]
+        currentSegment += char
+        continue
+      }
+
+      if (char === '"' && !quotes["'"]) {
+        quotes['"'] = !quotes['"']
+        currentSegment += char
+        continue
+      }
+
+      if (value[i] === '(' && !quotes["'"] && !quotes['"']) {
+        bracketCount++
+      } else if (value[i] === ')' && !quotes["'"] && !quotes['"']) {
+        bracketCount--
+      }
+
+      if (!quotes["'"] && !quotes['"'] && bracketCount === 0) {
+        let char =
+          value[i + 0] + value[i + 1] + value[i + 2] + value[i + 3] + value[i + 4] + value[i + 5]
+        if (/^\slike\s$/im.test(char)) {
+          if (/\snot/gim.test(value.slice(0, i).trim())) {
+            let a = /not\s*$/gim.exec(currentSegment)
+            splittedArray.push(currentSegment.slice(0, currentSegment.length - (a && a[0]?.length)))
+            operators = 'not like'
+          } else {
+            operators = 'like'
+            splittedArray.push(currentSegment)
+          }
+          charPos.push(i)
+          currentSegment = ''
+          i += 5
+          continue
+        } else if (
+          /^\snull$/im.test(
+            value[i + 0] + value[i + 1] + value[i + 2] + value[i + 3] + value[i + 4],
+          )
+        ) {
+          let a = /(?:is|is\s+not)\s*$/gim.exec(currentSegment)
+          if (/\snot/gim.test(value.slice(0, i).trim())) {
+            operators = 'is not null'
+          } else {
+            operators = 'is null'
+          }
+          charPos.push(i)
+          splittedArray.push(currentSegment.slice(0, currentSegment.length - (a && a[0]?.length)))
+          currentSegment = ''
+          i += 4
+          continue
+        } else if (/^\sin\s$/im.test(value[i + 0] + value[i + 1] + value[i + 2] + value[i + 3])) {
+          if (/\snot/gim.test(value.slice(0, i).trim())) {
+            let a = /not\s*$/gim.exec(currentSegment)
+            splittedArray.push(currentSegment.slice(0, currentSegment.length - (a && a[0]?.length)))
+            operators = 'not in'
+          } else {
+            operators = 'in'
+            splittedArray.push(currentSegment)
+          }
+          charPos.push(i)
+          currentSegment = ''
+          i += 3
+          continue
+        } else if (
+          /^\sand\s$/im.test(
+            value[i + 0] + value[i + 1] + value[i + 2] + value[i + 3] + value[i + 4],
+          )
+        ) {
+          operators = 'between-and'
+          charPos.push(i)
+          // splittedArray.push(currentSegment)
+          splittedArray = splittedArray.concat(checkBetween(currentSegment, 'between'))
+          currentSegment = ''
+          i += 4
+          continue
+        } else if (/^(<=|>=|!=|<>)$/im.test(value[i + 0] + value[i + 1])) {
+          operators = 'ops'
+          charPos.push(i)
+          splittedArray.push(currentSegment)
+          currentSegment = ''
+          i += 1
+          continue
+        } else if (/^(<|>|=)$/im.test(value[i + 0])) {
+          operators = 'ops'
+          charPos.push(i)
+          splittedArray.push(currentSegment)
+          currentSegment = ''
+          // i += 1
+          continue
+        }
+      }
+
+      currentSegment += char
+    }
+
+    if (currentSegment.trim()) {
+      splittedArray.push(currentSegment)
+    }
+    return { splittedArray, charPos, operators }
   }
 }
 
@@ -2301,7 +2889,7 @@ function checkBetween(value) {
     splittedArray.push(currentSegment)
   }
 
-  return splittedArray.length > 1
+  return splittedArray
 }
 
 function separatingFromBrackets(value, flag) {
@@ -2317,13 +2905,13 @@ function separatingFromBrackets(value, flag) {
   let separators = []
 
   for (let i = 0; i < value.length; i++) {
-    if (i === 0 && value[0] === '(' && value[value.length - 1] === ')') {
-      continue
-    }
+    // if (i === 0 && value[0] === '(' && value[value.length - 1] === ')') {
+    //   continue
+    // }
 
-    if (i === value.length - 1 && value[0] === '(' && value[value.length - 1] === ')') {
-      continue
-    }
+    // if (i === value.length - 1 && value[0] === '(' && value[value.length - 1] === ')') {
+    //   continue
+    // }
 
     str += value[i]
 
@@ -2359,7 +2947,7 @@ function separatingFromBrackets(value, flag) {
               isBetween = false
               continue
             }
-            if (checkBetween(str, 'between') && !isBetween) {
+            if (checkBetween(str, 'between').length > 1 && !isBetween) {
               isBetween = true
               continue
             }
@@ -2399,8 +2987,11 @@ function separatingFromBrackets(value, flag) {
 
 function validatingWhereConditions(value, separator, query, strObj, fieldsList, selectedStream) {
   let errMsg = []
-  if (/^(?:not\s+)?\((.+)\)$/gim.test(value.trim())) {
-    let res = separatingFromBrackets(/^(?:not\s+)?\((.+)\)$/gim.exec(value.trim())[1].trim(), false)
+  let a = /^(?:not\s+)?\((.+)\)$/gim.exec(value.trim())
+  let mark = validateBrackets('', a && a[1])
+  if (a && mark.length === 0) {
+    let res = separatingFromBrackets(a[1].trim(), false)
+    // let res = separatingFromBrackets(value.trim().trim(), false)
     for (let i = 0; i < res.splittedArray.length; i++) {
       let err = validatingWhereConditions(
         res.splittedArray[i],
@@ -2419,135 +3010,30 @@ function validatingWhereConditions(value, separator, query, strObj, fieldsList, 
     }
     return errMsg
   } else {
-    console.log('val:', value)
-    // like
-    if (
-      /^(?:\(?\s*not\s+)?\(*\s*(?:(("[^\n"]*")|('[^\n']*'))|(@\w+(((\.\w+)|(\[\s*\d+\s*\]))+)?)|((\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\))|(([a-zA-Z0-9_-]+))|(\d+))\s*\)?\s+(not\s*like|like)\s*\(?\s*(?:(("[^\n"]*")|('[^\n']*'))|(@\w+(((\.\w+)|(\[\s*\d+\s*\]))+)?)|((\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\))|(([a-zA-Z0-9_-]+))|(\d+))\s*\)?\s*\)?$/gim.test(
-        value.trim(),
-      )
-    ) {
-      if (
-        /^(?:\(?\s*not\s+)?\(?\s*(?:(@\w+(((\.\w+)|(\[\s*\d+\s*\]))+)?)|([a-zA-Z0-9_-]+))\s+(not\s*like|like)\s*\(?\s*(?:(("[^\n"]*")|('[^\n']*'))|((\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\))|(([a-zA-Z0-9_-]+))|(\d+))\s*\)?\s*\)?$/gim.test(
-          value.trim(),
-        )
-      ) {
-        if (!/^@/.test(value.trim())) {
-          let temp = /^(?:\(?\s*not\s+)?\(?\s*(?:(@\w+(((\.\w+)|(\[\s*\d+\s*\]))+)?)|([a-zA-Z0-9_-]+))\s+(not\s*like|like)\s*\(?\s*(?:(("[^\n"]*")|('[^\n']*'))|((\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\))|(([a-zA-Z0-9_-]+))|(\d+))\s*\)?\s*\)?$/gim.exec(
-            value.trim(),
-          )
-          console.log(temp)
-          if (!(temp && temp[6] && fieldsList.includes(temp[6].trim()))) {
-            return [
-              {
-                // startLineNumber: model.getPositionAt(i).lineNumber,
-                startColumn: strObj.correctStr.length + 1,
-                // endLineNumber: model.getPositionAt(i).lineNumber,
-                endColumn: strObj.correctStr.length + value.length + 1,
-                message: 'Syntax Error: WHERE :: not a valid field name',
-                severity: monaco.MarkerSeverity.Error,
-                query: value,
-              },
-            ]
-          }
-        }
-      } else if (
-        /^(?:\(?\s*not\s+)?\(*\s*(?:((\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))\s*\)?\s+(not\s*like|like)\s*\(?\s*(?:(("[^\n"]*")|('[^\n']*'))|((\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\))|(([a-zA-Z0-9_-]+))|(\d+))\s*\)?\s*\)?$/gim.test(
-          value.trim(),
-        )
-      ) {
-        let fun = /^(?:\(?\s*not\s+)?\(*\s*(?:((\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))\s*\)?\s+(not\s*like|like)\s*\(?\s*(?:(("[^\n"]*")|('[^\n']*'))|((\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\))|(([a-zA-Z0-9_-]+))|(\d+))\s*\)?\s*\)?$/gim.exec(
-          value.trim(),
-        )
-        let arr = []
-        let func = []
-        if (fun && fun[1]) {
-          arr = columnExtract(fun[1], 'where-all', func)
-          console.log(func)
-        }
-        if (arr.length > 0 || func.length > 0) {
-          let invalidField = 0
-          arr.forEach(element => {
-            if (
-              !fieldsList.includes(element.trim().toLowerCase()) &&
-              !/^@\w+(((\.\w+)|(\[\s*\d+\s*\]))+)?$/gm.test(element.trim())
-            ) {
-              invalidField++
-            }
-          })
-          if (invalidField === 0) {
-            strObj.correctStr += value + separator
-            strObj.remStr = query.slice(strObj.correctStr.length)
-          } else {
-            return [
-              {
-                // startLineNumber: model.getPositionAt(i).lineNumber,
-                startColumn: strObj.correctStr.length + 1,
-                // endLineNumber: model.getPositionAt(i).lineNumber,
-                endColumn: strObj.correctStr.length + value.length + 1,
-                message: 'Syntax Error: WHERE :: not a valid field in the function',
-                severity: monaco.MarkerSeverity.Error,
-                query: value,
-              },
-            ]
-          }
-        } else {
-          return [
-            {
-              // startLineNumber: model.getPositionAt(i).lineNumber,
-              startColumn: strObj.correctStr.length + 1,
-              // endLineNumber: model.getPositionAt(i).lineNumber,
-              endColumn: strObj.correctStr.length + value.length + 1,
-              message: 'Syntax Error: WHERE :: not a function',
-              severity: monaco.MarkerSeverity.Error,
-              query: value,
-            },
-          ]
-        }
-      }
-    }
+    let operatorsSplit = splitingQuery(value.trim(), '', true, true, 'checkForWhereCond')
 
-    // in
-    else if (
-      /^(?:\(?\s*not\s+)?\(??\s*(?:(?:(?:"[^\n"]*")|(?:'[^\n']*'))|(@\w+(((\.\w+)|(\[\s*\d+\s*\]))+)?)|((\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\))|(([a-zA-Z0-9_-]+))|(\d+))\s*(not\s+in|in)\s*(?:\(*(?:(?:"[^\n"]*")|(?:'[^\n']*'))(?:\s*,\s*(?:(?:"[^\n"]*")|(?:'[^\n']*')))*\s*\)*)\s*?$/gim.test(
-        value.trim(),
-      )
-    ) {
-      if (
-        /^(?:\(?\s*not\s+)?\(?\s*(?:([a-zA-Z-]+))\s*(not\s+in|in)\s*(?:\(*(?:(?:"[^\n"]*")|(?:'[^\n']*'))(?:\s*,\s*(?:(?:"[^\n"]*")|(?:'[^\n']*')))*\s*\)*)\s*?$/gim.test(
-          value.trim(),
-        )
-      ) {
-        let temp = /^(?:\(?\s*not\s+)?\(?\s*(?:([a-zA-Z-]+))\s*(not\s+in|in)\s*(?:\(*(?:(?:"[^\n"]*")|(?:'[^\n']*'))(?:\s*,\s*(?:(?:"[^\n"]*")|(?:'[^\n']*')))*\s*\)*)\s*?$/gim.exec(
-          value.trim(),
-        )
-        if (!(temp && temp[1] && fieldsList.includes(temp[1].trim()))) {
+    if (operatorsSplit.operators === '') {
+      // check for boolean functions
+      if (/^(?:not\s+)?(\w+|[|~!=%&*+-\/<>^]+)\([^\n]+\)$/gm.test(value.trim())) {
+        let fun = /^(?:not\s+)?((\w+|[|~!=%&*+-\/<>^]+)\(\s*(.+)\s*\))$/gm.exec(value.trim())
+        let arr = []
+        let func = []
+        if (fun && fun[1]) {
+          arr = columnExtract(fun[1], 'where-boolean', func)
+        }
+        if (arr === 'error') {
           return [
             {
               // startLineNumber: model.getPositionAt(i).lineNumber,
               startColumn: strObj.correctStr.length + 1,
               // endLineNumber: model.getPositionAt(i).lineNumber,
               endColumn: strObj.correctStr.length + value.length + 1,
-              message: 'Syntax Error: WHERE :: not a valid field name',
+              message: '"WHERE": INVALID syntax!',
               severity: monaco.MarkerSeverity.Error,
               query: value,
             },
           ]
-        }
-      } else if (
-        /^(?:\(?\s*not\s+)?\(?\s*(?:((\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))\s*(not\s+in|in)\s*(?:\(*(?:(?:"[^\n"]*")|(?:'[^\n']*'))(?:\s*,\s*(?:(?:"[^\n"]*")|(?:'[^\n']*')))*\s*\)*)\s*?$/gim.test(
-          value.trim(),
-        )
-      ) {
-        let fun = /^(?:\(?\s*not\s+)?\(?\s*(?:((\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))\s*(not\s+in|in)\s*(?:\(*(?:(?:"[^\n"]*")|(?:'[^\n']*'))(?:\s*,\s*(?:(?:"[^\n"]*")|(?:'[^\n']*')))*\s*\)*)\s*?$/gim.exec(
-          value.trim(),
-        )
-        let arr = []
-        let func = []
-        if (fun && fun[1]) {
-          arr = columnExtract(fun[1], 'where-all', func)
-          console.log(func)
-        }
-        if (arr.length > 0 || func.length > 0) {
+        } else if (arr.length > 0 || func.length > 0) {
           let invalidField = 0
           arr.forEach(element => {
             if (
@@ -2567,7 +3053,7 @@ function validatingWhereConditions(value, separator, query, strObj, fieldsList, 
                 startColumn: strObj.correctStr.length + 1,
                 // endLineNumber: model.getPositionAt(i).lineNumber,
                 endColumn: strObj.correctStr.length + value.length + 1,
-                message: 'Syntax Error: WHERE :: not a valid field in the function',
+                message: '"WHERE": field inside the boolean function is INVALID!',
                 severity: monaco.MarkerSeverity.Error,
                 query: value,
               },
@@ -2580,127 +3066,7 @@ function validatingWhereConditions(value, separator, query, strObj, fieldsList, 
               startColumn: strObj.correctStr.length + 1,
               // endLineNumber: model.getPositionAt(i).lineNumber,
               endColumn: strObj.correctStr.length + value.length + 1,
-              message: 'Syntax Error: WHERE :: not a function',
-              severity: monaco.MarkerSeverity.Error,
-              query: value,
-            },
-          ]
-        }
-      }
-    }
-
-    // . is null | . is not null
-    else if (
-      /^(?:\(?\s*not\s+)?\(?\s*(?:(("[^\n"]*")|('[^\n']*'))|(@\w+(((\.\w+)|(\[\s*\d+\s*\]))+)?)|((\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\))|(([a-zA-Z0-9_-]+))|(\d+))\s*(?:is|is\s+not)\s+null\s*\)?$/gim.test(
-        value.trim(),
-      )
-    ) {
-      if (
-        /^(?:\(?\s*not\s+)?\(?\s*(?:([a-zA-Z0-9_-]+))\s*(?:is|is\s+not)\s+null\s*\)?$/gim.test(
-          value.trim(),
-        )
-      ) {
-        let temp = /^(?:\(?\s*not\s+)?\(?\s*(?:([a-zA-Z0-9_-]+))\s*(?:is|is\s+not)\s+null\s*\)?$/gim.exec(
-          value.trim(),
-        )
-        if (!(temp && temp[1] && fieldsList.includes(temp[1].trim()))) {
-          return [
-            {
-              // startLineNumber: model.getPositionAt(i).lineNumber,
-              startColumn: strObj.correctStr.length + 1,
-              // endLineNumber: model.getPositionAt(i).lineNumber,
-              endColumn: strObj.correctStr.length + value.length + 1,
-              message: 'Syntax Error: WHERE :: not a valid field name',
-              severity: monaco.MarkerSeverity.Error,
-              query: value,
-            },
-          ]
-        }
-      } else if (
-        /^(?:\(?\s*not\s+)?\(?\s*(?:((\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))\s*(?:is|is\s+not)\s+null\s*\)?$/gim.test(
-          value.trim(),
-        )
-      ) {
-        let fun = /^(?:\(?\s*not\s+)?\(?\s*(?:((\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))\s*(?:is|is\s+not)\s+null\s*\)?$/gim.exec(
-          value.trim(),
-        )
-        let arr = []
-        let func = []
-        if (fun && fun[1]) {
-          arr = columnExtract(fun[1], 'where-all', func)
-          console.log(func)
-        }
-        if (arr.length > 0 || func.length > 0) {
-          let invalidField = 0
-          arr.forEach(element => {
-            if (
-              !fieldsList.includes(element.trim().toLowerCase()) &&
-              !/^@\w+(((\.\w+)|(\[\s*\d+\s*\]))+)?$/gm.test(element.trim())
-            ) {
-              invalidField++
-            }
-          })
-          if (invalidField === 0) {
-            strObj.correctStr += value + separator
-            strObj.remStr = query.slice(strObj.correctStr.length)
-          } else {
-            return [
-              {
-                // startLineNumber: model.getPositionAt(i).lineNumber,
-                startColumn: strObj.correctStr.length + 1,
-                // endLineNumber: model.getPositionAt(i).lineNumber,
-                endColumn: strObj.correctStr.length + value.length + 1,
-                message: 'Syntax Error: WHERE :: not a valid field in the function',
-                severity: monaco.MarkerSeverity.Error,
-                query: value,
-              },
-            ]
-          }
-        } else {
-          return [
-            {
-              // startLineNumber: model.getPositionAt(i).lineNumber,
-              startColumn: strObj.correctStr.length + 1,
-              // endLineNumber: model.getPositionAt(i).lineNumber,
-              endColumn: strObj.correctStr.length + value.length + 1,
-              message: 'Syntax Error: WHERE :: not a function',
-              severity: monaco.MarkerSeverity.Error,
-              query: value,
-            },
-          ]
-        }
-      }
-    } else if (/^(?:not\s+)?(\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)$/gm.test(value.trim())) {
-      let fun = /^(?:not\s+)?((\w+|[|~!=%&*+-\/<>^]+)\(\s*(.+)\s*\))$/gm.exec(value.trim())
-      console.log(fun)
-      let arr = []
-      let func = []
-      if (fun && fun[1]) {
-        arr = columnExtract(fun[1], 'where-boolean', func)
-        console.log(func)
-      }
-      console.log(arr)
-      if (arr.length > 0 || func.length > 0) {
-        let invalidField = 0
-        arr.forEach(element => {
-          if (
-            !fieldsList.includes(element.trim().toLowerCase()) &&
-            !/^@\w+(((\.\w+)|(\[\s*\d+\s*\]))+)?$/gm.test(element.trim())
-          ) {
-            invalidField++
-          }
-        })
-        if (invalidField === 0) {
-          strObj.correctStr += value + separator
-          strObj.remStr = query.slice(strObj.correctStr.length)
-        } else {
-          return [
-            {
-              // startLineNumber: model.getPositionAt(i).lineNumber,
-              startColumn: strObj.correctStr.length + 1,
-              // endLineNumber: model.getPositionAt(i).lineNumber,
-              endColumn: strObj.correctStr.length + value.length + 1,
-              message: 'Syntax Error: WHERE :: not a valid field in the boolean function',
+              message: '"WHERE": boolean function expected',
               severity: monaco.MarkerSeverity.Error,
               query: value,
             },
@@ -2713,313 +3079,1312 @@ function validatingWhereConditions(value, separator, query, strObj, fieldsList, 
             startColumn: strObj.correctStr.length + 1,
             // endLineNumber: model.getPositionAt(i).lineNumber,
             endColumn: strObj.correctStr.length + value.length + 1,
-            message: 'Syntax Error: WHERE :: not a boolean function',
+            message: '"WHERE" syntax error: Invalid expression',
+            severity: monaco.MarkerSeverity.Error,
+            query: value,
+          },
+        ]
+      }
+    } else if (operatorsSplit.operators === 'ops') {
+      console.log('ops-----------> ', operatorsSplit)
+      if (operatorsSplit.splittedArray.length === 2) {
+        if (
+          /^\s*(?:\(?\s*not\s+)?(?:(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:(?:"[^\n"]*")|(?:'[^\n']*'))|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*(?:([+\-*\/%^&])\s*(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:(?:"[^\n"]*")|(?:'[^\n']*'))|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*?)*)$/gim.test(
+            operatorsSplit.splittedArray[0].trim(),
+          )
+        ) {
+          console.log(value, operatorsSplit.splittedArray)
+          let notCheck = /^(\s*not\s+)/.exec(operatorsSplit.splittedArray[0])
+          let returnVal = {}
+          if (notCheck && notCheck[1]) {
+            returnVal = extractfieldsFromOperators(
+              'where',
+              operatorsSplit.splittedArray[0].slice(notCheck[1].length),
+            )
+          } else {
+            returnVal = extractfieldsFromOperators('where', operatorsSplit.splittedArray[0])
+          }
+
+          for (let i = 0; i < returnVal.fields.length; i++) {
+            if (!fieldsList.includes(returnVal?.fields[i]?.toLowerCase().trim())) {
+              return [
+                {
+                  // startLineNumber: model.getPositionAt(i).lineNumber,
+                  startColumn: strObj.correctStr.length + 1,
+                  // endLineNumber: model.getPositionAt(i).lineNumber,
+                  endColumn: strObj.correctStr.length + value.length + 1,
+                  message: `"WHERE": field name "${returnVal.fields[i].trim() || ''}" is INVALID!`,
+                  severity: monaco.MarkerSeverity.Error,
+                  query: value,
+                },
+              ]
+            }
+          }
+
+          for (let i = 0; i < returnVal.functions.length; i++) {
+            let fun = /^((\w+|[|~!=%&*+-\/<>^]+)\(\s*(?:.+)\s*\))$/gim.exec(
+              returnVal.functions[i].trim(),
+            )
+            let arr = []
+            let func = []
+            arr = columnExtract(returnVal.functions[i].trim(), 'where-all', func)
+            console.log('where-all', arr, returnVal.functions[i].trim(), fun)
+            if (func.length === 0) {
+              return [
+                {
+                  // startLineNumber: model.getPositionAt(i).lineNumber,
+                  startColumn: strObj.correctStr.length + 1,
+                  // endLineNumber: model.getPositionAt(i).lineNumber,
+                  endColumn: strObj.correctStr.length + value.length + 1,
+                  message: `"WHERE": function ${fun[2] || ''} is INVALID`,
+                  severity: monaco.MarkerSeverity.Error,
+                  query: value,
+                },
+              ]
+            } else if (func.length > 0 && typeof arr === 'string') {
+              return [
+                {
+                  // startLineNumber: model.getPositionAt(i).lineNumber,
+                  startColumn: strObj.correctStr.length + 1,
+                  // endLineNumber: model.getPositionAt(i).lineNumber,
+                  endColumn: strObj.correctStr.length + value.length + 1,
+                  message: `"WHERE": function ${fun[1]} syntax is INVALID`,
+                  severity: monaco.MarkerSeverity.Error,
+                  query: value,
+                },
+              ]
+            } else if (arr.length > 0 || func.length > 0) {
+              let invalidField = 0
+              arr.forEach(element => {
+                if (
+                  !fieldsList.includes(element.trim().toLowerCase()) &&
+                  !/^@\w+(((\.\w+)|(\[\s*\d+\s*\]))+)?$/gm.test(element.trim())
+                ) {
+                  invalidField++
+                }
+              })
+              if (invalidField === 0) {
+                strObj.correctStr += value + separator
+                strObj.remStr = query.slice(strObj.correctStr.length)
+              } else {
+                return [
+                  {
+                    // startLineNumber: model.getPositionAt(i).lineNumber,
+                    startColumn: strObj.correctStr.length + 1,
+                    // endLineNumber: model.getPositionAt(i).lineNumber,
+                    endColumn: strObj.correctStr.length + value.length + 1,
+                    message: '"WHERE": field inside the function is INVALID!',
+                    severity: monaco.MarkerSeverity.Error,
+                    query: value,
+                  },
+                ]
+              }
+            } else {
+              return [
+                {
+                  // startLineNumber: model.getPositionAt(i).lineNumber,
+                  startColumn: strObj.correctStr.length + 1,
+                  // endLineNumber: model.getPositionAt(i).lineNumber,
+                  endColumn: strObj.correctStr.length + value.length + 1,
+                  message: '"WHERE": function is INVALID',
+                  severity: monaco.MarkerSeverity.Error,
+                  query: value,
+                },
+              ]
+            }
+          }
+        } else {
+          return [
+            {
+              // startLineNumber: model.getPositionAt(i).lineNumber,
+              startColumn: strObj.correctStr.length + 1,
+              // endLineNumber: model.getPositionAt(i).lineNumber,
+              endColumn: strObj.correctStr.length + value.length + 1,
+              message: `"WHERE": Syntax error while using operators`,
+              severity: monaco.MarkerSeverity.Error,
+              query: value,
+            },
+          ]
+        }
+
+        if (
+          /^\s*(?:\(?\s*not\s+)?(?:(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:(?:"[^\n"]*")|(?:'[^\n']*'))|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*(?:([+\-*\/%^&])\s*(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:(?:"[^\n"]*")|(?:'[^\n']*'))|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*?)*)$/gim.test(
+            operatorsSplit.splittedArray[1].trim(),
+          )
+        ) {
+          console.log(value, operatorsSplit.splittedArray)
+          let notCheck = /^(\s*not\s+)/.exec(operatorsSplit.splittedArray[1])
+          let returnVal = {}
+          if (notCheck && notCheck[1]) {
+            returnVal = extractfieldsFromOperators(
+              'where',
+              operatorsSplit.splittedArray[1].slice(notCheck[1].length),
+            )
+          } else {
+            returnVal = extractfieldsFromOperators('where', operatorsSplit.splittedArray[1])
+          }
+
+          for (let i = 0; i < returnVal.fields.length; i++) {
+            if (!fieldsList.includes(returnVal?.fields[i]?.toLowerCase().trim())) {
+              return [
+                {
+                  // startLineNumber: model.getPositionAt(i).lineNumber,
+                  startColumn: strObj.correctStr.length + 1,
+                  // endLineNumber: model.getPositionAt(i).lineNumber,
+                  endColumn: strObj.correctStr.length + value.length + 1,
+                  message: `"WHERE": field name "${returnVal.fields[i].trim() || ''}" is INVALID!`,
+                  severity: monaco.MarkerSeverity.Error,
+                  query: value,
+                },
+              ]
+            }
+          }
+
+          for (let i = 0; i < returnVal.functions.length; i++) {
+            let fun = /^((\w+|[|~!=%&*+-\/<>^]+)\(\s*(?:.+)\s*\))$/gim.exec(
+              returnVal.functions[i].trim(),
+            )
+            let arr = []
+            let func = []
+            arr = columnExtract(returnVal.functions[i].trim(), 'where-all', func)
+            console.log('where-all', arr, returnVal.functions[i].trim(), fun)
+            if (func.length === 0) {
+              return [
+                {
+                  // startLineNumber: model.getPositionAt(i).lineNumber,
+                  startColumn: strObj.correctStr.length + 1,
+                  // endLineNumber: model.getPositionAt(i).lineNumber,
+                  endColumn: strObj.correctStr.length + value.length + 1,
+                  message: `"WHERE": function ${fun[2] || ''} is INVALID`,
+                  severity: monaco.MarkerSeverity.Error,
+                  query: value,
+                },
+              ]
+            } else if (func.length > 0 && typeof arr === 'string') {
+              return [
+                {
+                  // startLineNumber: model.getPositionAt(i).lineNumber,
+                  startColumn: strObj.correctStr.length + 1,
+                  // endLineNumber: model.getPositionAt(i).lineNumber,
+                  endColumn: strObj.correctStr.length + value.length + 1,
+                  message: `"WHERE": function ${fun[1]} syntax is INVALID`,
+                  severity: monaco.MarkerSeverity.Error,
+                  query: value,
+                },
+              ]
+            } else if (arr.length > 0 || func.length > 0) {
+              let invalidField = 0
+              arr.forEach(element => {
+                if (
+                  !fieldsList.includes(element.trim().toLowerCase()) &&
+                  !/^@\w+(((\.\w+)|(\[\s*\d+\s*\]))+)?$/gm.test(element.trim())
+                ) {
+                  invalidField++
+                }
+              })
+              if (invalidField === 0) {
+                strObj.correctStr += value + separator
+                strObj.remStr = query.slice(strObj.correctStr.length)
+              } else {
+                return [
+                  {
+                    // startLineNumber: model.getPositionAt(i).lineNumber,
+                    startColumn: strObj.correctStr.length + 1,
+                    // endLineNumber: model.getPositionAt(i).lineNumber,
+                    endColumn: strObj.correctStr.length + value.length + 1,
+                    message: '"WHERE": field inside the function is INVALID!',
+                    severity: monaco.MarkerSeverity.Error,
+                    query: value,
+                  },
+                ]
+              }
+            } else {
+              return [
+                {
+                  // startLineNumber: model.getPositionAt(i).lineNumber,
+                  startColumn: strObj.correctStr.length + 1,
+                  // endLineNumber: model.getPositionAt(i).lineNumber,
+                  endColumn: strObj.correctStr.length + value.length + 1,
+                  message: '"WHERE": function is INVALID',
+                  severity: monaco.MarkerSeverity.Error,
+                  query: value,
+                },
+              ]
+            }
+          }
+        } else {
+          return [
+            {
+              // startLineNumber: model.getPositionAt(i).lineNumber,
+              startColumn: strObj.correctStr.length + 1,
+              // endLineNumber: model.getPositionAt(i).lineNumber,
+              endColumn: strObj.correctStr.length + value.length + 1,
+              message: `"WHERE": Syntax error while using operators`,
+              severity: monaco.MarkerSeverity.Error,
+              query: value,
+            },
+          ]
+        }
+      } else {
+        return [
+          {
+            // startLineNumber: model.getPositionAt(i).lineNumber,
+            startColumn: strObj.correctStr.length + 1,
+            // endLineNumber: model.getPositionAt(i).lineNumber,
+            endColumn: strObj.correctStr.length + value.length + 1,
+            message: `"WHERE": Syntax error while using operators`,
+            severity: monaco.MarkerSeverity.Error,
+            query: value,
+          },
+        ]
+      }
+    } else if (operatorsSplit.operators === 'between-and') {
+      console.log('between-and-----------> ', operatorsSplit)
+      if (operatorsSplit.splittedArray.length === 3) {
+        if (
+          /^\s*(?:\(?\s*not\s+)?(?:(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:(?:"[^\n"]*")|(?:'[^\n']*'))|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*(?:([+\-*\/%^&])\s*(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:(?:"[^\n"]*")|(?:'[^\n']*'))|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*?)*)$/gim.test(
+            operatorsSplit.splittedArray[0].trim(),
+          )
+        ) {
+          console.log(value, operatorsSplit.splittedArray)
+          let notCheck = /^(\s*not\s+)/.exec(operatorsSplit.splittedArray[0])
+          let returnVal = {}
+          if (notCheck && notCheck[1]) {
+            returnVal = extractfieldsFromOperators(
+              'where',
+              operatorsSplit.splittedArray[0].slice(notCheck[1].length),
+            )
+          } else {
+            returnVal = extractfieldsFromOperators('where', operatorsSplit.splittedArray[0])
+          }
+
+          for (let i = 0; i < returnVal.fields.length; i++) {
+            if (!fieldsList.includes(returnVal?.fields[i]?.toLowerCase().trim())) {
+              return [
+                {
+                  // startLineNumber: model.getPositionAt(i).lineNumber,
+                  startColumn: strObj.correctStr.length + 1,
+                  // endLineNumber: model.getPositionAt(i).lineNumber,
+                  endColumn: strObj.correctStr.length + value.length + 1,
+                  message: `"WHERE": field name "${returnVal.fields[i].trim() || ''}" is INVALID!`,
+                  severity: monaco.MarkerSeverity.Error,
+                  query: value,
+                },
+              ]
+            }
+          }
+
+          for (let i = 0; i < returnVal.functions.length; i++) {
+            let fun = /^((\w+|[|~!=%&*+-\/<>^]+)\(\s*(?:.+)\s*\))$/gim.exec(
+              returnVal.functions[i].trim(),
+            )
+            let arr = []
+            let func = []
+            arr = columnExtract(returnVal.functions[i].trim(), 'where-all', func)
+            console.log('where-all', arr, returnVal.functions[i].trim(), fun)
+            if (func.length === 0) {
+              return [
+                {
+                  // startLineNumber: model.getPositionAt(i).lineNumber,
+                  startColumn: strObj.correctStr.length + 1,
+                  // endLineNumber: model.getPositionAt(i).lineNumber,
+                  endColumn: strObj.correctStr.length + value.length + 1,
+                  message: `"WHERE": function ${fun[2] || ''} is INVALID`,
+                  severity: monaco.MarkerSeverity.Error,
+                  query: value,
+                },
+              ]
+            } else if (func.length > 0 && typeof arr === 'string') {
+              return [
+                {
+                  // startLineNumber: model.getPositionAt(i).lineNumber,
+                  startColumn: strObj.correctStr.length + 1,
+                  // endLineNumber: model.getPositionAt(i).lineNumber,
+                  endColumn: strObj.correctStr.length + value.length + 1,
+                  message: `"WHERE": function ${fun[1]} syntax is INVALID`,
+                  severity: monaco.MarkerSeverity.Error,
+                  query: value,
+                },
+              ]
+            } else if (arr.length > 0 || func.length > 0) {
+              let invalidField = 0
+              arr.forEach(element => {
+                if (
+                  !fieldsList.includes(element.trim().toLowerCase()) &&
+                  !/^@\w+(((\.\w+)|(\[\s*\d+\s*\]))+)?$/gm.test(element.trim())
+                ) {
+                  invalidField++
+                }
+              })
+              if (invalidField === 0) {
+                strObj.correctStr += value + separator
+                strObj.remStr = query.slice(strObj.correctStr.length)
+              } else {
+                return [
+                  {
+                    // startLineNumber: model.getPositionAt(i).lineNumber,
+                    startColumn: strObj.correctStr.length + 1,
+                    // endLineNumber: model.getPositionAt(i).lineNumber,
+                    endColumn: strObj.correctStr.length + value.length + 1,
+                    message: '"WHERE": field inside the function is INVALID!',
+                    severity: monaco.MarkerSeverity.Error,
+                    query: value,
+                  },
+                ]
+              }
+            } else {
+              return [
+                {
+                  // startLineNumber: model.getPositionAt(i).lineNumber,
+                  startColumn: strObj.correctStr.length + 1,
+                  // endLineNumber: model.getPositionAt(i).lineNumber,
+                  endColumn: strObj.correctStr.length + value.length + 1,
+                  message: '"WHERE": function is INVALID',
+                  severity: monaco.MarkerSeverity.Error,
+                  query: value,
+                },
+              ]
+            }
+          }
+        } else {
+          return [
+            {
+              // startLineNumber: model.getPositionAt(i).lineNumber,
+              startColumn: strObj.correctStr.length + 1,
+              // endLineNumber: model.getPositionAt(i).lineNumber,
+              endColumn: strObj.correctStr.length + value.length + 1,
+              message: `"WHERE": Syntax error while using between ... and`,
+              severity: monaco.MarkerSeverity.Error,
+              query: value,
+            },
+          ]
+        }
+
+        if (
+          /^\s*(?:\(?\s*not\s+)?(?:(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:(?:"[^\n"]*")|(?:'[^\n']*'))|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*(?:([+\-*\/%^&])\s*(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:(?:"[^\n"]*")|(?:'[^\n']*'))|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*?)*)$/gim.test(
+            operatorsSplit.splittedArray[1].trim(),
+          )
+        ) {
+          console.log(value, operatorsSplit.splittedArray)
+          let notCheck = /^(\s*not\s+)/.exec(operatorsSplit.splittedArray[1])
+          let returnVal = {}
+          if (notCheck && notCheck[1]) {
+            returnVal = extractfieldsFromOperators(
+              'where',
+              operatorsSplit.splittedArray[1].slice(notCheck[1].length),
+            )
+          } else {
+            returnVal = extractfieldsFromOperators('where', operatorsSplit.splittedArray[1])
+          }
+
+          for (let i = 0; i < returnVal.fields.length; i++) {
+            if (!fieldsList.includes(returnVal?.fields[i]?.toLowerCase().trim())) {
+              return [
+                {
+                  // startLineNumber: model.getPositionAt(i).lineNumber,
+                  startColumn: strObj.correctStr.length + 1,
+                  // endLineNumber: model.getPositionAt(i).lineNumber,
+                  endColumn: strObj.correctStr.length + value.length + 1,
+                  message: `"WHERE": field name "${returnVal.fields[i].trim() || ''}" is INVALID!`,
+                  severity: monaco.MarkerSeverity.Error,
+                  query: value,
+                },
+              ]
+            }
+          }
+
+          for (let i = 0; i < returnVal.functions.length; i++) {
+            let fun = /^((\w+|[|~!=%&*+-\/<>^]+)\(\s*(?:.+)\s*\))$/gim.exec(
+              returnVal.functions[i].trim(),
+            )
+            let arr = []
+            let func = []
+            arr = columnExtract(returnVal.functions[i].trim(), 'where-all', func)
+            console.log('where-all', arr, returnVal.functions[i].trim(), fun)
+            if (func.length === 0) {
+              return [
+                {
+                  // startLineNumber: model.getPositionAt(i).lineNumber,
+                  startColumn: strObj.correctStr.length + 1,
+                  // endLineNumber: model.getPositionAt(i).lineNumber,
+                  endColumn: strObj.correctStr.length + value.length + 1,
+                  message: `"WHERE": function ${fun[2] || ''} is INVALID`,
+                  severity: monaco.MarkerSeverity.Error,
+                  query: value,
+                },
+              ]
+            } else if (func.length > 0 && typeof arr === 'string') {
+              return [
+                {
+                  // startLineNumber: model.getPositionAt(i).lineNumber,
+                  startColumn: strObj.correctStr.length + 1,
+                  // endLineNumber: model.getPositionAt(i).lineNumber,
+                  endColumn: strObj.correctStr.length + value.length + 1,
+                  message: `"WHERE": function ${fun[1]} syntax is INVALID`,
+                  severity: monaco.MarkerSeverity.Error,
+                  query: value,
+                },
+              ]
+            } else if (arr.length > 0 || func.length > 0) {
+              let invalidField = 0
+              arr.forEach(element => {
+                if (
+                  !fieldsList.includes(element.trim().toLowerCase()) &&
+                  !/^@\w+(((\.\w+)|(\[\s*\d+\s*\]))+)?$/gm.test(element.trim())
+                ) {
+                  invalidField++
+                }
+              })
+              if (invalidField === 0) {
+                strObj.correctStr += value + separator
+                strObj.remStr = query.slice(strObj.correctStr.length)
+              } else {
+                return [
+                  {
+                    // startLineNumber: model.getPositionAt(i).lineNumber,
+                    startColumn: strObj.correctStr.length + 1,
+                    // endLineNumber: model.getPositionAt(i).lineNumber,
+                    endColumn: strObj.correctStr.length + value.length + 1,
+                    message: '"WHERE": field inside the function is INVALID!',
+                    severity: monaco.MarkerSeverity.Error,
+                    query: value,
+                  },
+                ]
+              }
+            } else {
+              return [
+                {
+                  // startLineNumber: model.getPositionAt(i).lineNumber,
+                  startColumn: strObj.correctStr.length + 1,
+                  // endLineNumber: model.getPositionAt(i).lineNumber,
+                  endColumn: strObj.correctStr.length + value.length + 1,
+                  message: '"WHERE": function is INVALID',
+                  severity: monaco.MarkerSeverity.Error,
+                  query: value,
+                },
+              ]
+            }
+          }
+        } else {
+          return [
+            {
+              // startLineNumber: model.getPositionAt(i).lineNumber,
+              startColumn: strObj.correctStr.length + 1,
+              // endLineNumber: model.getPositionAt(i).lineNumber,
+              endColumn: strObj.correctStr.length + value.length + 1,
+              message: `"WHERE": Syntax error while using between ... and`,
+              severity: monaco.MarkerSeverity.Error,
+              query: value,
+            },
+          ]
+        }
+
+        if (
+          /^\s*(?:\(?\s*not\s+)?(?:(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:(?:"[^\n"]*")|(?:'[^\n']*'))|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*(?:([+\-*\/%^&])\s*(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:(?:"[^\n"]*")|(?:'[^\n']*'))|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*?)*)$/gim.test(
+            operatorsSplit.splittedArray[2].trim(),
+          )
+        ) {
+          console.log(value, operatorsSplit.splittedArray)
+          let notCheck = /^(\s*not\s+)/.exec(operatorsSplit.splittedArray[2])
+          let returnVal = {}
+          if (notCheck && notCheck[1]) {
+            returnVal = extractfieldsFromOperators(
+              'where',
+              operatorsSplit.splittedArray[2].slice(notCheck[1].length),
+            )
+          } else {
+            returnVal = extractfieldsFromOperators('where', operatorsSplit.splittedArray[2])
+          }
+
+          for (let i = 0; i < returnVal.fields.length; i++) {
+            if (!fieldsList.includes(returnVal?.fields[i]?.toLowerCase().trim())) {
+              return [
+                {
+                  // startLineNumber: model.getPositionAt(i).lineNumber,
+                  startColumn: strObj.correctStr.length + 1,
+                  // endLineNumber: model.getPositionAt(i).lineNumber,
+                  endColumn: strObj.correctStr.length + value.length + 1,
+                  message: `"WHERE": field name "${returnVal.fields[i].trim() || ''}" is INVALID!`,
+                  severity: monaco.MarkerSeverity.Error,
+                  query: value,
+                },
+              ]
+            }
+          }
+
+          for (let i = 0; i < returnVal.functions.length; i++) {
+            let fun = /^((\w+|[|~!=%&*+-\/<>^]+)\(\s*(?:.+)\s*\))$/gim.exec(
+              returnVal.functions[i].trim(),
+            )
+            let arr = []
+            let func = []
+            arr = columnExtract(returnVal.functions[i].trim(), 'where-all', func)
+            console.log('where-all', arr, returnVal.functions[i].trim(), fun)
+            if (func.length === 0) {
+              return [
+                {
+                  // startLineNumber: model.getPositionAt(i).lineNumber,
+                  startColumn: strObj.correctStr.length + 1,
+                  // endLineNumber: model.getPositionAt(i).lineNumber,
+                  endColumn: strObj.correctStr.length + value.length + 1,
+                  message: `"WHERE": function ${fun[2] || ''} is INVALID`,
+                  severity: monaco.MarkerSeverity.Error,
+                  query: value,
+                },
+              ]
+            } else if (func.length > 0 && typeof arr === 'string') {
+              return [
+                {
+                  // startLineNumber: model.getPositionAt(i).lineNumber,
+                  startColumn: strObj.correctStr.length + 1,
+                  // endLineNumber: model.getPositionAt(i).lineNumber,
+                  endColumn: strObj.correctStr.length + value.length + 1,
+                  message: `"WHERE": function ${fun[1]} syntax is INVALID`,
+                  severity: monaco.MarkerSeverity.Error,
+                  query: value,
+                },
+              ]
+            } else if (arr.length > 0 || func.length > 0) {
+              let invalidField = 0
+              arr.forEach(element => {
+                if (
+                  !fieldsList.includes(element.trim().toLowerCase()) &&
+                  !/^@\w+(((\.\w+)|(\[\s*\d+\s*\]))+)?$/gm.test(element.trim())
+                ) {
+                  invalidField++
+                }
+              })
+              if (invalidField === 0) {
+                strObj.correctStr += value + separator
+                strObj.remStr = query.slice(strObj.correctStr.length)
+              } else {
+                return [
+                  {
+                    // startLineNumber: model.getPositionAt(i).lineNumber,
+                    startColumn: strObj.correctStr.length + 1,
+                    // endLineNumber: model.getPositionAt(i).lineNumber,
+                    endColumn: strObj.correctStr.length + value.length + 1,
+                    message: '"WHERE": field inside the function is INVALID!',
+                    severity: monaco.MarkerSeverity.Error,
+                    query: value,
+                  },
+                ]
+              }
+            } else {
+              return [
+                {
+                  // startLineNumber: model.getPositionAt(i).lineNumber,
+                  startColumn: strObj.correctStr.length + 1,
+                  // endLineNumber: model.getPositionAt(i).lineNumber,
+                  endColumn: strObj.correctStr.length + value.length + 1,
+                  message: '"WHERE": function is INVALID',
+                  severity: monaco.MarkerSeverity.Error,
+                  query: value,
+                },
+              ]
+            }
+          }
+        } else {
+          return [
+            {
+              // startLineNumber: model.getPositionAt(i).lineNumber,
+              startColumn: strObj.correctStr.length + 1,
+              // endLineNumber: model.getPositionAt(i).lineNumber,
+              endColumn: strObj.correctStr.length + value.length + 1,
+              message: `"WHERE": Syntax error while using between ... and`,
+              severity: monaco.MarkerSeverity.Error,
+              query: value,
+            },
+          ]
+        }
+      } else {
+        return [
+          {
+            // startLineNumber: model.getPositionAt(i).lineNumber,
+            startColumn: strObj.correctStr.length + 1,
+            // endLineNumber: model.getPositionAt(i).lineNumber,
+            endColumn: strObj.correctStr.length + value.length + 1,
+            message: `"WHERE": Syntax error while using between ... and`,
+            severity: monaco.MarkerSeverity.Error,
+            query: value,
+          },
+        ]
+      }
+    } else if (operatorsSplit.operators === 'like' || operatorsSplit.operators === 'not like') {
+      console.log('like-----------> ', operatorsSplit)
+      if (operatorsSplit.splittedArray.length === 2) {
+        if (
+          /^\s*(?:\(?\s*not\s+)?(?:(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:(?:"[^\n"]*")|(?:'[^\n']*'))|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*(?:([+\-*\/%^&])\s*(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:(?:"[^\n"]*")|(?:'[^\n']*'))|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*?)*)$/gim.test(
+            operatorsSplit.splittedArray[0].trim(),
+          )
+        ) {
+          console.log(value, operatorsSplit.splittedArray)
+          let notCheck = /^(\s*not\s+)/.exec(operatorsSplit.splittedArray[0])
+          let returnVal = {}
+          if (notCheck && notCheck[1]) {
+            returnVal = extractfieldsFromOperators(
+              'where',
+              operatorsSplit.splittedArray[0].slice(notCheck[1].length),
+            )
+          } else {
+            returnVal = extractfieldsFromOperators('where', operatorsSplit.splittedArray[0])
+          }
+
+          for (let i = 0; i < returnVal.fields.length; i++) {
+            if (!fieldsList.includes(returnVal?.fields[i]?.toLowerCase().trim())) {
+              return [
+                {
+                  // startLineNumber: model.getPositionAt(i).lineNumber,
+                  startColumn: strObj.correctStr.length + 1,
+                  // endLineNumber: model.getPositionAt(i).lineNumber,
+                  endColumn: strObj.correctStr.length + value.length + 1,
+                  message: `"WHERE": field name "${returnVal.fields[i].trim() || ''}" is INVALID!`,
+                  severity: monaco.MarkerSeverity.Error,
+                  query: value,
+                },
+              ]
+            }
+          }
+
+          for (let i = 0; i < returnVal.functions.length; i++) {
+            let fun = /^((\w+|[|~!=%&*+-\/<>^]+)\(\s*(?:.+)\s*\))$/gim.exec(
+              returnVal.functions[i].trim(),
+            )
+            let arr = []
+            let func = []
+            arr = columnExtract(returnVal.functions[i].trim(), 'where-all', func)
+            console.log('where-all', arr, returnVal.functions[i].trim(), fun)
+            if (func.length === 0) {
+              return [
+                {
+                  // startLineNumber: model.getPositionAt(i).lineNumber,
+                  startColumn: strObj.correctStr.length + 1,
+                  // endLineNumber: model.getPositionAt(i).lineNumber,
+                  endColumn: strObj.correctStr.length + value.length + 1,
+                  message: `"WHERE": function ${fun[2] || ''} is INVALID`,
+                  severity: monaco.MarkerSeverity.Error,
+                  query: value,
+                },
+              ]
+            } else if (func.length > 0 && typeof arr === 'string') {
+              return [
+                {
+                  // startLineNumber: model.getPositionAt(i).lineNumber,
+                  startColumn: strObj.correctStr.length + 1,
+                  // endLineNumber: model.getPositionAt(i).lineNumber,
+                  endColumn: strObj.correctStr.length + value.length + 1,
+                  message: `"WHERE": function ${fun[1]} syntax is INVALID`,
+                  severity: monaco.MarkerSeverity.Error,
+                  query: value,
+                },
+              ]
+            } else if (arr.length > 0 || func.length > 0) {
+              let invalidField = 0
+              arr.forEach(element => {
+                if (
+                  !fieldsList.includes(element.trim().toLowerCase()) &&
+                  !/^@\w+(((\.\w+)|(\[\s*\d+\s*\]))+)?$/gm.test(element.trim())
+                ) {
+                  invalidField++
+                }
+              })
+              if (invalidField === 0) {
+                strObj.correctStr += value + separator
+                strObj.remStr = query.slice(strObj.correctStr.length)
+              } else {
+                return [
+                  {
+                    // startLineNumber: model.getPositionAt(i).lineNumber,
+                    startColumn: strObj.correctStr.length + 1,
+                    // endLineNumber: model.getPositionAt(i).lineNumber,
+                    endColumn: strObj.correctStr.length + value.length + 1,
+                    message: '"WHERE": field inside the function is INVALID!',
+                    severity: monaco.MarkerSeverity.Error,
+                    query: value,
+                  },
+                ]
+              }
+            } else {
+              return [
+                {
+                  // startLineNumber: model.getPositionAt(i).lineNumber,
+                  startColumn: strObj.correctStr.length + 1,
+                  // endLineNumber: model.getPositionAt(i).lineNumber,
+                  endColumn: strObj.correctStr.length + value.length + 1,
+                  message: '"WHERE": function is INVALID',
+                  severity: monaco.MarkerSeverity.Error,
+                  query: value,
+                },
+              ]
+            }
+          }
+        } else {
+          return [
+            {
+              // startLineNumber: model.getPositionAt(i).lineNumber,
+              startColumn: strObj.correctStr.length + 1,
+              // endLineNumber: model.getPositionAt(i).lineNumber,
+              endColumn: strObj.correctStr.length + value.length + 1,
+              message: `"WHERE": Syntax error for "like / not like"`,
+              severity: monaco.MarkerSeverity.Error,
+              query: value,
+            },
+          ]
+        }
+
+        if (
+          /^\s*(?:\(?\s*not\s+)?(?:(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:(?:"[^\n"]*")|(?:'[^\n']*'))|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*(?:([+\-*\/%^&])\s*(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:(?:"[^\n"]*")|(?:'[^\n']*'))|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*?)*)$/gim.test(
+            operatorsSplit.splittedArray[1].trim(),
+          )
+        ) {
+          console.log(value, operatorsSplit.splittedArray)
+          let notCheck = /^(\s*not\s+)/.exec(operatorsSplit.splittedArray[1])
+          let returnVal = {}
+          if (notCheck && notCheck[1]) {
+            returnVal = extractfieldsFromOperators(
+              'where',
+              operatorsSplit.splittedArray[1].slice(notCheck[1].length),
+            )
+          } else {
+            returnVal = extractfieldsFromOperators('where', operatorsSplit.splittedArray[1])
+          }
+
+          for (let i = 0; i < returnVal.fields.length; i++) {
+            if (!fieldsList.includes(returnVal?.fields[i]?.toLowerCase().trim())) {
+              return [
+                {
+                  // startLineNumber: model.getPositionAt(i).lineNumber,
+                  startColumn: strObj.correctStr.length + 1,
+                  // endLineNumber: model.getPositionAt(i).lineNumber,
+                  endColumn: strObj.correctStr.length + value.length + 1,
+                  message: `"WHERE": field name "${returnVal.fields[i].trim() || ''}" is INVALID!`,
+                  severity: monaco.MarkerSeverity.Error,
+                  query: value,
+                },
+              ]
+            }
+          }
+
+          for (let i = 0; i < returnVal.functions.length; i++) {
+            let fun = /^((\w+|[|~!=%&*+-\/<>^]+)\(\s*(?:.+)\s*\))$/gim.exec(
+              returnVal.functions[i].trim(),
+            )
+            let arr = []
+            let func = []
+            arr = columnExtract(returnVal.functions[i].trim(), 'where-all', func)
+            console.log('where-all', arr, returnVal.functions[i].trim(), fun)
+            if (func.length === 0) {
+              return [
+                {
+                  // startLineNumber: model.getPositionAt(i).lineNumber,
+                  startColumn: strObj.correctStr.length + 1,
+                  // endLineNumber: model.getPositionAt(i).lineNumber,
+                  endColumn: strObj.correctStr.length + value.length + 1,
+                  message: `"WHERE": function ${fun[2] || ''} is INVALID`,
+                  severity: monaco.MarkerSeverity.Error,
+                  query: value,
+                },
+              ]
+            } else if (func.length > 0 && typeof arr === 'string') {
+              return [
+                {
+                  // startLineNumber: model.getPositionAt(i).lineNumber,
+                  startColumn: strObj.correctStr.length + 1,
+                  // endLineNumber: model.getPositionAt(i).lineNumber,
+                  endColumn: strObj.correctStr.length + value.length + 1,
+                  message: `"WHERE": function ${fun[1]} syntax is INVALID`,
+                  severity: monaco.MarkerSeverity.Error,
+                  query: value,
+                },
+              ]
+            } else if (arr.length > 0 || func.length > 0) {
+              let invalidField = 0
+              arr.forEach(element => {
+                if (
+                  !fieldsList.includes(element.trim().toLowerCase()) &&
+                  !/^@\w+(((\.\w+)|(\[\s*\d+\s*\]))+)?$/gm.test(element.trim())
+                ) {
+                  invalidField++
+                }
+              })
+              if (invalidField === 0) {
+                strObj.correctStr += value + separator
+                strObj.remStr = query.slice(strObj.correctStr.length)
+              } else {
+                return [
+                  {
+                    // startLineNumber: model.getPositionAt(i).lineNumber,
+                    startColumn: strObj.correctStr.length + 1,
+                    // endLineNumber: model.getPositionAt(i).lineNumber,
+                    endColumn: strObj.correctStr.length + value.length + 1,
+                    message: '"WHERE": field inside the function is INVALID!',
+                    severity: monaco.MarkerSeverity.Error,
+                    query: value,
+                  },
+                ]
+              }
+            } else {
+              return [
+                {
+                  // startLineNumber: model.getPositionAt(i).lineNumber,
+                  startColumn: strObj.correctStr.length + 1,
+                  // endLineNumber: model.getPositionAt(i).lineNumber,
+                  endColumn: strObj.correctStr.length + value.length + 1,
+                  message: '"WHERE": function is INVALID',
+                  severity: monaco.MarkerSeverity.Error,
+                  query: value,
+                },
+              ]
+            }
+          }
+        } else {
+          return [
+            {
+              // startLineNumber: model.getPositionAt(i).lineNumber,
+              startColumn: strObj.correctStr.length + 1,
+              // endLineNumber: model.getPositionAt(i).lineNumber,
+              endColumn: strObj.correctStr.length + value.length + 1,
+              message: `"WHERE": Syntax error for "like / not like" at where`,
+              severity: monaco.MarkerSeverity.Error,
+              query: value,
+            },
+          ]
+        }
+      } else {
+        return [
+          {
+            // startLineNumber: model.getPositionAt(i).lineNumber,
+            startColumn: strObj.correctStr.length + 1,
+            // endLineNumber: model.getPositionAt(i).lineNumber,
+            endColumn: strObj.correctStr.length + value.length + 1,
+            message: `"WHERE": Syntax error for "like / not like" at where`,
+            severity: monaco.MarkerSeverity.Error,
+            query: value,
+          },
+        ]
+      }
+    } else if (operatorsSplit.operators === 'in' || operatorsSplit.operators === 'not in') {
+      console.log('in-----------> ', operatorsSplit)
+      if (operatorsSplit.splittedArray.length === 2) {
+        if (
+          /^\s*(?:\(?\s*not\s+)?(?:(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:(?:"[^\n"]*")|(?:'[^\n']*'))|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*(?:([+\-*\/%^&])\s*(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:(?:"[^\n"]*")|(?:'[^\n']*'))|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*?)*)$/gim.test(
+            operatorsSplit.splittedArray[0].trim(),
+          )
+        ) {
+          console.log(value, operatorsSplit.splittedArray)
+          let notCheck = /^(\s*not\s+)/.exec(operatorsSplit.splittedArray[0])
+          let returnVal = {}
+          if (notCheck && notCheck[1]) {
+            returnVal = extractfieldsFromOperators(
+              'where',
+              operatorsSplit.splittedArray[0].slice(notCheck[1].length),
+            )
+          } else {
+            returnVal = extractfieldsFromOperators('where', operatorsSplit.splittedArray[0])
+          }
+
+          for (let i = 0; i < returnVal.fields.length; i++) {
+            if (!fieldsList.includes(returnVal?.fields[i]?.toLowerCase().trim())) {
+              return [
+                {
+                  // startLineNumber: model.getPositionAt(i).lineNumber,
+                  startColumn: strObj.correctStr.length + 1,
+                  // endLineNumber: model.getPositionAt(i).lineNumber,
+                  endColumn: strObj.correctStr.length + value.length + 1,
+                  message: `"WHERE": field name "${returnVal.fields[i].trim() || ''}" is INVALID!`,
+                  severity: monaco.MarkerSeverity.Error,
+                  query: value,
+                },
+              ]
+            }
+          }
+
+          for (let i = 0; i < returnVal.functions.length; i++) {
+            let fun = /^((\w+|[|~!=%&*+-\/<>^]+)\(\s*(?:.+)\s*\))$/gim.exec(
+              returnVal.functions[i].trim(),
+            )
+            let arr = []
+            let func = []
+            arr = columnExtract(returnVal.functions[i].trim(), 'where-all', func)
+            console.log('where-all', arr, returnVal.functions[i].trim(), fun)
+            if (func.length === 0) {
+              return [
+                {
+                  // startLineNumber: model.getPositionAt(i).lineNumber,
+                  startColumn: strObj.correctStr.length + 1,
+                  // endLineNumber: model.getPositionAt(i).lineNumber,
+                  endColumn: strObj.correctStr.length + value.length + 1,
+                  message: `"WHERE": function ${fun[2] || ''} is INVALID`,
+                  severity: monaco.MarkerSeverity.Error,
+                  query: value,
+                },
+              ]
+            } else if (func.length > 0 && typeof arr === 'string') {
+              return [
+                {
+                  // startLineNumber: model.getPositionAt(i).lineNumber,
+                  startColumn: strObj.correctStr.length + 1,
+                  // endLineNumber: model.getPositionAt(i).lineNumber,
+                  endColumn: strObj.correctStr.length + value.length + 1,
+                  message: `"WHERE": function ${fun[1]} syntax is INVALID`,
+                  severity: monaco.MarkerSeverity.Error,
+                  query: value,
+                },
+              ]
+            } else if (arr.length > 0 || func.length > 0) {
+              let invalidField = 0
+              arr.forEach(element => {
+                if (
+                  !fieldsList.includes(element.trim().toLowerCase()) &&
+                  !/^@\w+(((\.\w+)|(\[\s*\d+\s*\]))+)?$/gm.test(element.trim())
+                ) {
+                  invalidField++
+                }
+              })
+              if (invalidField === 0) {
+                strObj.correctStr += value + separator
+                strObj.remStr = query.slice(strObj.correctStr.length)
+              } else {
+                return [
+                  {
+                    // startLineNumber: model.getPositionAt(i).lineNumber,
+                    startColumn: strObj.correctStr.length + 1,
+                    // endLineNumber: model.getPositionAt(i).lineNumber,
+                    endColumn: strObj.correctStr.length + value.length + 1,
+                    message: '"WHERE": field inside the function is INVALID!',
+                    severity: monaco.MarkerSeverity.Error,
+                    query: value,
+                  },
+                ]
+              }
+            } else {
+              return [
+                {
+                  // startLineNumber: model.getPositionAt(i).lineNumber,
+                  startColumn: strObj.correctStr.length + 1,
+                  // endLineNumber: model.getPositionAt(i).lineNumber,
+                  endColumn: strObj.correctStr.length + value.length + 1,
+                  message: '"WHERE": function is INVALID',
+                  severity: monaco.MarkerSeverity.Error,
+                  query: value,
+                },
+              ]
+            }
+          }
+        } else {
+          return [
+            {
+              // startLineNumber: model.getPositionAt(i).lineNumber,
+              startColumn: strObj.correctStr.length + 1,
+              // endLineNumber: model.getPositionAt(i).lineNumber,
+              endColumn: strObj.correctStr.length + value.length + 1,
+              message: `"WHERE": Syntax error for "in/ not in" at where`,
+              severity: monaco.MarkerSeverity.Error,
+              query: value,
+            },
+          ]
+        }
+        let a = /^\((.+)\)$/gim.exec(operatorsSplit.splittedArray[1].trim())
+        let mark = validateBrackets('', a && a[1])
+        if (a && mark.length === 0) {
+          let arr = splitingQuery(a[1], ',', false, true).splittedArray
+          for (let x = 0; x < arr.length; x++) {
+            if (
+              /^(?:(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:(?:"[^\n"]*")|(?:'[^\n']*'))|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*(?:([+\-*\/%^&])\s*(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:(?:"[^\n"]*")|(?:'[^\n']*'))|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*?)*)$/gim.test(
+                arr[x].trim(),
+              )
+            ) {
+              let returnVal = {}
+              returnVal = extractfieldsFromOperators('where', arr[x])
+              for (let i = 0; i < returnVal.fields.length; i++) {
+                if (!fieldsList.includes(returnVal?.fields[i]?.toLowerCase().trim())) {
+                  return [
+                    {
+                      // startLineNumber: model.getPositionAt(i).lineNumber,
+                      startColumn: strObj.correctStr.length + 1,
+                      // endLineNumber: model.getPositionAt(i).lineNumber,
+                      endColumn: strObj.correctStr.length + value.length + 1,
+                      message: `"WHERE": field name "${returnVal.fields[i].trim() ||
+                        ''}" at "in /not in" is INVALID!`,
+                      severity: monaco.MarkerSeverity.Error,
+                      query: value,
+                    },
+                  ]
+                }
+              }
+
+              for (let i = 0; i < returnVal.functions.length; i++) {
+                let fun = /^((\w+|[|~!=%&*+-\/<>^]+)\(\s*(?:.+)\s*\))$/gim.exec(
+                  returnVal.functions[i].trim(),
+                )
+                let arr = []
+                let func = []
+                arr = columnExtract(returnVal.functions[i].trim(), 'where-all', func)
+                if (func.length === 0) {
+                  return [
+                    {
+                      // startLineNumber: model.getPositionAt(i).lineNumber,
+                      startColumn: strObj.correctStr.length + 1,
+                      // endLineNumber: model.getPositionAt(i).lineNumber,
+                      endColumn: strObj.correctStr.length + value.length + 1,
+                      message: `"WHERE": function ${fun[2] || ''} at "in /not in" is INVALID`,
+                      severity: monaco.MarkerSeverity.Error,
+                      query: value,
+                    },
+                  ]
+                } else if (func.length > 0 && typeof arr === 'string') {
+                  return [
+                    {
+                      // startLineNumber: model.getPositionAt(i).lineNumber,
+                      startColumn: strObj.correctStr.length + 1,
+                      // endLineNumber: model.getPositionAt(i).lineNumber,
+                      endColumn: strObj.correctStr.length + value.length + 1,
+                      message: `"WHERE": function ${fun[1]} syntax at "in /not in" is INVALID`,
+                      severity: monaco.MarkerSeverity.Error,
+                      query: value,
+                    },
+                  ]
+                } else if (arr.length > 0 || func.length > 0) {
+                  let invalidField = 0
+                  arr.forEach(element => {
+                    if (
+                      !fieldsList.includes(element.trim().toLowerCase()) &&
+                      !/^@\w+(((\.\w+)|(\[\s*\d+\s*\]))+)?$/gm.test(element.trim())
+                    ) {
+                      invalidField++
+                    }
+                  })
+                  if (invalidField === 0) {
+                    strObj.correctStr += value + separator
+                    strObj.remStr = query.slice(strObj.correctStr.length)
+                  } else {
+                    return [
+                      {
+                        // startLineNumber: model.getPositionAt(i).lineNumber,
+                        startColumn: strObj.correctStr.length + 1,
+                        // endLineNumber: model.getPositionAt(i).lineNumber,
+                        endColumn: strObj.correctStr.length + value.length + 1,
+                        message: '"WHERE": field inside the function at "in /not in" is INVALID!',
+                        severity: monaco.MarkerSeverity.Error,
+                        query: value,
+                      },
+                    ]
+                  }
+                } else {
+                  return [
+                    {
+                      // startLineNumber: model.getPositionAt(i).lineNumber,
+                      startColumn: strObj.correctStr.length + 1,
+                      // endLineNumber: model.getPositionAt(i).lineNumber,
+                      endColumn: strObj.correctStr.length + value.length + 1,
+                      message: '"WHERE": function at "in /not in" is INVALID',
+                      severity: monaco.MarkerSeverity.Error,
+                      query: value,
+                    },
+                  ]
+                }
+              }
+            } else {
+              return [
+                {
+                  // startLineNumber: model.getPositionAt(i).lineNumber,
+                  startColumn: strObj.correctStr.length + 1,
+                  // endLineNumber: model.getPositionAt(i).lineNumber,
+                  endColumn: strObj.correctStr.length + value.length + 1,
+                  message: `"WHERE": ${x.trim() || ''} "in /not in" is INVALID`,
+                  severity: monaco.MarkerSeverity.Error,
+                  query: value,
+                },
+              ]
+            }
+          }
+        } else {
+          return [
+            {
+              // startLineNumber: model.getPositionAt(i).lineNumber,
+              startColumn: strObj.correctStr.length + 1,
+              // endLineNumber: model.getPositionAt(i).lineNumber,
+              endColumn: strObj.correctStr.length + value.length + 1,
+              message: `"WHERE": "in /not in" is INVALID`,
+              severity: monaco.MarkerSeverity.Error,
+              query: value,
+            },
+          ]
+        }
+      } else {
+        return [
+          {
+            // startLineNumber: model.getPositionAt(i).lineNumber,
+            startColumn: strObj.correctStr.length + 1,
+            // endLineNumber: model.getPositionAt(i).lineNumber,
+            endColumn: strObj.correctStr.length + value.length + 1,
+            message: `"WHERE": Syntax error for "in/ not in" at where`,
+            severity: monaco.MarkerSeverity.Error,
+            query: value,
+          },
+        ]
+      }
+    } else if (
+      operatorsSplit.operators === 'is null' ||
+      operatorsSplit.operators === 'is not null'
+    ) {
+      if (operatorsSplit.splittedArray.length === 1) {
+        // else
+        if (
+          /^\s*(?:\(?\s*not\s+)?(?:(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:(?:"[^\n"]*")|(?:'[^\n']*'))|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*(?:([+\-*\/%^&])\s*(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:(?:"[^\n"]*")|(?:'[^\n']*'))|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*?)*)$/gim.test(
+            operatorsSplit.splittedArray[0].trim(),
+          )
+        ) {
+          let notCheck = /^(\s*not\s+)/.exec(operatorsSplit.splittedArray[0])
+          let returnVal = {}
+          if (notCheck && notCheck[1]) {
+            returnVal = extractfieldsFromOperators(
+              'where',
+              operatorsSplit.splittedArray[0].slice(notCheck[1].length),
+            )
+          } else {
+            returnVal = extractfieldsFromOperators('where', operatorsSplit.splittedArray[0])
+          }
+
+          for (let i = 0; i < returnVal.fields.length; i++) {
+            if (!fieldsList.includes(returnVal?.fields[i]?.toLowerCase().trim())) {
+              return [
+                {
+                  // startLineNumber: model.getPositionAt(i).lineNumber,
+                  startColumn: strObj.correctStr.length + 1,
+                  // endLineNumber: model.getPositionAt(i).lineNumber,
+                  endColumn: strObj.correctStr.length + value.length + 1,
+                  message: `"WHERE": field name "${returnVal.fields[i].trim() || ''}" is INVALID!`,
+                  severity: monaco.MarkerSeverity.Error,
+                  query: value,
+                },
+              ]
+            }
+          }
+
+          for (let i = 0; i < returnVal.functions.length; i++) {
+            let fun = /^((\w+|[|~!=%&*+-\/<>^]+)\(\s*(?:.+)\s*\))$/gim.exec(
+              returnVal.functions[i].trim(),
+            )
+            let arr = []
+            let func = []
+            if (fun && fun[1]) {
+              arr = columnExtract(returnVal.functions[i].trim(), 'where-all', func)
+            }
+            console.log('where-all', arr, fun)
+            if (func.length === 0) {
+              return [
+                {
+                  // startLineNumber: model.getPositionAt(i).lineNumber,
+                  startColumn: strObj.correctStr.length + 1,
+                  // endLineNumber: model.getPositionAt(i).lineNumber,
+                  endColumn: strObj.correctStr.length + value.length + 1,
+                  message: `"WHERE": function ${fun[2] || ''} is INVALID`,
+                  severity: monaco.MarkerSeverity.Error,
+                  query: value,
+                },
+              ]
+            } else if (func.length > 0 && typeof arr === 'string') {
+              return [
+                {
+                  // startLineNumber: model.getPositionAt(i).lineNumber,
+                  startColumn: strObj.correctStr.length + 1,
+                  // endLineNumber: model.getPositionAt(i).lineNumber,
+                  endColumn: strObj.correctStr.length + value.length + 1,
+                  message: `"WHERE": function ${fun[1]} syntax is INVALID`,
+                  severity: monaco.MarkerSeverity.Error,
+                  query: value,
+                },
+              ]
+            } else if (arr.length > 0 || func.length > 0) {
+              let invalidField = 0
+              arr.forEach(element => {
+                if (
+                  !fieldsList.includes(element.trim().toLowerCase()) &&
+                  !/^@\w+(((\.\w+)|(\[\s*\d+\s*\]))+)?$/gm.test(element.trim())
+                ) {
+                  invalidField++
+                }
+              })
+              if (invalidField === 0) {
+                strObj.correctStr += value + separator
+                strObj.remStr = query.slice(strObj.correctStr.length)
+              } else {
+                return [
+                  {
+                    // startLineNumber: model.getPositionAt(i).lineNumber,
+                    startColumn: strObj.correctStr.length + 1,
+                    // endLineNumber: model.getPositionAt(i).lineNumber,
+                    endColumn: strObj.correctStr.length + value.length + 1,
+                    message: '"WHERE": field inside the function is INVALID!',
+                    severity: monaco.MarkerSeverity.Error,
+                    query: value,
+                  },
+                ]
+              }
+            } else {
+              return [
+                {
+                  // startLineNumber: model.getPositionAt(i).lineNumber,
+                  startColumn: strObj.correctStr.length + 1,
+                  // endLineNumber: model.getPositionAt(i).lineNumber,
+                  endColumn: strObj.correctStr.length + value.length + 1,
+                  message: '"WHERE": function is INVALID',
+                  severity: monaco.MarkerSeverity.Error,
+                  query: value,
+                },
+              ]
+            }
+          }
+        } else {
+          return [
+            {
+              // startLineNumber: model.getPositionAt(i).lineNumber,
+              startColumn: strObj.correctStr.length + 1,
+              // endLineNumber: model.getPositionAt(i).lineNumber,
+              endColumn: strObj.correctStr.length + value.length + 1,
+              message: `"WHERE": Syntax error for "is null/ is not null" at where`,
+              severity: monaco.MarkerSeverity.Error,
+              query: value,
+            },
+          ]
+        }
+      } else {
+        return [
+          {
+            // startLineNumber: model.getPositionAt(i).lineNumber,
+            startColumn: strObj.correctStr.length + 1,
+            // endLineNumber: model.getPositionAt(i).lineNumber,
+            endColumn: strObj.correctStr.length + value.length + 1,
+            message: `"WHERE": Syntax error for "is null/ is not null" at where`,
             severity: monaco.MarkerSeverity.Error,
             query: value,
           },
         ]
       }
     }
-    // conditions having operators
-    else if (
-      /^(?:\(?\s*not\s+)?\(?\s*(?:(("[^\n"]*")|('[^\n']*'))|(@\w+(((\.\w+)|(\[\s*\d+\s*\]))+)?)|((\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\))|(([a-zA-Z0-9_-]+))|(\d+))\s*(?:<=|>=|<|>|=|!=|<>)\s*\(?(?:(("[^\n"]*")|('[^\n']*'))|(@\w+(((\.\w+)|(\[\s*\d+\s*\]))+)?)|((\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\))|(([a-zA-Z0-9_-]+))|(\d+))\s*\)?$/gim.test(
-        value.trim(),
-      )
-    ) {
-      //first half
-      if (
-        /^(?:\(?\s*not\s+)?\(?\s*(?:((\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\))|)\s*(?:<=|>=|<|>|=|!=|<>)\s*(?:(("[^\n"]*")|('[^\n']*'))|((\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\))|(([a-zA-Z0-9_-]+))|(\d+))\s*\)?$/gim.test(
-          value.trim(),
-        )
-      ) {
-        // functions verification
-        let tempWord = /^(?:\(?\s*not\s+)?(?:(\(?\s*(\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\))|)\s*(?:<=|>=|<|>|=|!=|<>)\s*(?:(("[^\n"]*")|('[^\n']*'))|((\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\))|(([a-zA-Z0-9_-]+))|(\d+))\s*\)?$/gim.exec(
-          value.trim(),
-        )[1]
-        let fun = /^(\(?\s*(\w+|[|~!=%&*+-\/<>^]+)\(\s*(.+)\s*\))$/gm.exec(tempWord)
-        let arr = []
-        let func = []
-        if (fun && fun[1]) {
-          arr = columnExtract(fun[1], 'where-all', func)
-          console.log(func)
-        }
-        console.log(arr)
-        let invalidField = 0
-        if (arr.length > 0 || func.length > 0) {
-          // check for every fieldnames extracted from arr should be valid
-          arr.forEach(element => {
-            if (
-              !fieldsList.includes(element.trim().toLowerCase()) &&
-              !/^@\w+(((\.\w+)|(\[\s*\d+\s*\]))+)?$/gm.test(element.trim())
-            ) {
-              invalidField++
-            }
-          })
-          if (invalidField > 0) {
-            return [
-              {
-                // startLineNumber: model.getPositionAt(i).lineNumber,
-                startColumn: strObj.correctStr.length + 1,
-                // endLineNumber: model.getPositionAt(i).lineNumber,
-                endColumn: strObj.correctStr.length + value.length + 1,
-                message: 'Syntax Error: WHERE :: not a valid field',
-                severity: monaco.MarkerSeverity.Error,
-                query: value,
-              },
-            ]
-          }
-        } else {
-          return [
-            {
-              // startLineNumber: model.getPositionAt(i).lineNumber,
-              startColumn: strObj.correctStr.length + 1,
-              // endLineNumber: model.getPositionAt(i).lineNumber,
-              endColumn: strObj.correctStr.length + value.length + 1,
-              message: 'Syntax Error: WHERE :: not a valid function',
-              severity: monaco.MarkerSeverity.Error,
-              query: value,
-            },
-          ]
-        }
-      } else if (
-        /^(?:\(?\s*not\s+)?\(?\s*(?:(\d+))\s*(?:<=|>=|<|>|=|!=|<>)\s*(?:(("[^\n"]*")|('[^\n']*'))|((\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\))|(([a-zA-Z0-9_-]+))|(\d+))\s*\)?$/gim.test(
-          value.trim(),
-        )
-      ) {
-        // digits
-      } else if (
-        /^(?:\(?\s*not\s+)?\(?\s*(?:(([a-zA-Z0-9_-]+)))\s*(?:<=|>=|<|>|=|!=|<>)\s*(?:(("[^\n"]*")|('[^\n']*'))|((\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\))|(([a-zA-Z0-9_-]+))|(\d+))\s*\)?$/gim.test(
-          value.trim(),
-        )
-      ) {
-        // field Names
-        let tempWord = /^(?:\(?\s*not\s+)?\(?\s*([a-zA-Z0-9_-]+)\s*(?:<=|>=|<|>|=|!=|<>)\s*(?:(("[^\n"]*")|('[^\n']*'))|((\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\))|(([a-zA-Z0-9_-]+))|(\d+))\s*\)?$/gim.exec(
-          value.trim(),
-        )[1]
-        if (!(tempWord && fieldsList.includes(tempWord.trim().toLowerCase()))) {
-          return [
-            {
-              // startLineNumber: model.getPositionAt(i).lineNumber,
-              startColumn: strObj.correctStr.length + 1,
-              // endLineNumber: model.getPositionAt(i).lineNumber,
-              endColumn: strObj.correctStr.length + value.length + 1,
-              message: 'Syntax Error: WHERE:: Invalid field name',
-              severity: monaco.MarkerSeverity.Error,
-              query: value,
-            },
-          ]
-        }
-      } else if (
-        /^(?:\(?\s*not\s+)?\(?\s*(?:(("[^\n"]*")|('[^\n']*')))\s*(?:<=|>=|<|>|=|!=|<>)\s*(?:(("[^\n"]*")|('[^\n']*'))|(\(?\s*(\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\))|(([a-zA-Z0-9_-]+))|(\d+))\s*\)?$/gim.test(
-          value.trim(),
-        )
-      ) {
-        // string
-      }
-
-      //second half
-      if (
-        /^(?:\(?\s*not\s+)?\(?\s*(?:(("[^\n"]*")|('[^\n']*'))|((\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\))|(([a-zA-Z0-9_-]+))|(\d+))\s*(?:<=|>=|<|>|=|!=|<>)\s*(?:((\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))\s*\)?$/gim.test(
-          value.trim(),
-        )
-      ) {
-        // functions verification
-        let tempWord = /^(?:\(?\s*not\s+)?\(?\s*(?:(("[^\n"]*")|('[^\n']*'))|((\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\))|(([a-zA-Z0-9_-]+))|(\d+))\s*(?:<=|>=|<|>|=|!=|<>)\s*(?:((\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))\s*\)?$/gim.exec(
-          value.trim(),
-        )[9]
-
-        let fun = /^((\w+|[|~!=%&*+-\/<>^]+)\(\s*(.+)\s*\))$/gm.exec(tempWord)
-        let arr = []
-        let func = []
-        if (fun && fun[1]) {
-          arr = columnExtract(fun[1], 'where-all', func)
-          console.log(func)
-        }
-        console.log(arr)
-        let invalidField = 0
-        if (arr.length > 0 || func.length > 0) {
-          arr.forEach(element => {
-            if (
-              !fieldsList.includes(element.trim().toLowerCase()) &&
-              !/^@\w+(((\.\w+)|(\[\s*\d+\s*\]))+)?$/gm.test(element.trim())
-            ) {
-              invalidField++
-            }
-          })
-          if (invalidField > 0) {
-            return [
-              {
-                // startLineNumber: model.getPositionAt(i).lineNumber,
-                startColumn: strObj.correctStr.length + 1,
-                // endLineNumber: model.getPositionAt(i).lineNumber,
-                endColumn: strObj.correctStr.length + value.length + 1,
-                message: 'Syntax Error: WHERE :: not a valid field',
-                severity: monaco.MarkerSeverity.Error,
-                query: value,
-              },
-            ]
-          }
-        } else {
-          return [
-            {
-              // startLineNumber: model.getPositionAt(i).lineNumber,
-              startColumn: strObj.correctStr.length + 1,
-              // endLineNumber: model.getPositionAt(i).lineNumber,
-              endColumn: strObj.correctStr.length + value.length + 1,
-              message: 'Syntax Error: WHERE :: not a valid function',
-              severity: monaco.MarkerSeverity.Error,
-              query: value,
-            },
-          ]
-        }
-      } else if (
-        /^(?:\(?\s*not\s+)?\(?\s*(?:(("[^\n"]*")|('[^\n']*'))|((\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\))|(([a-zA-Z0-9_-]+))|(\d+))\s*(?:<=|>=|<|>|=|!=|<>)\s*(?:(\d+))\s*\)?$/gim.test(
-          value.trim(),
-        )
-      ) {
-        // digits
-      } else if (
-        /^(?:\(?\s*not\s+)?\(?\s*(?:(?:(?:"[^\n"]*")|(?:'[^\n']*'))|(?:(?:[\w|~!=%&*+-\/<>^]+)\(\s*.+\s*\))|(?:(?:[a-zA-Z0-9_-]+))|(?:\d+))\s*(?:<=|>=|<|>|=|!=|<>)\s*(?:(?:([a-zA-Z0-9_-]+)))\s*\)?$/gim.test(
-          value.trim(),
-        )
-      ) {
-        // field Names
-        let tempWord = /^(?:\(?\s*not\s+)?\(?\s*(?:(?:(?:"[^\n"]*")|(?:'[^\n']*'))|(?:(?:[\w|~!=%&*+-\/<>^]+)\(\s*.+\s*\))|(?:(?:[a-zA-Z0-9_-]+))|(?:\d+))\s*(?:<=|>=|<|>|=|!=|<>)\s*(?:(?:([a-zA-Z0-9_-]+)))\s*\)?$/gim.exec(
-          value.trim(),
-        )[1]
-        if (!(tempWord && fieldsList.includes(tempWord.trim().toLowerCase()))) {
-          return [
-            {
-              // startLineNumber: model.getPositionAt(i).lineNumber,
-              startColumn: strObj.correctStr.length + 1,
-              // endLineNumber: model.getPositionAt(i).lineNumber,
-              endColumn: strObj.correctStr.length + value.length + 1,
-              message: 'Syntax Error: WHERE:: Invalid field name',
-              severity: monaco.MarkerSeverity.Error,
-              query: value,
-            },
-          ]
-        }
-      } else if (
-        /^(?:\(?\s*not\s+)?\(?\s*(?:(("[^\n"]*")|('[^\n']*'))|((\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\))|(([a-zA-Z0-9_-]+))|(\d+))\s*(?:<=|>=|<|>|=|!=|<>)\s*(?:(("[^\n"]*")|('[^\n']*')))\s*\)?$/gim.test(
-          value.trim(),
-        )
-      ) {
-        // string
-      }
-
-      strObj.correctStr += value + separator
-      strObj.remStr = query.slice(strObj.correctStr.length)
-    }
-
-    // between ... and
-    else if (
-      /^\(?(?:not\s+)?\s*(?:(("[^\n"]*")|('[^\n']*'))|(@\w+(((\.\w+)|(\[\s*\d+\s*\]))+)?)|((\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\))|(([a-zA-Z0-9_-]+))|(\d+))\s*\bbetween\b\s*\(?(?:(("[^\n"]*")|('[^\n']*'))|((\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\))|(([a-zA-Z0-9_-]+))|(\d+))\s*\)?\s+\band\b\s+\(?(?:(("[^\n"]*")|('[^\n']*'))|((\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\))|(([a-zA-Z0-9_-]+))|(\d+))\s*\)?$/gim.test(
-        value.trim(),
-      )
-    ) {
-      if (
-        /^\(?(?:not\s+)?\s*(?:([a-zA-Z]+))\s*\bbetween\b\s*\(?(?:(("[^\n"]*")|('[^\n']*'))|((\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\))|(([a-zA-Z0-9_-]+))|(\d+))\s*\)?\s+\band\b\s+\(?(?:(("[^\n"]*")|('[^\n']*'))|((\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\))|(([a-zA-Z0-9_-]+))|(\d+))\s*\)?$/gim.test(
-          value.trim(),
-        )
-      ) {
-        // check for valid field name
-        let temp = /^\(?(?:not\s+)?\s*(?:([a-zA-Z]+))\s*\bbetween\b\s*\(?(?:(("[^\n"]*")|('[^\n']*'))|((\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\))|(([a-zA-Z0-9_-]+))|(\d+))\s*\)?\s+\band\b\s+\(?(?:(("[^\n"]*")|('[^\n']*'))|((\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\))|(([a-zA-Z0-9_-]+))|(\d+))\s*\)?$/gim.exec(
-          value.trim(),
-        )
-        if (!(temp && temp[1] && fieldsList.includes(temp[1].trim()))) {
-          return [
-            {
-              // startLineNumber: model.getPositionAt(i).lineNumber,
-              startColumn: strObj.correctStr.length + 1,
-              // endLineNumber: model.getPositionAt(i).lineNumber,
-              endColumn: strObj.correctStr.length + value.length + 1,
-              message: 'Syntax Error: WHERE :: not a valid field name',
-              severity: monaco.MarkerSeverity.Error,
-              query: value,
-            },
-          ]
-        }
-      } else if (
-        /^\(?(?:not\s+)?\s*(?:((\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))\s*\bbetween\b\s*\(?(?:(("[^\n"]*")|('[^\n']*'))|((\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\))|(([a-zA-Z0-9_-]+))|(\d+))\s*\)?\s+\band\b\s+\(?(?:(("[^\n"]*")|('[^\n']*'))|((\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\))|(([a-zA-Z0-9_-]+))|(\d+))\s*\)?$/gim.test(
-          value.trim(),
-        )
-      ) {
-        // check for valid function
-        let fun = /^\(?(?:not\s+)?\s*(?:((\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))\s*\bbetween\b\s*\(?(?:(("[^\n"]*")|('[^\n']*'))|((\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\))|(([a-zA-Z0-9_-]+))|(\d+))\s*\)?\s+\band\b\s+\(?(?:(("[^\n"]*")|('[^\n']*'))|((\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\))|(([a-zA-Z0-9_-]+))|(\d+))\s*\)?$/gim.exec(
-          value.trim(),
-        )
-        let arr = []
-        let func = []
-        if (fun && fun[1]) {
-          arr = columnExtract(fun[1], 'where-all', func)
-          console.log(func)
-        }
-        if (arr.length > 0 || func.length > 0) {
-          let invalidField = 0
-          arr.forEach(element => {
-            if (
-              !fieldsList.includes(element.trim().toLowerCase()) &&
-              !/^@\w+(((\.\w+)|(\[\s*\d+\s*\]))+)?$/gm.test(element.trim())
-            ) {
-              invalidField++
-            }
-          })
-          if (invalidField === 0) {
-            strObj.correctStr += value + separator
-            strObj.remStr = query.slice(strObj.correctStr.length)
-          } else {
-            return [
-              {
-                // startLineNumber: model.getPositionAt(i).lineNumber,
-                startColumn: strObj.correctStr.length + 1,
-                // endLineNumber: model.getPositionAt(i).lineNumber,
-                endColumn: strObj.correctStr.length + value.length + 1,
-                message: 'Syntax Error: WHERE :: not a valid field in the function',
-                severity: monaco.MarkerSeverity.Error,
-                query: value,
-              },
-            ]
-          }
-        } else {
-          return [
-            {
-              // startLineNumber: model.getPositionAt(i).lineNumber,
-              startColumn: strObj.correctStr.length + 1,
-              // endLineNumber: model.getPositionAt(i).lineNumber,
-              endColumn: strObj.correctStr.length + value.length + 1,
-              message: 'Syntax Error: WHERE :: not a function',
-              severity: monaco.MarkerSeverity.Error,
-              query: value,
-            },
-          ]
-        }
-      }
-      console.log('val:', value)
-    }
-
-    // else
-    else {
-      console.log('"WHERE" Invalid', value)
-      return [
-        {
-          // startLineNumber: model.getPositionAt(i).lineNumber,
-          startColumn: strObj.correctStr.length + 1,
-          // endLineNumber: model.getPositionAt(i).lineNumber,
-          endColumn: strObj.correctStr.length + value.length + 1,
-          message: 'Syntax Error: "WHERE" Invalid',
-          severity: monaco.MarkerSeverity.Error,
-          query: value,
-        },
-      ]
-    }
+    // else {
+    //   return [
+    //     {
+    //       // startLineNumber: model.getPositionAt(i).lineNumber,
+    //       startColumn: strObj.correctStr.length + 1,
+    //       // endLineNumber: model.getPositionAt(i).lineNumber,
+    //       endColumn: strObj.correctStr.length + value.length + 1,
+    //       message: '"WHERE" syntax error: Invalid expression',
+    //       severity: monaco.MarkerSeverity.Error,
+    //       query: value,
+    //     },
+    //   ]
+    // }
   }
 }
 
 function validatingHavingConditions(value, separator, query, strObj, pos, havingFullFields) {
   let errMsg = []
-  if (/^\((.+)\)$/gim.test(value.trim())) {
-    let res = separatingFromBrackets(value.trim(), true)
+  let a = /^(?:not\s+)?\((.+)\)$/gim.exec(value.trim())
+  let mark = validateBrackets('', a && a[1])
+  if (a && mark.length === 0) {
+    let res = separatingFromBrackets(a[1].trim(), true)
     for (let i = 0; i < res.splittedArray.length; i++) {
       let err = validatingHavingConditions(
         res.splittedArray[i],
@@ -3040,12 +4405,10 @@ function validatingHavingConditions(value, separator, query, strObj, pos, having
     }
     return errMsg
   } else {
-    console.log('val::::', value)
-    console.log(splitingQuery(value, '', false, false, 'havingCond'))
     // let opers = value.trim().split(/(<=|>=|==|!=|<|>)/).filter((op) => (op !== undefined && op !== null && !/^\s*$/m.test(op)))
     let opers = splitingQuery(value, '', false, false, 'havingCond').splittedArray
-    const operators = ['<=', '>=', '==', '!=', '<', '>']
     console.log(opers)
+    const operators = ['<=', '>=', '==', '!=', '<', '>']
     if (opers.length === 0 || opers[0] === '') {
       return [
         {
@@ -3061,8 +4424,12 @@ function validatingHavingConditions(value, separator, query, strObj, pos, having
     }
     // log Field
     if (opers[0].trim().includes('@')) {
-      if (/^(?:(?:\w+)\s*[+\-*\/]\s*)@\w+(((\.\w+)|(\[\s*\d+\s*\]))+)?$/gm.test(opers[0].trim())) {
-        let tempOpers = opers[0].trim().split(/[+\-*\/]/gm)
+      if (
+        /^(?:(?:[\w&_-]+)\s*[+\-*\/%^&]\s*)@\w+(((\.\w+)|(\[\s*\d+\s*\]))+)?$/gm.test(
+          opers[0].trim(),
+        )
+      ) {
+        let tempOpers = opers[0].trim().split(/[+\-*\/%^&]/gm)
         havingFullFields.push([value, tempOpers[1]])
       } else if (/^@\w+(((\.\w+)|(\[\s*\d+\s*\]))+)?$/gm.test(opers[0].trim())) {
         havingFullFields.push([value, opers[0]])
@@ -3073,7 +4440,7 @@ function validatingHavingConditions(value, separator, query, strObj, pos, having
             startColumn: pos + strObj.correctStr.length + 1,
             // endLineNumber: model.getPositionAt(i).lineNumber,
             endColumn: pos + strObj.correctStr.length + value?.length + 1,
-            message: `Error at 'having': Invalid operand-1, found "${opers[0]}"`,
+            message: `Error at 'having': Invalid operand, found "${opers[0]}"`,
             severity: monaco.MarkerSeverity.Error,
             query: value,
           },
@@ -3082,7 +4449,9 @@ function validatingHavingConditions(value, separator, query, strObj, pos, having
     }
     // check for function
     else if (
-      !/^(?:(?:\w+)\s*[+\-*\/]\s*)?(?:(?:\w+)|(?:"[^\n"]*")|(?:'[^\n']*'))$/gm.test(opers[0].trim())
+      !/^(?:(?:[\w&_-]+)\s*[+\-*\/%^&]\s*)?(?:(?:[\w&_-]+)|(?:"[^\n"]*")|(?:'[^\n']*'))$/gm.test(
+        opers[0].trim(),
+      )
     ) {
       return [
         {
@@ -3097,22 +4466,22 @@ function validatingHavingConditions(value, separator, query, strObj, pos, having
       ]
     }
     if (
-      /^(?:(?:\w+)\s*[+\-*\/]\s*)(?:(?:\w+))$/gm.test(opers[0].trim()) &&
-      !/^(?:(?:\d+)\s*[+\-*\/]\s*)(?:(?:\w+))$/gm.test(opers[0].trim())
+      /^(?:(?:[\w&_-]+)\s*[+\-*\/%^&]\s*)(?:(?:[\w&_-]+))$/gm.test(opers[0].trim()) &&
+      !/^(?:(?:\d+)\s*[+\-*\/%^&]\s*)(?:(?:[\w&_-]+))$/gm.test(opers[0].trim())
     ) {
       // field check
-      let tempOpers = opers[0].trim().split(/[+\-*\/]/gm)
+      let tempOpers = opers[0].trim().split(/[+\-*\/%^&]/gm)
       havingFullFields.push([value, tempOpers[0]])
     }
     if (
-      /^(?:(?:\w+)\s*[+\-*\/]\s*)(?:(?:\w+))$/gm.test(opers[0].trim()) &&
-      !/^(?:(?:\w+)\s*[+\-*\/]\s*)(?:(?:\d+))$/gm.test(opers[0].trim())
+      /^(?:(?:[\w&_-]+)\s*[+\-*\/%^&]\s*)(?:(?:[\w&_-]+))$/gm.test(opers[0].trim()) &&
+      !/^(?:(?:[\w&_-]+)\s*[+\-*\/%^&]\s*)(?:(?:\d+))$/gm.test(opers[0].trim())
     ) {
       // field check
-      let tempOpers = opers[0].trim().split(/[+\-*\/]/gm)
+      let tempOpers = opers[0].trim().split(/[+\-*\/%^&]/gm)
       havingFullFields.push([value, tempOpers[1]])
     }
-    if (/^(?:(?:\w+))$/gm.test(opers[0].trim()) && !/^(?:(?:\d+))$/gm.test(opers[0].trim())) {
+    if (/^(?:(?:[\w&_-]+))$/gm.test(opers[0].trim()) && !/^(?:(?:\d+))$/gm.test(opers[0].trim())) {
       // field check
       havingFullFields.push([value, opers[0]])
     }
@@ -3159,8 +4528,12 @@ function validatingHavingConditions(value, separator, query, strObj, pos, having
     }
     // log Field
     if (opers[2].trim().includes('@')) {
-      if (/^(?:(?:\w+)\s*[+\-*\/]\s*)@\w+(((\.\w+)|(\[\s*\d+\s*\]))+)?$/gm.test(opers[2].trim())) {
-        let tempOpers = opers[0].trim().split(/[+\-*\/]/gm)
+      if (
+        /^(?:(?:[\w&_-]+)\s*[+\-*\/%^&]\s*)@\w+(((\.\w+)|(\[\s*\d+\s*\]))+)?$/gm.test(
+          opers[2].trim(),
+        )
+      ) {
+        let tempOpers = opers[0].trim().split(/[+\-*\/%^&]/gm)
         havingFullFields.push([value, tempOpers[1]])
       } else if (/^@\w+(((\.\w+)|(\[\s*\d+\s*\]))+)?$/gm.test(opers[2].trim())) {
         havingFullFields.push([value, opers[2]])
@@ -3178,7 +4551,9 @@ function validatingHavingConditions(value, separator, query, strObj, pos, having
         ]
       }
     } else if (
-      !/^(?:(?:\w+)\s*[+\-*\/]\s*)?(?:(?:\w+)|(?:"[^\n"]*")|(?:'[^\n']*'))$/gm.test(opers[2].trim())
+      !/^(?:(?:[\w&_-]+)\s*[+\-*\/%^&]\s*)?(?:(?:[\w&_-]+)|(?:"[^\n"]*")|(?:'[^\n']*'))$/gm.test(
+        opers[2].trim(),
+      )
     ) {
       return [
         {
@@ -3193,22 +4568,22 @@ function validatingHavingConditions(value, separator, query, strObj, pos, having
       ]
     }
     if (
-      /^(?:(?:\w+)\s*[+\-*\/]\s*)(?:(?:\w+))$/gm.test(opers[2].trim()) &&
-      !/^(?:(?:\d+)\s*[+\-*\/]\s*)(?:(?:\w+))$/gm.test(opers[2].trim())
+      /^(?:(?:[\w&_-]+)\s*[+\-*\/%^&]\s*)(?:(?:[\w&_-]+))$/gm.test(opers[2].trim()) &&
+      !/^(?:(?:\d+)\s*[+\-*\/%^&]\s*)(?:(?:[\w&_-]+))$/gm.test(opers[2].trim())
     ) {
       // field check
-      let tempOpers = opers[2].trim().split(/[+\-*\/]/gm)
+      let tempOpers = opers[2].trim().split(/[+\-*\/%^&]/gm)
       havingFullFields.push([value, tempOpers[0]])
     }
     if (
-      /^(?:(?:\w+)\s*[+\-*\/]\s*)(?:(?:\w+))$/gm.test(opers[2].trim()) &&
-      !/^(?:(?:\w+)\s*[+\-*\/]\s*)(?:(?:\d+))$/gm.test(opers[2].trim())
+      /^(?:(?:[\w&_-]+)\s*[+\-*\/%^&]\s*)(?:(?:[\w&_-]+))$/gm.test(opers[2].trim()) &&
+      !/^(?:(?:[\w&_-]+)\s*[+\-*\/%^&]\s*)(?:(?:\d+))$/gm.test(opers[2].trim())
     ) {
       // field check
-      let tempOpers = opers[2].trim().split(/[+\-*\/]/gm)
+      let tempOpers = opers[2].trim().split(/[+\-*\/%^&]/gm)
       havingFullFields.push([value, tempOpers[1]])
     }
-    if (/^(?:(?:\w+))$/gm.test(opers[2].trim()) && !/^(?:(?:\d+))$/gm.test(opers[2].trim())) {
+    if (/^(?:(?:[\w&_-]+))$/gm.test(opers[2].trim()) && !/^(?:(?:\d+))$/gm.test(opers[2].trim())) {
       // field check
       havingFullFields.push([value, opers[2]])
     }
@@ -3241,8 +4616,12 @@ function validatingHavingConditions(value, separator, query, strObj, pos, having
     }
     // log Field
     if (opers[3] !== undefined && opers[4].trim().includes('@')) {
-      if (/^(?:(?:\w+)\s*[+\-*\/]\s*)@\w+(((\.\w+)|(\[\s*\d+\s*\]))+)?$/gm.test(opers[4].trim())) {
-        let tempOpers = opers[4].trim().split(/[+\-*\/]/gm)
+      if (
+        /^(?:(?:[\w&_-]+)\s*[+\-*\/%^&]\s*)@\w+(((\.\w+)|(\[\s*\d+\s*\]))+)?$/gm.test(
+          opers[4].trim(),
+        )
+      ) {
+        let tempOpers = opers[4].trim().split(/[+\-*\/%^&]/gm)
         havingFullFields.push([value, tempOpers[1]])
       } else if (/^@\w+(((\.\w+)|(\[\s*\d+\s*\]))+)?$/gm.test(opers[4].trim())) {
         havingFullFields.push([value, opers[4]])
@@ -3261,7 +4640,9 @@ function validatingHavingConditions(value, separator, query, strObj, pos, having
       }
     } else if (
       opers[3] !== undefined &&
-      !/^(?:(?:\w+)\s*[+\-*\/]\s*)?(?:(?:\w+)|(?:"[^\n"]*")|(?:'[^\n']*'))$/gm.test(opers[4].trim())
+      !/^(?:(?:[\w&_-]+)\s*[+\-*\/%^&]\s*)?(?:(?:[\w&_-]+)|(?:"[^\n"]*")|(?:'[^\n']*'))$/gm.test(
+        opers[4].trim(),
+      )
     ) {
       return [
         {
@@ -3277,25 +4658,25 @@ function validatingHavingConditions(value, separator, query, strObj, pos, having
     }
     if (
       opers[3] !== undefined &&
-      /^(?:(?:\w+)\s*[+\-*\/]\s*)(?:(?:\w+))$/gm.test(opers[3].trim()) &&
-      !/^(?:(?:\d+)\s*[+\-*\/]\s*)(?:(?:\w+))$/gm.test(opers[3].trim())
+      /^(?:(?:[\w&_-]+)\s*[+\-*\/%^&]\s*)(?:(?:[\w&_-]+))$/gm.test(opers[3].trim()) &&
+      !/^(?:(?:\d+)\s*[+\-*\/%^&]\s*)(?:(?:[\w&_-]+))$/gm.test(opers[3].trim())
     ) {
       // field check
-      let tempOpers = opers[3].trim().split(/[+\-*\/]/gm)
+      let tempOpers = opers[3].trim().split(/[+\-*\/%^&]/gm)
       havingFullFields.push([value, tempOpers[0]])
     }
     if (
       opers[3] !== undefined &&
-      /^(?:(?:\w+)\s*[+\-*\/]\s*)(?:(?:\w+))$/gm.test(opers[3].trim()) &&
-      !/^(?:(?:\w+)\s*[+\-*\/]\s*)(?:(?:\d+))$/gm.test(opers[3].trim())
+      /^(?:(?:[\w&_-]+)\s*[+\-*\/%^&]\s*)(?:(?:[\w&_-]+))$/gm.test(opers[3].trim()) &&
+      !/^(?:(?:[\w&_-]+)\s*[+\-*\/%^&]\s*)(?:(?:\d+))$/gm.test(opers[3].trim())
     ) {
       // field check
-      let tempOpers = opers[3].trim().split(/[+\-*\/]/gm)
+      let tempOpers = opers[3].trim().split(/[+\-*\/%^&]/gm)
       havingFullFields.push([value, tempOpers[1]])
     }
     if (
       opers[3] !== undefined &&
-      /^(?:(?:\w+))$/gm.test(opers[4].trim()) &&
+      /^(?:(?:[\w&_-]+))$/gm.test(opers[4].trim()) &&
       !/^(?:(?:\d+))$/gm.test(opers[4].trim())
     ) {
       // field check
@@ -3318,7 +4699,6 @@ function validatingHavingConditions(value, separator, query, strObj, pos, having
 
     strObj.correctStr += value + separator
     strObj.remStr = strObj.remStr.slice(value.length + separator.length - 1)
-    console.log(strObj, value)
   }
 }
 
@@ -3333,38 +4713,25 @@ function validatingHavingWithSelectAndGroupby(
   selectFullField,
   havingFullFields,
 ) {
-  console.log('HAVING')
-  console.log('pipes', pipes)
-  console.log('fields', fieldsList)
-  console.log('gby:', groupbyFields)
-  console.log('selectF', selectFields)
-  console.log('selectAgg', selectAggregate)
-  console.log('selectAlias', selectAliases)
-  console.log('selectFun', selectFunction)
-  console.log('selectFull', selectFullField)
-  console.log('havingFullFields', havingFullFields)
   // only groupby -> count_col1 is allowed
   // JSON.parse(JSON.stringify(fieldsList))
   let fieldsListForHaving = []
   if (pipes['having'][0] !== -1) {
     if (pipes['timeslice'][0] !== -1) {
       fieldsListForHaving.push('count_col0')
-      console.log('timeslice exist')
     }
     if (pipes['groupby'][0] !== -1 && pipes['select'][0] === -1) {
       fieldsListForHaving.push('count_col1')
-      console.log('Groupby but not select')
     } else if (pipes['select'][0] !== -1) {
       for (let i = 0; i < selectFullField.length; i++) {
         if (selectFullField[i][1] === 'aggregate') {
-          console.log(selectFullField[i][2][2])
           if (selectFullField[i][2][2] && selectFullField[i][2][2] !== '') {
             fieldsListForHaving.push(selectFullField[i][2][2].trim())
           } else {
             fieldsListForHaving.push(selectFullField[i][0].trim() + '_col' + i)
           }
         } else if (selectFullField[i][1] === 'nonAggregate') {
-          console.log(selectFullField[i])
+          // fieldsListForHaving = fieldsListForHaving.concat(selectFullField[i][3][3])
           if (selectFullField[i][3][2] && selectFullField[i][3][2] !== '') {
             fieldsListForHaving.push(selectFullField[i][3][2].trim())
           } else {
@@ -3379,9 +4746,8 @@ function validatingHavingWithSelectAndGroupby(
         } else if (selectFullField[i][1] === 'allFields') {
         }
       }
-      console.log('select exist', fieldsListForHaving)
     }
-
+    console.log(fieldsListForHaving, selectFields, selectFullField)
     for (let i = 0; i < havingFullFields.length; i++) {
       if (!fieldsListForHaving.includes(havingFullFields[i][1].toLowerCase().trim())) {
         return [
@@ -3417,7 +4783,6 @@ function getIndexOfSubstring(str, ss) {
       let j = m - 1
       while (j >= 0 && pat[j] == txt[s + j]) j--
       if (j < 0) {
-        console.log('Patterns occur at shift = ' + s)
         return parseInt(s)
         s += s + m < n ? m - badchar[txt[s + m].charCodeAt(0)] : 1
       } else {
@@ -3486,7 +4851,8 @@ function validateQuery(model, streams, streamList) {
   }
   let valueArr = model.split(/\n/g)
   let value = valueArr.join('')
-  console.log('^^^^^^^^^^', value, valueArr)
+  // console.log('^^^^^^^^^^', value)
+  // console.log(valueArr)
   let markers = []
   let pipePos = []
   let queryArray = []
@@ -3514,11 +4880,11 @@ function validateQuery(model, streams, streamList) {
     // const queryArray = value.split('|')
     console.log(queryArray)
     let bracketsErr = validateBrackets(value)
-    if(bracketsErr.length > 0){
+    if (bracketsErr.length > 0) {
       let end = process.hrtime(start);
       console.log(bracketsErr)
       return { markers: bracketsErr[0], time: Math.round((end[0] * 1000 + end[1] / 1000000) * 10000) / 10000 }
-    } 
+    }
 
     if (/^(\s*\bstream\s*=.+)/gi.test(value)) {
       streamErrors = checkForStreamsAndWhere(
@@ -3688,6 +5054,17 @@ function validateQuery(model, streams, streamList) {
         }
       } else {
         if (/^\|\s*\w+$/.test(pipeArr[k])) {
+          if (/^\|\s*(\w+)$/.exec(pipeArr[k])[1].toLowerCase() === 'where') {
+            markers.push({
+              // startLineNumber: model.getPositionAt(i).lineNumber,
+              startColumn: pipePos[k] + 1,
+              // endLineNumber: model.getPositionAt(i).lineNumber,
+              endColumn: k + 1 < pipeArr.length ? pipePos[k + 1] + 1 : value.length + 1,
+              message: 'Unexpected "|" before "WHERE"',
+              severity: monaco.MarkerSeverity.Warning,
+            })
+            break
+          }
           markers.push({
             // startLineNumber: model.getPositionAt(i).lineNumber,
             startColumn: pipePos[k] + 1,
@@ -3698,6 +5075,17 @@ function validateQuery(model, streams, streamList) {
           })
           break
         } else {
+          if (/^\|\s*(\w+)/.exec(pipeArr[k])[1].toLowerCase() === 'where') {
+            markers.push({
+              // startLineNumber: model.getPositionAt(i).lineNumber,
+              startColumn: pipePos[k] + 1,
+              // endLineNumber: model.getPositionAt(i).lineNumber,
+              endColumn: k + 1 < pipeArr.length ? pipePos[k + 1] + 1 : value.length + 1,
+              message: 'Unexpected "|" before "WHERE"',
+              severity: monaco.MarkerSeverity.Error,
+            })
+            break
+          }
           markers.push({
             // startLineNumber: model.getPositionAt(i).lineNumber,
             startColumn: pipePos[k] + 1,
@@ -3779,7 +5167,7 @@ function validateQuery(model, streams, streamList) {
     }
   }
 
-  console.log('MARKERS', markers)
+  // console.log('MARKERS', markers)
   // console.log('newMarkers', newMark)
   // monaco.editor.setModelMarkers(model, 'Pipe position', newMark)
   // console.timeEnd('validateQuery')
