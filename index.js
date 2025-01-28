@@ -30,13 +30,13 @@ function promptUserForQuery() {
             // console.log(res)
             // result.push(validateQuery(queries[i]));
             if (res.markers) {
-                result[i].query = queries[i]
-                result[i].performanceTime = res.time
                 result.push(res.markers)
-            } else {
                 result[i].query = queries[i]
                 result[i].performanceTime = res.time
+            } else {
                 result.push([])
+                result[i].query = queries[i]
+                result[i].performanceTime = res.time
             }
         }
         downloadCSV(result, 'resultwithHaving.xlsx')
