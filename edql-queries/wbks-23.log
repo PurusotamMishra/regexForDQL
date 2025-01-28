@@ -1,0 +1,908 @@
+stream=* where sourcename!="null" | duration 1d | select devsrcip, sum(evtlen)/1024/1024/1024 | groupby devsrcip | limit 10
+
+stream=Threat where sourcename="SENTINELONE" | first 20 | duration 2d
+
+stream=authentication where sourcename='PALOALTO' and action='LOGIN' and status in ('PASSED','FAILED') | groupby user, system, devsrcip, srcip, status, cnamtime | duration 1d
+
+stream=AUTHENTICATION where Devsrcip='3.1.48.240' | groupby cnamtime, Devsrcip, user, action, status |  duration 1d
+
+stream=FIREWALL where dstport='135' and proto='TCP' and srctype='PUBLIC' and dsttype='PRIVATE' and dstip='{TargetHost}' and srcip='{SuspectHost}' | duration 6m
+
+stream=FIREWALL where dstport='135' and proto='TCP' and srctype='PUBLIC' and dsttype='PRIVATE' and subaction in ('accept','pass') | groupby system, devsrcip, srcip, dstip, subaction
+
+stream=firewall where sourcename='FORTIGATE' and srctype='PUBLIC' and dsttype='PUBLIC' and dstisp='Mahindra And Mahindra Limited' and not (srcisp='ZSCALER, INC.' or srcisp='Microsoft Corporation') and subaction in ('accept','pass') and not (@policyname='video.mahindra.com') | select srcisp,srcip,dstip,distinct_count(dstport) as Ports_Scanned | groupby srcisp,srcip,dstip | having Ports_Scanned > 10 | duration 1h
+
+stream=firewall where sourcename='FORTIGATE' and srcip in ('104.152.52.140') and srctype='PUBLIC' and dsttype='PUBLIC' and dstisp='Mahindra And Mahindra Limited' and not (srcisp='ZSCALER, INC.' or srcisp='Microsoft Corporation') and subaction in ('accept','pass') | select srcisp,srcip,dstip,dstport,dstisp,system as Firewall_HostName,devsrcip as Firewall_IP,@policyname as Firewall_PolicyName,subaction,count(*) as Count | groupby srcisp,srcip,dstip,dstport,dstisp,system,devsrcip,@policyname,subaction | duration 1h
+
+stream=Threat where sourcename="SENTINELONE" |select count(*) as TotalCount |duration 24h
+
+stream=FIREWALL where dstport between 5800 and 5810 and proto='TCP' and srctype='PUBLIC' and dsttype='PRIVATE' and srcip='{SuspectHost}'
+
+stream=FIREWALL where dstport between 5800 and 5810 and proto='TCP' and srctype='PUBLIC' and dsttype='PRIVATE' and subaction in ('accept','pass') | select system, devsrcip, subaction, count(dstip) as count_dstip | groupby srcip, system, devsrcip, subaction
+
+stream=Threat where sourcename="SENTINELONE" |select count(*) as TotalCount |duration 1w
+
+stream=PRISMA where sourcename='PRISMA-CLOUD' and (cloudservice like 'Amazon%' or cloudservice like 'AWS%') and policytype='audit' | select cloudservice,distinct_count(policyname) as AuditAlerts | groupby cloudservice | duration 1d
+
+stream=Threat where sourcename="SENTINELONE" AND NOT threatmitigationstatus="-" | duration 2d |timeslice 1d | groupby threatmitigationstatus
+
+stream=* where devsrcip in ('10.2.212.11','10.2.212.12','10.2.212.13','10.204.86.12','10.204.86.13') and (logevent like '%Shut%' or logevent like '%shut%' or logevent like '%restart%' or logevent like '%reboot%') | groupby cnamtime, devsrcip, logevent
+
+stream=* where logevent like '%sepadm%' |  duration from 2024-04-29T08:00:00 to 2024-04-29T12:00:00
+
+stream=WEBFILTER where sourcename='CLOUDFLARE' and action in ('URL_ALLOWED','URL_REDIRECT') and 
+((requesturi like '%;eval%') or (requesturi like '%;exec%') or (requesturi like '%;system%') or (requesturi like '%;popen%') or (requesturi like '%subprocess%') or (requesturi like '%.socket%') or (requesturi like '%shellexec%') or (requesturi like '%xp_cmdshell%') or (requesturi like "%>&%") or (requesturi like "%<&%") or (requesturi like "%/bin/sh%") or (requesturi like '%-i%')) and 
+not ((requesturi like '%>&id=%') or (requesturi like '%16+GB%')) | groupby srcisp,srcip,system,requesturi | duration 1d
+
+stream=PRISMA where sourcename='PRISMA-CLOUD' and (cloudservice like 'Amazon%' or cloudservice like 'AWS%') and policytype='iam' | select cloudservice,distinct_count(policyname) as IAM_Alerts | groupby cloudservice | duration 1d
+
+stream=WEBFILTER where sourcename='CLOUDFLARE' and action in ('URL_ALLOWED','URL_REDIRECT') and (requesturi like '%1=1%' or requesturi like '%;%')  | groupby system,requesturi | duration 1d
+
+stream=threat where sourcename='SENTINELONE' and not file in ('-','fsquirt.exe') |  groupby sourcehostname | select sourcehostname, distinct_count(file) as ThreatCnt | having ThreatCnt>2 | duration 1d
+
+stream=win-audit where sourcename='WINDOWS' and action='PROCESS_CREATED' and status='PASSED' and eid=4688 | groupby user, @NewProcessName
+
+stream=AUTHENTICATION where action='LOGIN' and status='FAILED' and reason='USER_DISABLED' |  groupby user, srcip, system, action, status, reason |  duration 3h | having count_col1>5
+
+stream=firewall where sourcename='FORTIGATE' and dstport in ('8333','18333','9333','9999','22556','30303') and action in ('PACKET_ALLOWED') and srccn='-' and not dstcn='-' and not srcip like '172.26.%' | groupby cnamtime, srcip, dstip, dstport
+
+stream=firewall where sourcename='FORTIGATE' and dstport in ('8333','18333','9333','9999','22556','30303') and actiontaken in ('allow','accept') and srccn='-' and not dstcn='-' and srcip='{SuspectHost}'
+
+stream=prisma where sourcename='PRISMA-CLOUD' and cloudservice like '%Azure%' and severity='low' and CloudService='{TargetResource}'
+
+stream=prisma where sourcename='PRISMA-CLOUD' and cloudservice like '%Azure%' and severity='low' | groupby PolicyName, severity, CloudService, ResourceID, RestrictedResourceName, accountid, resourcename |  duration 6h
+
+stream=threat where sourcename='SENTINELONE' |  groupby user |  duration 2h
+
+stream=threat where sourcename='PALOALTO' | groupby threat | limit 10
+
+stream=IAM where action in ('USER_ACCOUNT_CREATED','USER_ACCOUNT_DELETED') and targetuser='{TargetUser}' and user='{SuspectUser}' | duration 6m
+
+stream=IAM where action in ('USER_ACCOUNT_CREATED','USER_ACCOUNT_DELETED') | select user, targetuser, distinct_count(action) as CountAction | groupby user, targetuser | having CountAction==2
+
+stream=win-audit where action='EXTERNAL_DEVICE_PLUGGED' and status='PASSED' and (eid='6416' and logevent='DiskDrive') or logevent='USB Mass Storage Device' | duration 15m | groupby user, system
+
+stream=win-audit where action='EXTERNAL_DEVICE_PLUGGED' and status='PASSED' and (eid='6416' and class='DiskDrive') or message='USB Mass Storage Device' and system='{TargetHost}' and user='{SuspectUser}' | duration 16m
+
+stream=FIREWALL where dstport='3389' and srcip='{SuspectHost}' and dstip='{TargetHost}' | duration 6m
+
+stream=FIREWALL where dstport='3389' | select srcip, dstip, count(*) as count | groupby srcip, dstip | having count > 5
+
+stream=threat where sourcename='SMOKESCREEN' and threat='Reconnaissance' and cs1severity='high' and cs1reconrequest is not null  | groupby srcip, system, cs1reconrequest
+
+stream=authentication where sourcename='FORTIGATE' and action='LOGIN' and subtype in ('user','vpn') and not description like 'Explicit%' and user is not null and status='FAILED' | select system as Firewall_HostName, count(*) as Count | groupby system | duration 1w | limit 10
+
+stream=PRISMA where sourcename='PRISMA-CLOUD' and policytype='iam' and (cloudservice like 'Amazon%' or cloudservice like 'AWS%')| select accountid,cloudservice,severity,policyname | groupby accountid,cloudservice,severity,policyname | duration 1d
+
+stream=threat where sourcename='SENTINELONE' and threat='Ransomware' |  groupby threat, file, sourcehostname |  duration 1h
+
+stream=AUTHENTICATION where sourcename='FORTIGATE' and action='LOGIN' and description in ('Admin login failed','Admin login successful') |  groupby user, system, devsrcip, action, status, description, cnamtime |  duration 1d
+
+stream=threat where sourcename='SENTINELONE' and not file in ('-','fsquirt.exe') |  groupby file, sourcehostname | duration 3h
+
+stream=threat where sourcename='SENTINELONE' and not file in ('-','fsquirt.exe') |  groupby file | select file, distinct_count(sourcehostname) as DetectedHostCnt |  having DetectedHostCnt>1 | duration 3h
+
+stream=authentication where sourcename='FORTIGATE' and action='LOGIN' and subtype='system' and user is not null and not system='MMKNDEXTFW' and status='FAILED' | select system,count(*) as Count | groupby system | duration 1w | limit 10
+
+stream=PRISMA where sourcename='PRISMA-CLOUD' and (cloudservice like 'Amazon%' or cloudservice like 'AWS%') and policytype='config' | select cloudservice,distinct_count(policyname) as ConfigurationAlerts | groupby cloudservice | duration 1d
+
+stream=firewall where sourcename='FORTIGATE' and dstport in ('9001','9030','9031','9051','9150','9151') and not srcip like '172.26.%' and action in ('PACKET_ALLOWED') and srccn='-' and not dstcn in ('-','IN') | groupby cnamtime, srcip, dstip, dstport
+
+stream=firewall where sourcename='FORTIGATE' and dstport in ('9001','9030','9031','9051','9150','9151') and actiontaken in ('allow','accept') and srccn='-' and not dstcn in ('-','IN') and srcip='{SuspectHost}'
+
+stream=CONFIGURATION where sourcename='FORTIGATE' and action='CONFIGURATION_CHANGED' and status='PASSED' and not user in ('FGT_ha_admin','gourammat-ey-soc','hardikd-ey-soc','raveendran-ey-soc','aditya-ey-soc','nileshd-ey-soc','50005208') | groupby user, cnamtime, logevent
+
+stream=CONFIGURATION where sourcename='FORTIGATE' and action='CONFIGURATION_CHANGED' and status='PASSED' and user='{SuspectUser}'
+
+stream=IAM where (action='USER_DISABLED' or action='USER_ENABLED') and user='ITSMBPPM1' and targetuser='BALAJI' | select cnamtime, user, targetuser, devsrcip, severity, role, event, logevent | groupby cnamtime, user, targetuser, devsrcip, severity, role, event, logevent | duration 1h
+
+stream=IAM where (action='USER_DISABLED' or action='USER_ENABLED') and not targetuser like '%$%' | select user, targetuser, distinct_count(action) as countaction | groupby user, targetuser | having countaction==2 | duration 1h
+
+stream=authentication where sourcename='FORTIGATE' and action='LOGIN' and subtype in ('user','vpn') and not description like 'Explicit%' and user is not null and status='FAILED' | groupby srcisp | duration 1w | limit 10
+
+stream=authentication where sourcename='FORTIGATE' and action='LOGIN' and subtype='user' | select srcip,user,system as Firewall_HostName, devsrcip as Firewall_IP,description as Category,message as SubCategory, count_if(status='FAILED') as LoginFailedCount, count_if(status='PASSED') as LoginSuccessCount | groupby srcip,user,system,devsrcip,description,message | having LoginFailedCount>9 and LoginSuccessCount>0 | duration 1h 
+
+stream=IAM where (action='USER_DISABLED' or action='USER_ENABLED') and targetuser='{TargetUser}' and user='{SuspectUser}'
+
+stream=IAM where (action='USER_DISABLED' or action='USER_ENABLED') and not targetuser like '%$%' | select user, targetuser, distinct_count(action) as countaction | groupby user, targetuser | having countaction==2
+
+stream=system where sourcename='FORTIGATE' and description='Interface status changed' and not message like ('%Erkunt_Turket%') and system='{TargetHost}' and message='{SuspectObject}'
+
+stream=system where sourcename='FORTIGATE' and description='Interface status changed' and not message like ('%Erkunt_Turket%') |  groupby devsrcip, system, message, status, cnamtime, logevent
+
+stream=other where sourcename='FORTIGATE' and @logdesc='"Device shutdown"' or @logdesc='"Device rebooted"' and devsrcip='{TargetHost}'
+
+stream=other where sourcename='FORTIGATE' and @logdesc='"Device shutdown"' or @logdesc='"Device rebooted"' | groupby devsrcip, @logdesc, @msg, cnamtime
+
+stream=threat where sourcename='SMOKESCREEN' and AttackType='ransomware' and not CS1AttackerCommandLine like '%Qualys%' | groupby file, CS1AttackerName, CS1AttackerMachineName, CS1AttackerUserName, CS1AttackerCommandLine, CS1AttackerServiceName, SrcIP, CS1Severity, CN1AttackerScore
+
+stream=AUTHENTICATION where devsrcip='10.2.212.17' | groupby cnamtime, sourcename, action, status, user, logevent |  duration 1d
+
+stream=configuration where sourcename='PRISMA-CLOUD' and severity='low' | groupby PolicyName, CloudService, ResourceID, RestrictedResourceName, accountid, resourcename, logevent |  duration 3h
+
+stream=AUDIT where devsrcip='Cloudflare SQS connector' and ResourceType='account' and ActionTaken='rule_set' | groupby ActionTaken, User, @member_user_email, MuRoleLabels, logevent | duration 1h
+
+stream=prisma where sourcename='PRISMA-CLOUD' and cloudservice like '%Azure%' and severity='high' | groupby PolicyName, severity, CloudService, ResourceID, RestrictedResourceName, accountid, resourcename |  duration 6h
+
+stream=prisma where sourcename='PRISMA-CLOUD' and cloudservice like '%Azure%' and severity='high' and cloudservice='{TargetResource}' | duration 6h
+
+stream=dns where sourcename='CLOUDFLARE' and responsecode='Non-Existent Domain' | select query,count(*) as Count | groupby query | duration 5d | limit 10
+
+stream=authentication where sourcename='FORTIGATE' and action='LOGIN' and subtype='system' and user is not null and not system='MMKNDEXTFW' and srctype='PUBLIC' and status='FAILED' | select srcip,count(*) as Count | groupby srcip | duration 1w | limit 10
+
+stream=authentication where sourcename='FORTIGATE' and action='LOGIN' and subtype='system' and user is not null and not system='MMKNDEXTFW' and srctype='PUBLIC' and status='FAILED' | select user,count(*) as Count | groupby user | duration 1w | limit 10
+
+stream=authentication where sourcename='WINDOWS' and action='LOGIN' | select user,srcip,system as DomainController,devsrcip as DomainControllerIP, targetdomain, count_if(eid='4624' or (eid='4768' and statustaken='0x0')) as LoginSuccessful, count_if((eid='4625') or (eid='4776') or (eid='4771') or (eid='4768') or (eid='4769')) as LoginFailure, count_if(statustaken='0xc000006d') as WrongCredentials, count_if(statustaken='0xc0000234') as AccountLockedForMultipleFailedAttempts, count_if(statustaken='0xc000006a') as WrongPassword, count_if(statustaken='0xc0000064') as UserDoesntExist, count_if(statustaken='0x18') as KerberosAuthFailed | groupby user,srcip,system,devsrcip,targetdomain | duration 1h | having LoginFailure>4 and LoginSuccessful>0 and (WrongCredentials>0 or AccountLockedForMultipleFailedAttempts>0 or UserDoesntExist>0 or KerberosAuthFailed>0)
+
+stream=authentication where sourcename='WINDOWS' and action='LOGIN' and user in ('FDLT221194$','23073287') and eid in ('4624','4625','4768','4776','4771','4769') and statustaken in ('0xc000006d','0xc0000234','0xc000006a','0xc0000064','0x18','0x0') | select cnamtime,user,srcip,system as DomainController,devsrcip as DomainControllerIP,targetdomain,eid,statustaken,status,reason | groupby cnamtime,user,srcip,system,devsrcip,targetdomain,eid,statustaken,status,reason | duration 1h
+
+stream=OTHER where sourcename='PALOALTO' @event='"high-cpu-utilization"' or @event='"high-memory-utilization"' or @event='"high-session-count"' | groupby devsrcip, @event, @description, cnamtime
+
+stream=firewall where sourcename='FORTIGATE' and dstport='3389' and srctype='PUBLIC' | groupby srcip, @srccountry | select srcip, @srccountry, count_if(action=='PACKET_ALLOWED') as RDP_Allowed, count_if(action=='PACKET_BLOCKED') as RDP_Blocked, distinct_count(dstip) as DstIPCnt , COUNT(*) as Allow_BlockCnt | having Allow_BlockCnt>2 | duration 1h 
+
+stream=firewall where sourcename='FORTIGATE' and action='PACKET_ALLOWED' and srctype='PUBLIC' and not dstport='3389' and not srcisp='ZSCALER, INC.' and not dstisp='ZSCALER, INC.' | groupby srcip, @srccountry, action | select srcip, @srccountry, count_if(action=='PACKET_ALLOWED') as NonRDP_Allowed, distinct_count(dstport) as DstPortCnt, distinct_count(dstip) as DstIPCnt | duration 1h
+
+stream=AUTHENTICATION where action='LOGIN' and status='PASSED' and not (system like '%MMDC%' or system like'%mmdc%') | select user, distinct_count(system) as CountSystem | groupby user | having CountSystem > 10 | duration 3h
+
+stream=AUTHENTICATION where action='LOGIN' and status='PASSED' and user='{SuspectUser}' | duration 1h
+
+stream=threat where sourcename='SENTINELONE' and (file like '%.xl%' or file like '%.do%' or file like '%.pp%' or file like '%.xar') | select threatdetectiontime, sourcehostname, file, 
+count_if(threatmitigationstatus='mitigated') as Mitigated,
+count_if(threatmitigationstatus='marked_as_benign') as Marked_as_Benign,
+count_if(threatmitigationstatus='not_mitigated') as Not_Mitigated,
+count_if(newvalue='Resolved') as Resolved, 
+count_if(newvalue='True positive') as True_Positive, 
+count_if(newvalue='False positive') as False_Positive, 
+count_if(eventdescription='Kill failed') as Kill_Failed,
+count_if(eventdescription='Quarantine failed') as Quarantine_Failed,
+count_if(eventdescription='Remediate failed') as Remediate_Failed,
+count_if(eventdescription='Kill pending to reboot') as Kill_Pending_to_Reboot,
+count_if(eventdescription='Quarantine pending to reboot') as Quarantine_Pending_to_Reboot,
+count_if(eventdescription='Kill performed successfully') as Kill_Performed_Successfully,
+count_if(eventdescription='Quarantine performed successfully') as Quarantine_Performed_Successfully | groupby threatdetectiontime, sourcehostname, file | duration 1h | having Mitigated<1 and Marked_as_Benign<1 and Resolved<1 and True_Positive<1 and False_Positive<1 and Kill_Performed_Successfully<1 and Quarantine_Performed_Successfully<1  
+
+stream=threat where sourcename='SENTINELONE' and sourcehostname='FDDT230155' and file='QAS738.ps1' | groupby threatdetectiontime, accountname, sitename, sourcegroupname, sourcehostname, sourceipaddresses, user, threatstoryline, file, hash, filepath, commandline, threatconfidencelevel, threatdetectingengine | duration 1h
+
+stream=PRISMA where sourcename='PRISMA-CLOUD' and not policytype in ('network','anomaly','attackpath','config','iam','audit')  | select cloudservice,policytype,accountid,severity,policyname,reason | groupby cloudservice,policytype,accountid,severity,policyname,reason | duration 1d
+
+stream=other where sourcename='FORTIGATE' and @cpu="80%" or @event="high-memory-utilization" or @event="high-session-count" or @msg='"HA cluster state change"'| groupby devsrcip, @cpu, @event, cnamtime, @msg
+
+stream=PRISMA where sourcename='PRISMA-CLOUD' and policytype='audit' and (cloudservice like 'Amazon%' or cloudservice like 'AWS%')  | select accountid,cloudservice,severity,policyname | groupby accountid,cloudservice,severity,policyname | duration 1d
+
+stream=AUDIT where sourcename='CLOUDFLARE' and ResourceType='dns.record' and ActorType='user' |  groupby ActionTaken, User, content, type, logevent |  duration 1h
+
+stream=AUDIT where sourcename='CLOUDFLARE' and ResourceType='dns.record' and ActorType='user' and actiontaken='{TargetHost}' and user='{SuspectHost}' | duration 10m
+
+stream=OTHER where devsrcip in ('10.2.212.14','10.2.212.15','10.2.212.16','10.204.86.14','10.204.86.15','10.204.86.16') and logevent like '%system-shutdown%' or logevent like 'The system is starting up' or logevent like 'The dataplane is restarting' or logevent like 'System restart requested' | groupby devsrcip, logevent | limit 10000
+
+stream=iam where sourcename='MS-O365' and action='PASSWORD_CHANGED' and status='PASSED' and not user like '%MAZVWPADCONN01%' and targetuser='{TargetUser}' and user='{SuspectUser}' | duration 6h
+
+stream=iam where sourcename='MS-O365' and action='PASSWORD_CHANGED' and status='PASSED' and not user like '%MAZVWPADCONN01%' | select cnamtime, user, targetuser | groupby cnamtime, user, targetuser
+
+stream=AUDIT where devsrcip='Cloudflare SQS connector' and ResourceType='rpat' | groupby cnamtime , ActionTaken, User, ActorType, RPATMatch, ZoneName, logevent |  duration 1h
+
+stream=configuration where sourcename='PRISMA-CLOUD' and severity='high' | groupby PolicyName, CloudService, ResourceID, RestrictedResourceName, accountid, resourcename, logevent |  duration 3h
+
+stream=FIREWALL where sourcename='FORTIGATE' and action='PACKET_ALLOWED' and dstport='22' and srctype='PUBLIC' and not dstip='103.81.88.56' | groupby srcip, dstip, @policyname, @policyid | duration 1d
+
+stream=FIREWALL where action='PACKET_ALLOWED' and dstport='22' and srctype='PUBLIC' and dstip='{TargetHost}' and srcip='{SuspectHost}' | duration 6m
+
+stream=configuration where sourcename='PRISMA-CLOUD' and severity='medium' | groupby PolicyName, CloudService, ResourceID, RestrictedResourceName, accountid, resourcename, logevent |  duration 3h
+
+stream=configuration where sourcename='PRISMA-CLOUD' and accountname like '%Account-DMS2.0%' and severity='High' | groupby accountname, PolicyName, severity, CloudService, ResourceID, RestrictedResourceName, accountid, resourcename, logevent
+
+stream=dns where sourcename='CLOUDFLARE' and responsecode='Non-Existent Domain' and srcisp is not null and not srcisp='-' | select srcisp,count(*) as Count | groupby srcisp | duration 5d | limit 10
+
+stream=dns where sourcename='CLOUDFLARE' and responsecode='Non-Existent Domain' | select srcip,count(*) as Count | groupby srcip | duration 5d | limit 10
+
+stream=authentication where action='LOGIN' and status='FAILED' and (reason like 'sslvpn_login_permission_denied' or reason like 'sslvpn_login_unknown_user') | groupby user, system, srcip | having count_col1>3 |  duration 5m
+
+stream=authentication where action='LOGIN' and status='FAILED' and system='{TargetHost}' and (reason like 'sslvpn_login_permission_denied' or reason like 'sslvpn_login_unknown_user') and srcip='{SuspectHost}' and system='{TargetHost}' | duration 6m
+
+stream=firewall where srctype='PUBLIC' and action='PACKET_ALLOWED' and not srcisp='ZSCALER, INC.' and not srcip like '%103.81.%' and not srcip like '%172.%' and not srcip like '%192.168.%' | groupby srcip, cnamtime |  duration 1h
+
+stream=AUTHENTICATION where action='LOGIN' and status='FAILED' and Reason='ACCOUNT_EXPIRED' |  groupby Cnamtime, User, SrcIP, DevSrcIP, System, eid, Logevent |  duration 15m
+
+stream=configuration where sourcename='PRISMA-CLOUD' and accountname like '%Account-DMS2.0%' and severity='medium' | groupby accountname, PolicyName, severity, CloudService, ResourceID, RestrictedResourceName, accountid, resourcename, logevent
+
+stream=dns
+
+stream=firewall where sourcename='FORTIGATE' and action='CONFIG_ERASD' and status='PASSED' |  groupby srcip, devsrcip
+
+stream=firewall where sourcename='FORTIGATE' and action='CONFIG_ERASD' and status='PASSED' and system='{TargetHost}'
+
+stream=authentication where devsrcip='10.101.0.42' and eid='4624' |  duration 1d | limit 100000
+
+stream=* | duration 1h | select distinct(devsrcip) as devsrcip | limit 10000
+
+stream=prisma where sourcename='PRISMA-CLOUD' and (cloudservice like '%Amazon%' or cloudservice like '%AWS%') and accountname not like '%Account-DMS%' and accountname not like '%Account-DMS%' | groupby severity |  duration 1h
+
+stream=threat where sourcename='SENTINELONE' and not file='-' and not hash in ('6ab83620379fc69f80c0242105ddffd7d98d5d9d','2ff161a1185b5716ade6b895127d561299e7cafe') |  groupby file, sourcehostname, threat |  select file, sourcehostname, threat, count_if(threatmitigationstatus=='mitigated') as Mitigated, count_if(threatmitigationstatus=='marked_as_benign') as Mark_As_Benign | having Mitigated<1 and Mark_As_Benign<1 | duration 1h
+
+stream=DNS where sourcename='CLOUDFLARE' and not querytype in ('1','28','2','16','5','15','33','48') |  groupby query, srcip | select query, srcip, distinct_count(querytype) as QueryTypes | having QueryTypes>3 |  duration 15m
+
+stream=firewall where dstport in ('9001','9030') and srctype='PRIVATE' and dsttype='PUBLIC' and proto='TCP' |  groupby srcip, dstip, dstport, action, sourcename, devsrcip
+
+stream=configuration where sourcename='PRISMA-CLOUD' and accountname like '%Account-DMS2.0%' and severity='low' | groupby accountname, PolicyName, severity, CloudService, ResourceID, RestrictedResourceName, accountid, resourcename, logevent
+
+stream=prisma where sourcename='PRISMA-CLOUD' and cloudservice like '%Google%' and severity in ('low','medium','high','Iinformational') |  groupby severity
+
+stream=firewall where sourcetype='FIREWALL' and dstport in ('107','384','512','530','544','625','641','666','981') and not dstcn='-' and subaction in ('accept','pass') and not srcip like '%172.26.%' | groupby cnamtime, srcip, dstip, dstport
+
+stream=firewall where sourcetype='FIREWALL' and dstport in ('107','384','512','530','544','625','641','666','981') and not dstcn='-' and not action in ('PACKET_BLOCKED') and srcip='{SuspectHost}'
+
+stream=prisma where sourcename='PRISMA-CLOUD' and cloudservice like '%Azure%' | groupby severity |  duration 1h
+
+stream=authentication where sourcename='FORTIGATE' and user in ('50006111') and action='LOGIN' and subtype='system' | select user,srcisp,srcip,system as Firewall_HostName,devsrcip as Firewall_IP,description as Category,message as SubCategory,status | groupby user,srcisp,srcip,system,devsrcip,description,message,status | duration 1d
+
+stream=authentication where sourcename='FORTIGATE' and action='LOGIN' and subtype='system' and user is not null | select user,count_if(status='PASSED') as Login_Success,count_if(status='FAILED') as Login_Failed,distinct_count(system) as No_Of_Firewall_Involved | groupby user | duration 1d | having Login_Success>0 and Login_Failed>0
+
+stream=PRISMA where sourcename='PRISMA-CLOUD' and policytype='config' and (cloudservice like 'Amazon%' or cloudservice like 'AWS%')  | select accountid,cloudservice,severity,policyname | groupby accountid,cloudservice,severity,policyname | duration 1d
+
+stream=documents where action in ('ACCESSED', 'DOWNLOADED') and not srccn in ('-') | select user, distinct_count(srccn) as srccn_cnt | groupby user | having srccn_cnt > 2 | duration 1h 
+
+stream=documents where action in ('ACCESSED', 'DOWNLOADED') and not srccn in ('-') and user='{SuspectUser}' | duration 6m
+
+stream=other where devsrcip in ('10.2.212.14','10.2.212.15','10.2.212.16','10.204.86.14','10.204.86.15','10.204.86.16') and logevent like '%Port%' and logevent like '%Down%' and not devsrcip in ('Office 365_10thjan25','Cloudflare SQS connector') |  groupby devsrcip, logevent
+
+stream=* where sourcename='PALOALTO' and type='SYSTEM' and severity='critical' and subtype in ('ha','lacp') |  groupby system, devsrcip, description
+
+stream=AUTHENTICATION where action='LOGIN' and system='{TargetHost}' and srcip='{SuspectHost}' | duration 16m
+
+stream=AUTHENTICATION where action='LOGIN' and not srcip='-' and not user='sa' | duration 15m | select srcip, user, system, count_if(status='FAILED') as failcount, count_if(status='PASSED') as passcount | groupby srcip, user, system | having failcount >=100 and failcount >= passcount * 5
+
+stream=firewall where sourcename='FORTIGATE' and ((dstport='3389' and dstisp='Mahindra And Mahindra Limited' and srctype='PUBLIC') or (dstport='3389' and dsttype='PUBLIC')) and subaction in ('accept','pass') and not srcip like '172.26.%' and not @policyname='"CRQ000000070667"' | select srcisp,srcip,dstip,dstport,dstisp,system as Firewall_HostName,devsrcip as Firewall_IP,@policyname as Firewall_PolicyName,count(*) as Count | groupby srcisp,srcip,dstip,dstport,dstisp,system,devsrcip,@policyname | duration 1h
+
+
+stream=AUTHENTICATION where sourcename='WINDOWS' and sourcetype='OS' and action='LOGIN' and status='FAILED' and eid='4625' and reason='USER_DISABLED' and @SubStatus='0xc0000072' and srcip='{SuspectHost}'
+
+stream=AUTHENTICATION where sourcename='WINDOWS' and sourcetype='OS' and action='LOGIN' and status='FAILED' and eid='4625' and reason='USER_DISABLED' and @SubStatus='0xc0000072' and not srcip in ('-','10.2.206.100') | groupby srcip, user, logevent
+
+stream=prisma where sourcename='PRISMA-CLOUD' and cloudservice like '%Google%' and severity='low' | groupby PolicyName, severity, CloudService, ResourceID, RestrictedResourceName, accountid, resourcename |  duration 6h
+
+stream=prisma where sourcename='PRISMA-CLOUD' and cloudservice like '%Google%' and severity='low' and cloudservice='{TargetResource}' | duration 6h
+
+stream=authentication where sourcename='WINDOWS' and action='LOGIN' and user in ('Administrator') and ((targetsid like '%-500') or (targetsid like '%-512') or (targetsid like '%-517') or (targetsid like '%-518') or (targetsid like '%-519') or (targetsid like '%-520') or (targetsid like '%-526') or (targetsid like '%-527') or (targetsid like '%-544')) and statustaken in ('0x0','0xc000006d','0xc0000234','0xc000006a','0xc0000064','0x18') | select cnamtime,user,targetsid,srcip,system as DomainController,devsrcip as DomainControllerIP,targetdomain,eid,statustaken,status,reason | groupby cnamtime,user,targetsid,srcip,system,devsrcip,targetdomain,eid,statustaken,status,reason | duration 1h
+
+stream=authentication where sourcename='WINDOWS' and action='LOGIN' and ((targetsid like '%-500') or (targetsid like '%-512') or (targetsid like '%-517') or (targetsid like '%-518') or (targetsid like '%-519') or (targetsid like '%-520') or (targetsid like '%-526') or (targetsid like '%-527') or (targetsid like '%-544')) | select user,targetsid,srcip,system as DomainController,devsrcip as DomainControllerIP, count_if((eid='4624') or ((eid='4768') and (statustaken='0x0'))) as LoginSuccessful, count_if((eid='4625') or (eid='4776') or (eid='4771') or (eid='4768') or (eid='4769')) as LoginFailure, count_if(statustaken='0xc000006d') as WrongCredentials, count_if(statustaken='0xc0000234') as AccountLockedForMultipleFailedAttempts, count_if(statustaken='0xc000006a') as WrongPassword, count_if(statustaken='0xc0000064') as UserDoesntExist, count_if(statustaken='0x18') as KerberosAuthFailed | groupby user,targetsid,srcip,system,devsrcip | duration 1h | having LoginFailure>3 and LoginSuccessful>=0 and (WrongCredentials>0 or AccountLockedForMultipleFailedAttempts>0 or UserDoesntExist>0 or KerberosAuthFailed>0)
+
+stream=authentication where sourcename='FORTIGATE' and action='LOGIN' and subtype='system' and user is not null and not system='MMKNDEXTFW' and srctype='PRIVATE' and status='FAILED' | select user,count(*) as Count | groupby user | duration 1d | limit 10
+
+stream=prisma where sourcename='PRISMA-CLOUD' and (cloudservice like '%Amazon%' or cloudservice like '%AWS%') and accountname not like '%Account-DMS%' and accountname not like '%Account-DMS%' and severity='high' and cloudservice='{TargetResource}'
+
+stream=prisma where sourcename='PRISMA-CLOUD' and (cloudservice like '%Amazon%' or cloudservice like '%AWS%') and accountname not like '%Account-DMS%' and accountname not like '%Account-DMS%' and severity='high' | groupby PolicyName, severity, CloudService, ResourceID, RestrictedResourceName, accountid, resourcename | duration 6h
+
+stream=prisma where sourcename='PRISMA-CLOUD' and cloudservice like '%Azure%' and severity='medium' | groupby PolicyName, severity, CloudService, ResourceID, RestrictedResourceName, accountid, resourcename |  duration 6h
+
+stream=prisma where sourcename='PRISMA-CLOUD' and cloudservice like '%Azure%' and severity='medium' and cloudservice='{TargetResource}' | duration 6h
+
+stream=prisma where sourcename='PRISMA-CLOUD' and cloudservice like '%Google%' and severity='medium' and cloudservice='{TargetResource}'
+
+stream=prisma where sourcename='PRISMA-CLOUD' and cloudservice like '%Google%' and severity='medium' | groupby PolicyName, severity, CloudService, ResourceID, RestrictedResourceName, accountid, resourcename |  duration 6h
+
+stream=authentication where sourcename='PALOALTO' and action='LOGIN' and user in ('hardikd-ey-soc','mnmsoc') and srcip is not null | select cnamtime,srcip,user,system as Firewall_HostName,devsrcip as Firewall_IP,authproto as Authentication_Protocol | groupby cnamtime,srcip,user,system,devsrcip,authproto | duration 1h  
+
+stream=authentication where sourcename='PALOALTO' and action='LOGIN' and user is not null and srcip is not null | select srcip,user,system as Firewall_HostName, devsrcip as Firewall_IP, authproto as Authentication_Protocol, count_if(status='FAILED') as LoginFailCount,count_if(status='PASSED') as LoginSuccessCount | groupby srcip,user,system,devsrcip,authproto | duration 1h | having LoginFailCount>4 and LoginSuccessCount>0
+
+stream=vpn |  groupby user, srcip, system |  select user, srcip, system, distinct_count(srccn) as CountryCnt |  having CountryCnt>1 | duration 3h
+
+stream=iam where group in ('INTERNET ACCESS BANKING','INTERNET ACCESS FULL','INTERNET ACCESS GMAIL','INTERNET ACCESS MLDL','INTERNET ACCESS NORMAL','INTERNET ACCESS SOCIAL','INTERNET ACCESS YOUTUBE','INTERNET USER AUDIT','INTERNET-CONT-MASPL','Internet Access Developer','Internet Access Full SM ZS','M&M INTERNET USERS','MMFSL_INTERNET_USERS') and action='USER_ADDED' |  groupby cnamtime, group, user, @MemberName |  duration 1d
+
+stream=PALO-ALTO-GENERIC where sourcename='PALOALTO' and type='SYSTEM' and severity='informational' and contenttype='port' | groupby system, devsrcip, description, filename | select system, devsrcip, description, (filename) as Interface |  duration 15d
+
+stream=PRISMA where sourcename='PRISMA-CLOUD' and policytype='config' and (cloudservice like 'Azure%')  | select accountid,cloudservice,severity,policyname | groupby accountid,cloudservice,severity,policyname | duration 1d
+
+stream=* | duration 6h | select distinct(devsrcip) as devsrcip | limit 5000
+
+stream=win-audit where sourcename='WINDOWS' and action='OBJECT_ACCESSED' and event='A network share object was accessed.' and not user in ('206918','210182','211352','23158129','25007400','202019','YADAJE-CONT','MITC-WINDOWS','ITSMBPPM') and not system like '%MMDC-KND3.corp.mahindra.com%' AND NOT object like '%IPC%' AND NOT object like '%SYSVOL%' AND NOT object like '%NETLOGON%' AND NOT object like '%Wallpaper%' AND NOT object like '%WALLPAPER%' and not object like '%wallpaper%' | groupby user, srcip, action, object, eid, system, @ShareLocalPath, @SubjectDomainName |  select user, srcip, object, eid, system, @ShareLocalPath, @SubjectDomainName |  duration 6h
+
+stream=win-audit where sourcename='WINDOWS' and action='OBJECT_ACCESSED' and event='A network share object was accessed.' and not user in ('206918','210182','211352','23158129','25007400','202019','YADAJE-CONT','MITC-WINDOWS','ITSMBPPM') and not system like '%MMDC-KND3.corp.mahindra.com%' AND NOT object like '%IPC%' AND NOT object like '%SYSVOL%' AND NOT object like '%NETLOGON%' AND NOT object like '%Wallpaper%' AND NOT object like '%WALLPAPER%' AND user='{SuspectUser}' | duration 6h
+
+stream=authentication where sourcename='FORTIGATE' and action='LOGIN' and subtype='vpn' | select srcisp,srcip,user,system as Firewall_HostName, devsrcip as Firewall_IP,description as Category,reason as SubCategory, count_if(status='FAILED') as LoginFailedCount, count_if(status='PASSED') as LoginSuccessCount | groupby srcisp,srcip,user,system,devsrcip,description,reason | having LoginFailedCount>4 and LoginSuccessCount>0 | duration 1h
+
+stream=AUTHENTICATION where sourcename='WINDOWS' and action='LOGIN' and status='FAILED' and reason='BAD_USER_PASSWORD' and @Category='Credential Validation' and not user like '%$%' and not user in ('Administrator','admin') and user='{SuspectUser}' | duration 10m
+
+stream=AUTHENTICATION where sourcename='WINDOWS' and action='LOGIN' and status='FAILED' and reason='BAD_USER_PASSWORD' and @Category='Credential Validation' and not user like '%$%' and not user in ('Administrator','admin') | groupby srcip, user, system, cnamtime | having count_col1 > 5
+
+stream=DNS where sourcename='CLOUDFLARE' |  groupby Query, srcip |  duration 1h |  having count_col1>50
+
+stream=authentication where sourcename='FORTIGATE' and action='LOGIN' and subtype='system' and user is not null and not system='MMKNDEXTFW' | select user,count_if(status='PASSED') as Login_Success,count_if(status='FAILED') as Login_Failed,distinct_count(system) as No_Of_Firewall_Involved | groupby user | duration 1h | having Login_Success>0 and Login_Failed>4
+
+stream=authentication where sourcename='FORTIGATE' and user in ('50005253','50005456') and action='LOGIN' and subtype='system' and not system='MMKNDEXTFW' | select cnamtime,user,srcisp,srcip,system as Firewall_HostName,devsrcip as Firewall_IP,description as Category,message as SubCategory,status | groupby cnamtime,user,srcisp,srcip,system,devsrcip,description,message,status | duration 1h
+
+stream=threat where sourcename='SENTINELONE' and sourcehostname in ('adlt190420','MFHO-100006600') and file in ('update.exe','node-v20.15.0-x64.msi') | select threatdetectiontime,accountname,sitename,sourcegroupname,sourcehostname,sourceipaddresses,user,threatstoryline,file,hash,filepath,commandline,threatconfidencelevel,threatdetectingengine | groupby threatdetectiontime,accountname,sitename,sourcegroupname,sourcehostname,sourceipaddresses,user,threatstoryline,file,hash,filepath,commandline,threatconfidencelevel,threatdetectingengine | duration 1h
+
+stream=threat where sourcename='SENTINELONE' and not (threatclassifier='BLACKLIST') and not threat in ('Rootkit','Ransomware') and not (file like '%.xl%' or file like '%.do%' or file like '%.pp%' or file like '%.xar' or file like 'kmod') | select sourcehostname,file, 
+count_if(threatmitigationstatus='mitigated') as Mitigated,
+count_if(threatmitigationstatus='marked_as_benign') as Marked_as_Benign,
+count_if(threatmitigationstatus='not_mitigated') as Not_Mitigated,
+count_if(newvalue='Resolved') as Resolved, 
+count_if(newvalue='True positive') as True_Positive, 
+count_if(newvalue='False positive') as False_Positive,
+count_if(eventdescription='Quarantine performed successfully') as Quarantine_Performed_Successfully,
+count_if(eventdescription='Kill performed successfully') as Kill_Performed_Successfully,
+count_if(eventdescription='Kill failed') as Kill_Failed,
+count_if(eventdescription='Quarantine failed') as Quarantine_Failed,
+count_if(eventdescription='Remediate failed') as Remediate_Failed,
+count_if(eventdescription='Kill pending to reboot') as Kill_Pending_to_Reboot,
+count_if(eventdescription='Quarantine pending to reboot') as Quarantine_Pending_to_Reboot | groupby sourcehostname,file | duration 1h | having Mitigated<1 and Marked_as_Benign<1 and Resolved<1 and True_Positive<1 and False_Positive<1 
+
+stream=threat where sourcename='SENTINELONE' and sourcehostname in ('MMFSL-Bigfix-RHEL9') and file in ('kmod') | select threatdetectiontime,accountname,sitename,sourcegroupname,sourcehostname,sourceipaddresses,user,threatstoryline,file,hash,filepath,commandline,threatconfidencelevel,threatdetectingengine | groupby threatdetectiontime,accountname,sitename,sourcegroupname,sourcehostname,sourceipaddresses,user,threatstoryline,file,hash,filepath,commandline,threatconfidencelevel,threatdetectingengine | duration 1h
+
+stream=threat where sourcename='SENTINELONE' and threat in ('Rootkit','Ransomware') | select sourcehostname, file, 
+count_if(threatmitigationstatus='mitigated') as Mitigated,
+count_if(threatmitigationstatus='marked_as_benign') as Marked_as_Benign,
+count_if(threatmitigationstatus='not_mitigated') as Not_Mitigated,
+count_if(newvalue='Resolved') as Resolved, 
+count_if(newvalue='True positive') as True_Positive, 
+count_if(newvalue='False positive') as False_Positive,
+count_if(eventdescription='Quarantine performed successfully') as Quarantine_Performed_Successfully,
+count_if(eventdescription='Kill performed successfully') as Kill_Performed_Successfully,
+count_if(eventdescription='Kill failed') as Kill_Failed,
+count_if(eventdescription='Quarantine failed') as Quarantine_Failed,
+count_if(eventdescription='Remediate failed') as Remediate_Failed,
+count_if(eventdescription='Kill pending to reboot') as Kill_Pending_to_Reboot,
+count_if(eventdescription='Quarantine pending to reboot') as Quarantine_Pending_to_Reboot | groupby sourcehostname, file | duration 1h | having Mitigated<1 and Marked_as_Benign<1 and Resolved<1 and True_Positive<1 and False_Positive<1
+
+stream=prisma where sourcename='PRISMA-CLOUD' and cloudservice like '%Google%' and severity='high' | groupby PolicyName, severity, CloudService, ResourceID, RestrictedResourceName, accountid, resourcename |  duration 6h
+
+stream=prisma where sourcename='PRISMA-CLOUD' and cloudservice like '%Google%' and severity='high' and cloudservice='{TargetResource}' | duration 6h
+
+stream=OTHER where devsrcip in ('10.2.212.14','10.2.212.15','10.2.212.16','10.204.86.14','10.204.86.15','10.204.86.16') and logevent like '%critical%' and (logevent like '%ha%' or logevent like '%HA%' or logevent like '%lacp%')
+
+stream=prisma where sourcename='PRISMA-CLOUD' and (cloudservice like '%Amazon%' or cloudservice like '%AWS%') and accountname not like '%Account-DMS%' and accountname not like '%Account-DMS%' and severity='medium' and cloudservice='{TargetResource}' | duration 6h
+
+stream=prisma where sourcename='PRISMA-CLOUD' and (cloudservice like '%Amazon%' or cloudservice like '%AWS%') and accountname not like '%Account-DMS%' and accountname not like '%Account-DMS%' and severity='medium' | groupby PolicyName, severity, CloudService, ResourceID, RestrictedResourceName, accountid, resourcename | duration 6h
+
+stream=PRISMA where sourcename='PRISMA-CLOUD' and policytype in ('network','anomaly','attackpath') and (cloudservice like 'Amazon%' or cloudservice like 'AWS%') | select cloudservice,policytype,accountid,severity,policyname,reason | groupby cloudservice,policytype,accountid,severity,policyname,reason | duration 1h
+
+stream=firewall where proto='TCP' and dstport in ('1080','3128','8080') and srctype='PRIVATE' and not dsttype='PRIVATE' and not dstip like '136.226.252%' and not dstip like '136.226.253.%' and not dstip like '165.225.122.%' and not dstip like '165.225.123.%' and not dstip like '165.225.106.%' and not dstip like '165.225.107.%' and not dstip like '136.226.254.%' and not dstip like '136.226.255.%' and not dstip like '136.226.232.%' and not dstip like '136.226.233.%' and not dstip like '165.225.120.%' and not dstip like '165.225.121.%' and not dstip like '136.226.250.%' and not dstip like '136.226.251.%' and not dstip like '165.225.124.%' and not dstip like '165.225.125.%' and not srcip like '172.26.%' | groupby srcip, dstip, dstport
+
+stream=authentication where sourcename='FORTIGATE' and action='LOGIN' and subtype in ('user','vpn') and not description like 'Explicit%' and user is not null and status='FAILED' | groupby user | duration 1w | limit 10
+
+stream=win-audit where sourcename='WINDOWS' and action='POLICY_CHANGED' and eid in ('4703','4704','4705') and user='{SuspectUser}' | duration 6m
+
+stream=win-audit where sourcename='WINDOWS' and action='POLICY_CHANGED' and eid in ('4703','4704','4705')  and not user='MMKNDACCESSDB1$' | groupby user, eid, system, @ProcessName |  duration 1d
+
+stream=authentication where sourcename='WINDOWS' and action='LOGIN' and status='FAILED' and reason='USER_LOCKOUT' and status='{TargetHost}' | duration 6h
+
+stream=authentication where sourcename='WINDOWS' and action='LOGIN' and status='FAILED' and reason='USER_LOCKOUT' | groupby user, system, action, status, reason |  duration 6h
+
+stream=FIREWALL where dstport='23' and srctype='PUBLIC' and proto='TCP' and lower(intel)='true' and dstip='{TargetHost}' and srcip='{SuspectHost}'
+
+stream=FIREWALL where dstport='23' and srctype='PUBLIC' and proto='tcp' and lower(intel)='true' | groupby srcip, dstip
+
+stream=firewall where sourcename='FORTIGATE' and srctype='PRIVATE' and dsttype='PUBLIC' and dstport='53' and action='PACKET_ALLOWED' and not srcip like '172.26.%' and not dstip in ('2.2.2.2','3.3.3.3') and subaction in ('accept','pass') and not (@policyname='"ALL VPN users to DNS comm."' or @policyname='"VZEN_Zscaler_ProxyIP-69341"' or @policyname='"VZEN_Zscaler -- CRQ000000069341"' or @policyname='"NTP"' or @policyname='"Mcafee_WEB_GW_DNS"' or @policyname='"CRQ000000058360,62496"') | select srcip,dstip,dstport,dstisp,system as Firewall_Hostname,devsrcip as Firewall_IP,@policyname as Firewall_PolicyName | groupby srcip,dstip,dstport,dstisp,system,devsrcip,@policyname | duration 1h
+
+stream=prisma where sourcename='PRISMA-CLOUD' and (cloudservice like '%Amazon%' or cloudservice like '%AWS%') and accountname not like '%Account-DMS%' and accountname not like '%Account-DMS%' and severity='low' | groupby PolicyName, severity, CloudService, ResourceID, RestrictedResourceName, accountid, resourcename | duration 6h
+
+stream=prisma where sourcename='PRISMA-CLOUD' and (cloudservice like '%Amazon%' or cloudservice like '%AWS%') and accountname not like '%Account-DMS%' and accountname not like '%Account-DMS%' and severity='low' and CloudService='{TargetResource}'
+
+stream=* where sourcename='PALOALTO' and type='SYSTEM' and severity='critical'
+
+stream=webfilter where rlike(url,"\.exe|\.vbs|\.bat|\.rar|\.ps1|\.doc|\.docm|\.xls|\.xlsm|\.pptm|\.rtf|\.hta|\.dll|\.ws|\.wsf|\.sct|\.zip") and not rlike(url,"\.com|\.org|\.net|\.edu|\.gov|\.uk|\.ca|\.de|\.jp|\.fr|\.au|\.us|\.ch|\.it|\.nl|\.se|\.no|\.es|\.in|\.io") and srcip='{SuspectHost}' | duration 6m
+
+stream=webfilter where rlike(url,"\.exe|\.vbs|\.bat|\.rar|\.ps1|\.doc|\.docm|\.xls|\.xlsm|\.pptm|\.rtf|\.hta|\.dll|\.ws|\.wsf|\.sct|\.zip") and not rlike(url,"\.com|\.org|\.net|\.edu|\.gov|\.uk|\.ca|\.de|\.jp|\.fr|\.au|\.us|\.ch|\.it|\.nl|\.se|\.no|\.es|\.in|\.io") | groupby srcip
+
+stream=authentication where sourcename='FORTIGATE' and action='LOGIN' and status='FAILED' and not reason in ('sslvpn_login_permission_denied','sslvpn_login_unknown_user','sslvpn_login_token_timeout','sslvpn_login_unknown_reason','user timed out by session closed') and not user in ('auto-join','gourammat-ey-soc','rushiv-ey-soc','aditya-ey-soc','hardikd-ey-soc','nileshd-ey-soc','omkarr-ey-soc') and logevent like '%"Admin login failed%' | groupby user, system, cnamtime, srcip, devsrcip, @logdesc, reason |  duration 12h
+
+stream=authentication where sourcename='FORTIGATE' and action='LOGIN' and status='FAILED' and not reason in ('sslvpn_login_permission_denied','sslvpn_login_unknown_user','sslvpn_login_token_timeout','sslvpn_login_unknown_reason','user timed out by session closed') and not user in ('auto-join','gourammat-ey-soc','rushiv-ey-soc','aditya-ey-soc','hardikd-ey-soc','nileshd-ey-soc','omkarr-ey-soc') and logevent like '%"Admin login failed%' and system='{TargetHost}' and user='{SuspectUser}' | duration 12h
+
+stream=WEBFILTER where (useragent like "%(hydra)%" or useragent like "% arachni/%" or useragent like "% BFAC %" or useragent like "% brutus %" or useragent like "% cgichk %" or useragent like "%core-project/1.0%" or useragent like "% crimscanner/%" or useragent like "%datacha0s%" or useragent like "%dirbuster%" or useragent like "%domino hunter%" or useragent like "%dotdotpwn%" or useragent like "FHScan Core" or useragent like "%floodgate%" or useragent like "%get-minimal%" or useragent like "%gootkit auto-rooter scanner%" or useragent like "%grendel-scan%" or useragent like "% inspath %" or useragent like "%internet ninja%" or useragent like "%jaascois%" or useragent like "% zmeu %" or useragent like "%masscan%" or useragent like "% metis %" or useragent like "%morfeus fucking scanner%" or useragent like "%n-stealth%" or useragent like "%nsauditor%" or useragent like "%pmafind%" or useragent like "%security scan%" or useragent like "%springenwerk%" or useragent like "%teh forest lobster%" or useragent like "%toata dragostea%" or useragent like "% vega/%" or useragent like "%voideye%" or useragent like "%webshag%" or useragent like "%webvulnscan%" or useragent like "% whcc/%" or useragent like "% Havij" or useragent like "%absinthe%" or useragent like "%bsqlbf%" or useragent like "%mysqloit%" or useragent like "%pangolin%" or useragent like "%sql power injector%" or useragent like "%sqlmap%" or useragent like "%sqlninja%" or useragent like "%uil2pn%" or useragent like "ruler" or lower(useragent) like "%bav2ropc%") | groupby srcip
+
+stream=WEBFILTER where (useragent like "%(hydra)%" or useragent like "% arachni/%" or useragent like "% BFAC %" or useragent like "% brutus %" or useragent like "% cgichk %" or useragent like "%core-project/1.0%" or useragent like "% crimscanner/%" or useragent like "%datacha0s%" or useragent like "%dirbuster%" or useragent like "%domino hunter%" or useragent like "%dotdotpwn%" or useragent like "FHScan Core" or useragent like "%floodgate%" or useragent like "%get-minimal%" or useragent like "%gootkit auto-rooter scanner%" or useragent like "%grendel-scan%" or useragent like "% inspath %" or useragent like "%internet ninja%" or useragent like "%jaascois%" or useragent like "% zmeu %" or useragent like "%masscan%" or useragent like "% metis %" or useragent like "%morfeus fucking scanner%" or useragent like "%n-stealth%" or useragent like "%nsauditor%" or useragent like "%pmafind%" or useragent like "%security scan%" or useragent like "%springenwerk%" or useragent like "%teh forest lobster%" or useragent like "%toata dragostea%" or useragent like "% vega/%" or useragent like "%voideye%" or useragent like "%webshag%" or useragent like "%webvulnscan%" or useragent like "% whcc/%" or useragent like "% Havij" or useragent like "%absinthe%" or useragent like "%bsqlbf%" or useragent like "%mysqloit%" or useragent like "%pangolin%" or useragent like "%sql power injector%" or useragent like "%sqlmap%" or useragent like "%sqlninja%" or useragent like "%uil2pn%" or useragent like "ruler" or lower(useragent) like "%bav2ropc%") and srcip='{SuspectHost}' | duration 6m
+
+stream=PRISMA where sourcename='PRISMA-CLOUD' and policytype in ('network','anomaly','attackpath') and (cloudservice like 'Azure%')  | select cloudservice,policytype,accountid,severity,policyname,reason | groupby cloudservice,policytype,accountid,severity,policyname,reason | duration 1h
+
+stream=IAM where sourcename='WINDOWS' and action='USER_ENABLED' and status='PASSED' and role='User Account Management' | groupby user, targetuser
+
+stream=IAM where sourcename='WINDOWS' and action='USER_ENABLED' and status='PASSED' and role='User Account Management' and user='{SuspectUser}' and targetuser='{TargetUser}'
+
+stream=FIREWALL where proto='TCP' and dstport in ('20','21') and srctype='PRIVATE' and action='PACKET_ALLOWED' and dsttype='PUBLIC'and not srcip like '172.26.%' and not srcip like '192.168.10%' and not dstip='172.32.1.178' |  groupby srcip, dstip, devsrcip, sourcename 
+
+stream=FIREWALL where SourceName='FORTIGATE' and SrcType='PUBLIC' and DstType='PUBLIC' and DstISP='Mahindra And Mahindra Limited' and NOT (SrcISP in ('ZSCALER, INC.','Microsoft Corporation','Mahindra And Mahindra Limited') or DstISP in ('ZSCALER, INC.','Microsoft Corporation')) and Proto in ('UDP','TCP') | select srcip, distinct_count(dstip) as hosts, count(*) as packetcount | groupby srcip | having hosts > 100 and packetcount > 50000  | duration 15m 
+
+stream=PRISMA where sourcename='PRISMA-CLOUD' and policytype='iam' and (cloudservice like 'Azure%') | select accountid,cloudservice,severity,policyname | groupby accountid,cloudservice,severity,policyname | duration 1d
+
+stream=threat where sourcename='PALOALTO' and logevent like'%high%' and (@dstPort='445' or @dstPort='22' or @dstPort='135') | groupby threat, srcip | select threat, srcip, distinct_count(dstip) as Dst_IP_Cnt | having Dst_IP_Cnt>1 |  duration 1h
+
+stream=firewall where srctype='PRIVATE' and dsttype='PRIVATE' and action='PACKET_ALLOWED' and dstport='53' and not srcip like '%172.26.%' |  groupby srcip |  select srcip, distinct_count(dstip) as Internal_Dns_Server |  having Internal_Dns_Server>2 |  duration 15m
+
+stream=firewall where srcip in ('172.29.1.74') and srctype='PRIVATE' and dsttype='PRIVATE' and action='PACKET_ALLOWED' and dstport='53' | groupby srcip, dstip, dstport
+
+stream=IAM where sourcename='WINDOWS' and action='USER_CREATED' and status='PASSED' and not user in ('IDMADM','AMBENE-CONTADM') and role='User Account Management' and user='{SuspectUser}' and targetuser='{TargetUser}'
+
+stream=IAM where sourcename='WINDOWS' and action='USER_CREATED' and status='PASSED' and not user in ('IDMADM','AMBENE-CONTADM') and role='User Account Management' | groupby user, targetuser
+
+stream=firewall where sourcename='FORTIGATE' and dstport in ('21','23','389','3389','445','63','5985','5986') and actiontaken in ('allow','accept') and not dstip like '190.%' and srccn='-' and not dstcn in ('-','IN','US') and srctype='PRIVATE' and srcip='{SuspectHost}'
+
+stream=firewall where sourcename='FORTIGATE' and dstport in ('21','23','389','3389','445','63','5985','5986') and action in ('PACKET_ALLOWED') and not dstip like '190.%' and srccn='-' and not dstcn in ('-','IN','US') and srctype='PRIVATE' and not srcip like '172.26%' | groupby cnamtime, srcip, dstip, dstport
+
+stream=PRISMA where sourcename='PRISMA-CLOUD' and policytype='audit' and (cloudservice like 'Azure%')  | select accountid,cloudservice,severity,policyname | groupby accountid,cloudservice,severity,policyname | duration 1d
+
+stream=firewall where sourcename='FORTIGATE' and ((dstport='22' and dstisp='Mahindra And Mahindra Limited' and srctype='PUBLIC') or (dstport='22' and dsttype='PUBLIC')) and subaction in ('accept','pass') and not dstip='103.81.88.56' and not (@policyname='"CRQ000000068610 - MLU"' or @policyname='"CRQ000000075335"' or @policyname='"CRQ000000061852"' or @policyname='"Deny_all"') | select srcisp,srcip,dstip,dstport,dstisp,system as Firewall_HostName,devsrcip as Firewall_IP,@policyname as Firewall_PolicyName,count(*) as Count | groupby srcisp,srcip,dstip,dstport,dstisp,system,devsrcip,@policyname | duration 1h
+
+stream=authentication where sourcename='FORTIGATE' and action='LOGIN' and subtype in ('user','vpn') and not description like 'Explicit%' and user is not null and status='FAILED'  | groupby srcip | duration 1w | limit 10
+
+stream=dns where sourcename='CLOUDFLARE' and not responsecode='No Error' |  groupby srcip, query, responsecode |  duration 1h | having count_col1>100
+
+stream=iam where sourcename='WINDOWS' and action='USER_ADDED' and status='PASSED' and role='Security Group Management' and not user in ('yadaje-conttadm','CMADMIN','MITC-WINDOWS','o365mitcwindows@mahindraonline.onmicrosoft.com','Adglobaladmin','AFSVDI','IDMADM','ITHELPDESK','ITSMBPPM','ITSMBCM','oradb_admin','DIGAMBAR','TACTIX','TACTIXTCL','JEELAJEET','YADAJE-CONT','pancdi-contadm') and not user in ('ATULP-EY-SOC','NILESHD-EY-SOC','GOURAMMAT-EY-SOC','arvindp-ey-soc','OMKARR-EY-SOC','SHARIFFM-EY-SOC') | groupby user, @MemberName, group, system, cnamtime
+
+stream=authentication where sourcename='FORTIGATE' and action='LOGIN' and status='FAILED' and reason='exceed_limit' | duration 15m | groupby srcip 
+
+stream=authentication where sourcename='FORTIGATE' and action='LOGIN' and status='FAILED' and reason='exceed_limit'
+
+stream=webfilter where sourcename='CLOUDFLARE' and not (WAFAttackScore='0' or WAFRCEAttackScore='0' or WAFSQLiAttackScore='0' or WAFXSSAttackScore='0')  | groupby WAFAttackScore, WAFRCEAttackScore, WAFSQLiAttackScore, WAFXSSAttackScore, srcip, system | duration 1h
+
+stream=firewall where sourcename='PALOALTO' and DstPort in ('135','22','445') and dsttype='PRIVATE' | groupby srcip, sourcename, action | select srcip, sourcename, distinct_count(dstip) as Dst_IP_Cnt, distinct_count(dstport) as Dst_Port_Cnt | having Dst_IP_Cnt>10 |  duration 1h
+
+stream=iam where sourcename='WINDOWS' and action='USER_LOCKOUT' and status='PASSED' and role='User Account Management' |  groupby user, targetuser
+
+stream=WEBFILTER where sourcename='CLOUDFLARE' and actiontaken='allow' | groupby ClientCountry, actiontaken, system |  duration 3h
+
+stream=iam where sourcename='WINDOWS' and action='USER_CREATED' and status='PASSED' and role='User Account Management' | groupby user, targetuser, eid, system
+
+stream=threat where sourcename='SMOKESCREEN' and threat='Data Theft' and not @cs1attackerprocessdomainname='NT AUTHORITY' and cs1decoyname='{SuspectHost}' | duration 6h
+
+stream=threat where sourcename='SMOKESCREEN' and threat='Data Theft' and not cs1attackerprocessdomainname='NT AUTHORITY' and not System='tcsi2250' | groupby SrcIP, File, Process, CommandLine, Status, CS1AttackerID, CS1Severity, System, CS1AttackerProcessTree, CS1AttackerProcessUserName, cs1attackerprocessdomainname |  duration 6h
+
+stream=threat where sourcename='SMOKESCREEN' and threat='Reconnaissance' | groupby SrcIP, System, DeviceIP, CS1Severity, CN1Score
+
+stream=dns where sourcename='CLOUDFLARE' and not responsecode='No Error' |  groupby srcip, query, responsecode |  duration 6h | having count_col1>30
+
+stream=FIREWALL where action='PACKET_ALLOWED' and proto='TCP' and dstport='1723' and dstip='{TargetHost}' and srcip='{SuspectHost}' | duration 6m
+
+stream=FIREWALL where action='PACKET_ALLOWED' and proto='TCP' and dstport='1723' and not srcip like '172.26.%' | groupby srcip, dstip
+
+stream=firewall where sourcename='FORTIGATE' and dstport in ('7777','8388','8580','8997','8998','8999','8332') and action in ('PACKET_ALLOWED') and actiontaken in ('accept','pass') and not srcip like '172.26.%' and not (dstip='10.2.198.188' and dstport='7777') | groupby cnamtime, srcip, dstip, dstport | having count_col1>1
+
+stream=firewall where sourcename='FORTIGATE' and dstport in ('7777','8388','8580','8997','8998','8999','8332') and actiontaken in ('allow','accept') and srcip='{SuspectHost}'
+
+stream=* where sourcename='WINDOWS' | select sourcename, sum(evtlen)/1024/1024/1024 | groupby sourcename | limit 10 |  duration 1d
+
+stream=IAM where sourcename='WINDOWS' and sourcetype='OS' and action in ('USER_CREATED','COMPUTER_ACCOUNT_CREATED') and status='PASSED' and not system like '%MMDC%' | groupby user, targetuser, system
+
+stream=IAM where sourcename='WINDOWS' and sourcetype='OS' and action in ('USER_CREATED','COMPUTER_ACCOUNT_CREATED') and status='PASSED' and not system like '%MMDC%' and user='{SuspectUser}' and targetuser='{TargetUser}'
+
+stream=WIN-AUDIT where sourcename='WINDOWS' and sourcetype='OS' and eid in ('5137','5141','5136','4739') | groupby eid, srcip, action, system, user | having count_col1 > 10
+
+stream=WIN-AUDIT where sourcename='WINDOWS' and sourcetype='OS' and eid in ('5137','5141','5136','4739') and action='{SuspectAction}'
+
+stream=threat where sourcename='PALOALTO' and logevent like '%Brute%' |  groupby srcip, dstip, threat |  having count_col1>100 | duration 30m
+
+
+stream=authentication where sourcename='FORTIGATE' and user in ('23177942','mldlt01') and action='LOGIN' and subtype in ('user','vpn') and not description like 'Explicit%' and not system='MMKNDEXTFW' | select cnamtime,user,srcisp,srcip,system as Firewall_HostName,devsrcip as Firewall_IP,description as Category,message as SubCategory,status | groupby cnamtime,user,srcisp,srcip,system,devsrcip,description,message,status | duration 1h
+
+stream=authentication where sourcename='FORTIGATE' and action='LOGIN' and subtype in ('user','vpn') and not description like 'Explicit%' and user is not null and not system='MMKNDEXTFW'| select user,count_if(status='PASSED') as Login_Success,count_if(status='FAILED') as Login_Failed,distinct_count(system) as No_Of_Firewall_Involved | groupby user | duration 1h | having Login_Success>0 and Login_Failed>4
+
+stream=WIN-AUDIT where sourcename='WINDOWS' and sourcetype='OS' and action='POLICY_CHANGED' and status='PASSED' and eid in ('4715','4780') and event='The audit policy (SACL) on an object was changed.' and category='POLICY' and user='{SuspectUser}'
+
+stream=WIN-AUDIT where sourcename='WINDOWS' and sourcetype='OS' and action='POLICY_CHANGED' and status='PASSED' and eid in ('4715','4780') and event='The audit policy (SACL) on an object was changed.' and category='POLICY' | groupby user
+
+stream=firewall where srctype='PUBLIC' and action='PACKET_ALLOWED' and not srcip like '%103.81.%' and not srcip like '%10.%' and not srcip like '%172.%' and not srcip like '%192.168.%' and not srcip like '%165.225.104%' and not srcip like '%136.226.252%' and not srcip like '%136.226.253%' and not srcip like '%165.225.120%' and not srcip like '%165.225.121%' |  groupby srcip, cnamtime |  duration 1h
+
+stream=iam where eid in ('4722','4725','4726','4738') and targetuser in ('PANCDI-CONT','YADAJE-CONT','JADHSR-CONT','yadaje-conttadm','203951
+','209455','23231418','23141621','205240','207084','200001','202209','208369','23137327','211002','RAMESH','IYER.RAMESH','205133','23151886','25004424','25006041','25008546','25008723','25009163','25009204','25011033','25015400') | groupby action, cnamtime, devsrcip, domain, eid, system, role, targetuser, user, logevent
+
+stream=WIN-AUDIT where sourcename='WINDOWS' and action='POLICY_CHANGED' and status='PASSED' and event='The workstation was locked.' and category='POLICY' | groupby srcip 
+
+stream=WIN-AUDIT where sourcename='WINDOWS' and action='POLICY_CHANGED' and status='PASSED' and event='The workstation was locked.' and category='POLICY' and srcip='{SuspectHost}' 
+
+stream=threat where sourcename='TIPPINGPOINT' and threat like '%injection%' | groupby srcip, dstip, threat
+
+stream=IAM where sourcename='WINDOWS' and sourcetype='OS' and action='COMPUTER_ACCOUNT_CREATED' and status='PASSED' and not user like '%$%' and user='{SuspectUser}' and targetuser='{TargetUser}'
+
+stream=IAM where sourcename='WINDOWS' and sourcetype='OS' and action='COMPUTER_ACCOUNT_CREATED' and status='PASSED' and not user like '%$%' | groupby user, targetuser
+
+
+stream=authentication where sourcename='FORTIGATE' and action='LOGIN' and status='PASSED' and intel='true' | groupby system, user
+
+stream=firewall where sourcename='FORTIGATE' and action='PACKET_ALLOWED' and status='PASSED' and dstport='69' and @service='TFTP' | groupby srcip, dstip
+
+stream=firewall where sourcename='FORTIGATE' AND action='RESOURCE_ALERT' and status='PASSED' |  groupby devsrcip
+
+stream=firewall where sourcename='FORTIGATE' and action='RESOURCE_ALERT'
+
+stream=firewall where sourcename='FORTIGATE' and action='FILE_DLETD' and status='PASSED' |  groupby devsrcip, cnamtime
+
+stream=firewall where sourcename='FORTIGATE' and action='CONFIG_CHNGD' |  groupby devsrcip, srcip,  system
+
+stream=threat where sourcename='TIPPINGPOINT' and threat like '%vulnerability%' | groupby threat, srcip, dstip
+
+stream=threat where sourcename='TIPPINGPOINT' and action='THREAT_DETECTED' and status='PASSED' and vector='NETWORK' and not dstip in ('172.23.0.51','172.23.0.52') and not threat like '%vulnerability%' and not threat like '%HTTPS: Generic SSL Certificate (CN=AlphaSSL)%' | groupby threat, srcip, dstip, cnamtime
+
+stream=threat where sourcename='TIPPINGPOINT' and action='THREAT_DETECTED' and status='PASSED' and vector='NETWORK' and threat like '%vulnerability%' | groupby threat, srcip, dstip, cnamtime
+
+stream=iam where sourcename='NIX' and action='USER_ADDED' and status='PASSED' |  groupby user, targetuser, cnamtime
+
+stream=iam where sourcename='NIX' and action='PASSWORD_CHANGED' and status='PASSED'| groupby user, targetuser 
+
+stream=iam where sourcename='NIX' and action='PASSWORD_CHANGED' and status='PASSED' |  groupby user, targetuser
+
+stream=iam where sourcename='NIX' and action='PASSWORD_CHANGED' and status='PASSED' and user='root' |  groupby user, targetuser
+
+stream=iam where sourcename='NIX' and action='USER_DELETED' and status='PASSED' | groupby user, targetuser
+
+stream=authentication where sourcename='NIX' and action='LOGIN' and status='FAILED' and user='root' |  groupby user, system, cnamtime |  duration 3h
+
+stream=AUTHENTICATION where sourcename='WINDOWS' and sourcetype='OS' and action='LOGIN' and status='FAILED' and  reason='BAD_USER_PASSWORD' and @Category='Logon' and @SubStatus='0xc000006d' | groupby srcip, user
+
+stream=AUTHENTICATION where sourcename='WINDOWS' and sourcetype='OS' and action='LOGIN' and status='FAILED' and  reason='BAD_USER_PASSWORD' and @Category='Logon' and @SubStatus='0xc000006d' and srcip='{SuspectHost}'
+
+stream=email-gateway where sourcename='MS-O365' and action='MAILBOX_LOGIN' and remotecn='TR' and remotecn is not null |  groupby remoteip, remotecn, sender, recipient
+
+stream=threat where sourcename='MS-O365' and action='THREAT_DETECTED' and status='PASSED' and vector='HOST' and @Operation='FileMalwareDetected' and @SourceFileExtension='exe' | groupby user, dstip, file 
+
+stream=email-gateway where sourcename='MS-O365' and action='MAILBOX_LOGIN' and remotecn='CZ' and remotecn is not null | groupby remoteip, remotecn, sender, recipient
+
+stream=email-gateway where sourcename='MS-O365' and action='MAILBOX_LOGIN' and remotecn='KR' and remotecn is not null |  groupby remoteip, remotecn, sender, recipient
+
+stream=authentication where sourcename='NIX' and action='LOGIN' and status='FAILED' and authproto='SSH' and reason='INVALID_CREDENTIALS' | select user, system, srcip, cnamtime, count(*) as count |  groupby user, system, srcip, cnamtime |  duration 6h |  having count>3
+
+stream=email-gateway where sourcename='MS-O365' and action='MAILBOX_LOGIN' and remotecn='RU' and not remotecn is null | groupby remoteip, remotecn, sender, recipient 
+
+stream=authentication where sourcename='WINDOWS' and action='LOGIN' and status='FAILED' and reason='USER_DISABLED' | groupby user, system
+
+stream=win-audit where sourcename='WINDOWS' and action='PROCESS_CREATED' and status='PASSED' and eid=4688 | groupby user, @NewProcessName
+
+stream=iam where sourcename='WINDOWS' and action='PASSWORD_CHANGED' and status='PASSED' and role='User Account Management' | groupby user, targetuser
+
+stream=configuration where sourcename='WINDOWS' and action='CONFIGURATION_CHANGED' and status='PASSED' | groupby user
+
+stream=win-audit where sourcename='WINDOWS' and action='POLICY_CHANGED' and status='PASSED' and event='Domain Policy was changed.' | groupby user
+
+stream=iam where sourcename='WINDOWS' and action in ('GROUP_DELETED', 'GROUP_CREATED') and status='PASSED' | groupby user, group, action, cnamtime
+
+stream=win-audit where sourcename='WINDOWS' and action='PROCESS_CREATED' and status='PASSED' and eid=4688 | groupby user, @ParentProcessName | duration 1d
+
+stream=configuration where sourcename='WINDOWS' and action='CONFIGURATION_CHANGED' and status='PASSED' and config='System Shut Down' | groupby user, system 
+
+stream=iam where sourcename='WINDOWS' and action='USER_DELETED' and status='PASSED' and role='User Account Management' | groupby user, targetuser
+
+stream=win-audit where sourcename='WINDOWS' and action='PROCESS_TERMINATED' and status='PASSED' and event='A process has exited.' | groupby user
+
+stream=authentication where sourcename='WINDOWS' and action='LOGIN' and status='FAILED' and reason='ACCOUNT_EXPIRED' | groupby user, system
+
+stream=win-audit where sourcename='WINDOWS' and action='PROCESS_CREATED' and status='PASSED' and eid=4688 and not user in ('yadaje-contadm','pateab-conttadm','cmadmin')| groupby user, @ParentProcessName 
+
+stream=win-audit  where sourcename='WINDOWS' and action='POLICY_CHANGED' and status='PASSED' and eid in ('4865', '4866', '4867') | groupby user
+
+stream=win-audit where sourcename='WINDOWS' and action='POLICY_CHANGED' and status='PASSED' and event='System audit policy was changed.' | groupby user, eid, action, @SubjectUserSid, @SubjectLogonId
+
+stream=win-audit where sourcename='WINDOWS' and action='OBJECT_ACCESSED' and status='PASSED' and event='A registry value was modified.' and rlike(object,".*currentversion.*run.*") | groupby user, system
+
+stream=win-audit where sourcename='WINDOWS' and action='OBJECT_ACCESSED' and status='PASSED' and eid=4656 | groupby user
+
+stream=win-audit where sourcename='WINDOWS' and action='POLICY_CHANGED' and eid in ('4706','4707','4714') | groupby user, cnamtime
+
+stream=win-audit where sourcename='WINDOWS' and action='OBJECT_ACCESSED' and status='PASSED' and eid=4656 and object like "%dump%" | groupby user, object
+
+stream=WIN-AUDIT where sourcename='WINDOWS' and action='OBJECT_ACCESSED' and status='PASSED' and object like '%Certutil%' | groupby user
+
+stream=WIN-AUDIT where sourcename='WINDOWS' and action='OBJECT_ACCESSED' and status='PASSED' and object like '%Certutil%' and user='{SuspectUser}'
+
+stream=win-audit where sourcename='WINDOWS' and action='POLICY_CHANGED' and status='PASSED' and event='The audit policy (SACL) on an object was changed.' | groupby user
+
+stream=win-audit where sourcename='WINDOWS' and action='POLICY_CHANGED' and status='PASSED' and event='Kerberos policy was changed.' |  groupby user 
+
+stream=threat where sourcename='WINDOWS' and action='THREAT_DETECTED' and status='PASSED' and threat='A replay attack was detected.' | groupby user, srcip
+
+stream=configuration where sourcename='WINDOWS' and action='CONFIGURATION_CHANGED' and status='PASSED' and config='System Time Changed' | groupby user, system, @SubjectUserSid, cnamtime |  select user, system, @SubjectUserSid, cnamtime |  duration 1d
+
+stream=win-audit where sourcename='WINDOWS' and action='POLICY_CHANGED' and status='PASSED' and event='Auditing settings on object were changed.' | groupby user
+
+stream=win-audit where sourcename='WINDOWS' and action='POLICY_CHANGED' and status='PASSED' and eid in ('4954', '4947', '4954') | groupby user 
+
+stream=WIN-AUDIT where sourcetype='OS' and not sourcename='NIX' and action='POLICY_CHANGED' and status='PASSED' and eid in ('4954','4956','4957','4958') and category='POLICY' | groupby srcip 
+
+stream=WIN-AUDIT where sourcetype='OS' and not sourcename='NIX' and action='POLICY_CHANGED' and status='PASSED' and eid in ('4954','4956','4957','4958') and category='POLICY' and srcip='{SuspectHost}'
+
+stream=FIREWALL where sourcename='FORTIGATE' and (proto='TCP' and dstport='8000' and srctype='PRIVATE') and (not dsttype='PRIVATE' and not action='PACKET_BLOCKED' and not srcip like '%172.26.%')
+
+stream=FIREWALL where proto='TCP' and dstport='26' and not action='PACKET_BLOCKED' and not srcip='10.2.48.62' and not srcip like '172.26.%' |  groupby srcip, dstip | limit 10
+
+stream=THREAT where devsrcip='prisma_incidents_connector' and system='{TargetHost}' and category='{SuspectHost}' | duration 6m
+
+stream=THREAT where devsrcip='prisma_incidents_connector'
+
+stream=configuration where action='CONFIGURATION_CHANGED' and status='PASSED' | groupby user, config | limit 10
+
+stream=configuration where action='CONFIGURATION_CHANGED' and status='PASSED' and user='{SuspectUser}'
+
+stream=authentication where action='LOGIN' and status='FAILED' and authproto='SSH' | groupby user, srcip | limit 10
+
+stream=authentication where action='LOGIN' and status='FAILED' and authproto='SSH' and srcip='{SuspectUser}'
+
+stream=authentication where action='LOGIN' and status='FAILED'  | groupby user, srcip | limit 10
+
+stream=authentication where action='LOGIN' and status='FAILED' and srcip='{SuspectHost}'
+
+stream=firewall where sourcename='FORTIGATE' and action='PACKET_ALLOWED' and status='PASSED' and proto='TCP' | duration 1h | groupby srcip, devsrcip, dstport 
+
+stream=firewall where sourcename='FORTIGATE' and action='PACKET_ALLOWED' and status='PASSED' and proto='TCP' and srcip='{SuspectHost}'
+
+stream=authentication where sourcename='NIX' and action='LOGIN' and user='root' and srcip='{SuspectHost}'
+
+stream=authentication where sourcename='NIX' and action='LOGIN' and status='PASSED' and user='root' | groupby srcip
+
+stream=authentication where sourcename='BLUECOAT' and sourcetype='WEBFILTER' and action='LOGIN' and status='PASSED' and user='{SuspectUser}'
+
+stream=authentication where sourcename='BLUECOAT' and sourcetype='WEBFILTER' and action='LOGIN' and status='PASSED' | groupby user 
+
+stream=firewall where sourcename='FORTIGATE' and sourcetype='FIREWALL' and not srccn='-' and not dstcn='-' and action='PACKET_BLOCKED' and status='PASSED' and not srcip like '172.32.%' and @action='deny' and srcip='{SuspectHost}'
+
+stream=firewall where sourcename='FORTIGATE' and sourcetype='FIREWALL' and not srccn='-' and not dstcn='-' and action='PACKET_BLOCKED' and status='PASSED' and not srcip like '172.32.%' and @action='deny'| groupby srcip 
+
+stream=authentication where sourcename='FORTIGATE' and action='LOGIN' and status='PASSED' | groupby user, system 
+
+stream=authentication where sourcename='FORTIGATE' and action='LOGIN' and status='PASSED' and user='{SuspectUser}'
+
+stream=iam where sourcename='NIX' and action='USER_ADDED' and status='PASSED' and daemon='useradd' and rlike(message,".*bash.*") |  groupby user 
+
+stream=iam where sourcename='NIX' and action='USER_ADDED' and status='PASSED' and daemon='useradd' and rlike(message,".*bash.*") and user='{SuspectUser}'
+
+stream=firewall where sourcename='FORTIGATE' and sourcetype='FIREWALL' and action='PACKET_BLOCKED' and status='PASSED' and not (srcip like '103.81.88.%' or srcip like '10.%' or srcip like '172.32.%' or srcip like '103.81.90.%') and @action='deny' | groupby srcip 
+
+stream=firewall where sourcename='FORTIGATE' and sourcetype='FIREWALL' and action='PACKET_BLOCKED' and status='PASSED' and not (srcip like '103.81.88.%' or srcip like '10.%' or srcip like '172.32.%' or srcip like '103.81.90.%') and @action='deny' and srcip='{SuspectHost}'
+
+stream=firewall where sourcename='FORTIGATE' and action='PACKET_BLOCKED' and srcip='{SuspectHost}'
+
+stream=firewall where sourcename='FORTIGATE' and action='PACKET_BLOCKED' | duration 1h | groupby srcip | having count_col1 > 100
+
+stream=firewall where sourcename='FORTIGATE' and dstport in ('23','3389') and actiontaken in ('allow','accept') and not srccn in ('-','IN') and srctype='PUBLIC' and srcip='{SuspectHost}'
+
+stream=firewall where sourcename='FORTIGATE' and dstport in ('23','3389') and action in ('PACKET_ALLOWED') and not srccn in ('-','IN') and srctype='PUBLIC' | groupby cnamtime, srcip, dstip, dstport
+
+stream=firewall where sourcename='FORTIGATE' and dstport in ('5656','6086','14800','18080','24465','9389','9898','9988') and actiontaken in ('allow','accept') and not srccn='-' and srcip='{SuspectHost}'
+
+stream=firewall where sourcename='FORTIGATE' and dstport in ('5656','6086','14800','18080','24465','9389','9898','9988') and action in ('PACKET_ALLOWED') and not srccn='-' and srctype='PUBLIC' | groupby cnamtime, srcip
+
+stream=authentication where action='LOGIN' and status='FAILED' and srcip='{SuspectHost}'
+
+stream=authentication where action='LOGIN' and status='FAILED' | groupby srcip, user, reason | limit 10
+
+stream=configuration where action='CONFIGURATION_CHANGED' and config='Server Reconfiguration' and user='{SuspectUser}'
+
+stream=configuration where action='CONFIGURATION_CHANGED' and config='Server Reconfiguration' | select user, count(user) as user_cnt | groupby user | having user_cnt >= 1
+
+stream=iam where sourcename='NIX' and action='PASSWORD_CHANGED' and status='PASSED' |  groupby user, targetuser
+
+stream=iam where sourcename='NIX' and action='PASSWORD_CHANGED' and status='PASSED' and user='{SuspectUser}' and targetuser='{TargetUser}'
+
+stream=iam where sourcename='NIX' and action='USER_DELETED' and status='PASSED' and user='{SuspectUser}' and targetuser='{TargetUser}'
+
+stream=iam where sourcename='NIX' and action='USER_DELETED' and status='PASSED' | groupby user, targetuser 
+
+stream=authentication where sourcename='NIX' and action='LOGIN' and status='FAILED' and reason='INVALID_CREDENTIALS' and actiontaken in ('authentication failed', 'authentication failure', 'authentication failures') and srcip='{SuspectHost}'
+
+stream=authentication where sourcename='NIX' and action='LOGIN' and status='FAILED' and reason='INVALID_CREDENTIALS' and action in ('authentication failed', 'authentication failure', 'authentication failures') |  groupby srcip, user
+
+stream=authentication where sourcename='NIX' and action='LOGIN' and status='PASSED' and daemon in ('su', 'sudo') and srcip='{SuspectHost}'
+
+stream=authentication where sourcename='NIX' and action='LOGIN' and status='PASSED' and daemon in ('su', 'sudo') | groupby srcip, user, authproto
+
+stream=auditd where sourcename='NIX' and action='USER_COMMAND_EXECUTED' and status='PASSED' and rlike(cmd,".*http.*") and user='{SuspectUser}'
+
+stream=auditd where sourcename='NIX' and action='USER_COMMAND_EXECUTED' and status='PASSED' and rlike(commandline,".*http.*") and not rlike(logevent,".*CROND.*") | groupby user, logevent | limit 10
+
+stream=auditd where sourcename='NIX' and action='USER_COMMAND_EXECUTED' and status='PASSED' and rlike(cmd,".*curl.*") | groupby user | limit 10
+
+stream=auditd where sourcename='NIX' and action='USER_COMMAND_EXECUTED' and status='PASSED' and rlike(cmd,".*curl.*") and user='{SuspectUser}'
+
+stream=authentication where sourcename='NIX' and action='LOGIN' and status='FAILED' and actiontaken in ( 'Received disconnect', 'Disconnected') and srcip='{SuspectHost}'
+
+stream=authentication where sourcename='NIX' and action='LOGIN' and status='FAILED' and action in ( 'Received disconnect', 'Disconnected') | groupby srcip, user, authproto
+
+stream=authentication where sourcename='NIX' and action='LOGIN' and status='FAILED' and actiontaken in ( 'Received disconnect', 'Disconnected') and srcip='{SuspectHost}'
+
+stream=authentication where sourcename='NIX' and action='LOGIN' and status='FAILED' and action in ( 'Received disconnect', 'Disconnected') | groupby srcip, user, authproto
+
+stream=iam where sourcename='NIX' and action='PASSWORD_CHANGED' and status='PASSED' and user='root' and user='{SuspectUser}' and targetuser='{TargetUser}'
+
+stream=iam where sourcename='NIX' and action='PASSWORD_CHANGED' and status='PASSED' and user='root' |  groupby user, targetuser | limit 10 
+
+stream=firewall where sourcename='FORTIGATE' and dstport in ('5656','6086','14800','18080','24465','9389','9898','9988') and actiontaken in ('allow','accept') and srccn='-' and not dstcn='-' and srctype='PRIVATE' and srcip='{SuspectHost}'
+
+stream=firewall where sourcename='FORTIGATE' and dstport in ('5656','6086','14800','18080','24465','9389','9898','9988') and action in ('PACKET_ALLOWED') and srccn='-' and not dstcn='-' and srctype='PRIVATE' | groupby cnamtime, srcip, dstport, dstip, srccn
+
+stream=authentication where sourcename='NIX' and action='LOGIN' and status='FAILED' and user='root' and srcip='{SuspectHost}'
+
+stream=authentication where sourcename='NIX' and action='LOGIN' and status='FAILED' and user='root' | groupby srcip
+
+stream=auditd where sourcename='NIX' and action='SERVICE_STOPED' and status='PASSED' |  groupby user
+
+stream=auditd where sourcename='NIX' and action='SERVICE_STOPED' and status='PASSED' and user='{SuspectUser}'
+
+stream=auditd where sourcename='NIX' and action='USER_COMMAND_EXECUTED' and status='PASSED' and cmd=':(){ :|:& };:' and user='{SuspectUser}'
+
+stream=auditd where sourcename='NIX' and action='USER_COMMAND_EXECUTED' and status='PASSED' and commandline=':(){ :|:& };:' | groupby user | limit 10
+
+stream=auditd where sourcename='NIX' and action='SERVICE_STARTED' and status='PASSED' |  groupby user
+
+stream=auditd where sourcename='NIX' and action='SERVICE_STARTED' and status='PASSED' and user='{SuspectUser}'
+
+stream=auditd where sourcename='NIX' and action='USER_COMMAND_EXECUTED' and status='PASSED' and rlike(commandline,".*socketcall.*") | groupby user | limit 10
+
+stream=auditd where sourcename='NIX' and action='USER_COMMAND_EXECUTED' and status='PASSED' and rlike(cmd,".*socketcall.*") and user='{SuspectUser}'
+
+stream=auditd where sourcename='NIX' and action='USER_COMMAND_EXECUTED' and status='PASSED' and not user='root' | groupby user, cmd
+
+stream=auditd where sourcename='NIX' and action='USER_COMMAND_EXECUTED' and status='PASSED' and not user='root' and user='{SuspectUser}'
+
+stream=WIN-AUDIT where sourcetype='OS' and not sourcename='NIX' and action='POLICY_CHANGED' and status='PASSED' and eid in ('4944','4945','4946','4947','4948','4949','4950','4951','4952','4954') and category='POLICY' | groupby srcip
+
+stream=WIN-AUDIT where sourcetype='OS' and not sourcename='NIX' and action='POLICY_CHANGED' and status='PASSED' and eid in ('4944','4945','4946','4947','4948','4949','4950','4951','4952','4954') and category='POLICY' and srcip='{SuspectHost}'
+
+stream=AUTHENTICATION where sourcename='MS-O365' and action='LOGIN' and status='PASSED' and @Operation='UserLoggedIn' and @ResultStatus='Succeeded' and not @Workload='AzureActiveDirectory' | groupby srcip
+
+stream=AUTHENTICATION where sourcename='MS-O365' and action='LOGIN' and status='PASSED' and @Operation='UserLoggedIn' and @ResultStatus='Succeeded' and not @Workload='AzureActiveDirectory' and srcip='{SuspectHost}'
+
+stream=CONFIGURATION where sourcename='MS-O365' and action='CONFIGURATION_CHANGED' and status='PASSED' and @Operation='Disable' | groupby user
+
+stream=CONFIGURATION where sourcename='MS-O365' and action='CONFIGURATION_CHANGED' and status='PASSED' and @Operation='Disable' and user='{SuspectUser}'
+
+stream=auditd where sourcename='NIX' and action='USER_COMMAND_EXECUTED' and status='PASSED' |  groupby user, commandline
+
+stream=auditd where sourcename='NIX' and action='USER_COMMAND_EXECUTED' and status='PASSED' and user='{SuspectUser}'
+
+stream=iam where sourcename='NIX' and action='GROUP_DELETED' and status='PASSED' and user='{SuspectUser}' and targetuser='{TargetUser}'
+
+stream=iam where sourcename='NIX' and action='GROUP_DELETED' and status='PASSED' |  groupby user, targetuser
+
+stream=threat where sourcename='MS-O365' and action='THREAT_DETECTED' and status='PASSED' and vector='HOST' and @Operation='FileMalwareDetected' and srcip='{SuspectHost}'
+
+stream=threat where sourcename='MS-O365' and action='THREAT_DETECTED' and status='PASSED' and vector='HOST' and @Operation='FileMalwareDetected' | groupby srcip, file 
+
+stream=AUTHENTICATION where sourcename='MS-O365' and action='LOGIN' and status='PASSED' and @Operation='UserLoggedIn' and @ResultStatus='Succeeded' and not srccn in ('IN','-') |  groupby srcip, srccn
+
+stream=AUTHENTICATION where sourcename='MS-O365' and action='LOGIN' and status='PASSED' and @Operation='UserLoggedIn' and @ResultStatus='Succeeded' and not srccn in ('IN','-') and srcip='{SuspectHost}' and srccn='{SuspectLocation}'
+
+stream=documents where sourcename='MS-O365' and action='REJECTED' and status='PASSED' and @Operation='AccessRequestRejected' and srcip='{SuspectHost}'
+
+stream=documents where sourcename='MS-O365' and action='REJECTED' and status='PASSED' and @Operation='AccessRequestRejected' | groupby srcip 
+
+stream=CONFIGURATION where sourcename='MS-O365' and action='CONFIGURATION_CHANGED' and @Operation='Add policy.' and user='{SuspectUser}'
+
+stream=CONFIGURATION where sourcename='MS-O365' and action='CONFIGURATION_CHANGED' and @Operation='Add policy.' |  groupby user
+
+stream=iam where sourcename='MS-O365' and action='USER_ADDED' and status='PASSED' and role='Delegated Permission Grant' | groupby user 
+
+stream=iam where sourcename='MS-O365' and action='USER_ADDED' and status='PASSED' and role='Delegated Permission Grant' and user='{SuspectUser}'
+
+stream=WIN-AUDIT where sourcename='WINDOWS' and action='OBJECT_ACCESSED' and status='PASSED' and event='A handle to an object was requested.' and object like '%RunOnce%' and category='NETWORK' and srcip='{SuspectHost}'
+
+stream=WIN-AUDIT where sourcename='WINDOWS' and action='OBJECT_ACCESSED' and status='PASSED' and event='A handle to an object was requested.' and object like '%RunOnce%' and category='NETWORK' |  groupby srcip
+
+stream=IAM where sourcename='WINDOWS' and action='COMPUTER_ACCOUNT_CREATED' and status='PASSED' and role='Computer Account Management' and user='{SuspectUser}' and targetuser='{TargetUser}'
+
+stream=IAM where sourcename='WINDOWS' and action='COMPUTER_ACCOUNT_CREATED' and status='PASSED' and role='Computer Account Management' | groupby user, targetuser
+
+stream=WIN-AUDIT where sourcename='WINDOWS' and sourcetype='OS' and action='POLICY_CHANGED' and status='PASSED' and category='POLICY' and eid in ('4706','4707') and srcip='{SuspectHost}'
+
+stream=WIN-AUDIT where sourcename='WINDOWS' and sourcetype='OS' and action='POLICY_CHANGED' and status='PASSED' and category='POLICY' and eid in ('4706','4707') | groupby srcip
+
+stream=AUTHENTICATION where sourcename='WINDOWS' and sourcetype='OS' and action='LOGIN' and status='STATUS_NOLOGON_WORKSTATION_TRUST_ACCOUNT' and srcip='{SuspectHost}'
+
+stream=AUTHENTICATION where sourcename='WINDOWS' and sourcetype='OS' and action='LOGIN' and status='STATUS_NOLOGON_WORKSTATION_TRUST_ACCOUNT' | groupby srcip
+
+stream=CONFIGURATION where sourcename='WINDOWS' and sourcetype='OS' and action='CONFIGURATION_CHANGED' and status='PASSED' and config='Service Installed' and user='{SuspectUser}'
+
+stream=CONFIGURATION where sourcename='WINDOWS' and sourcetype='OS' and action='CONFIGURATION_CHANGED' and status='PASSED' and config='Service Installed' | groupby user
+
+
+stream=WIN-AUDIT where sourcename='WINDOWS' and sourcetype='OS' and action='OBJECT_ACCESSED' and status='PASSED' and category='NETWORK' and object like '%lsass%' and srcip='{SuspectHost}'
+
+stream=WIN-AUDIT where sourcename='WINDOWS' and sourcetype='OS' and action='OBJECT_ACCESSED' and status='PASSED' and category='NETWORK' and object like '%lsass%' |  groupby srcip 
+
+stream=iam where sourcename='NIX' and action='USER_ADDED' and status='PASSED' | groupby user, targetuser 
+
+stream=iam where sourcename='NIX' and action='USER_ADDED' and status='PASSED' and user='{SuspectUser}' and targetuser='{TargetUser}' 
+
+stream=firewall where sourcetype='FIREWALL' and dstport in ('1604','1970','5800','5931','31337','12345') and not dstcn in ('-','IN') and not actiontaken in ('close','deny') and srcip='{SuspectHost}'
+
+stream=firewall where sourcetype='FIREWALL' and dstport in ('1604','1970','5800','5931','31337','12345') and not dstcn in ('-','IN') and not action in ('PACKET_BLOCKED') | groupby cnamtime, srcip, dstip, dstport
+
+stream=WIN-AUDIT where sourcename='WINDOWS' and action='OBJECT_ACCESSED' and status='PASSED' and event='An object was deleted.' and category='NETWORK' | groupby srcip
+
+stream=WIN-AUDIT where sourcename='WINDOWS' and action='OBJECT_ACCESSED' and status='PASSED' and event='An object was deleted.' and category='NETWORK' and srcip='{SuspectHost}'
+
+stream=WIN-AUDIT where sourcename='WINDOWS' and sourcetype='OS' and action='POLICY_CHANGED' and status='PASSED' and category='POLICY' and eid in ('4865','4866') and srcip='{SuspectHost}'
+
+stream=WIN-AUDIT where sourcename='WINDOWS' and sourcetype='OS' and action='POLICY_CHANGED' and status='PASSED' and category='POLICY' and eid in ('4865','4866') | groupby srcip
+
+stream=AUTHENTICATION where sourcename='WINDOWS' and sourcetype='OS' and action='LOGIN' and status='FAILED' and  reason='INVALID_USER' and @SubStatus='0XC000015B' | groupby srcip, user
+
+stream=AUTHENTICATION where sourcename='WINDOWS' and sourcetype='OS' and action='LOGIN' and status='FAILED' and  reason='INVALID_USER' and @SubStatus='0XC000015B'and srcip='{SuspectHost}'
+
+stream=authentication where sourcename='WINDOWS' and action='LOGIN' and status='FAILED' | duration 15m | select srcip, distinct_count(user) as user_cnt |  groupby srcip | having user_cnt >= 3
+
+stream=authentication where sourcename='WINDOWS' and action='LOGIN' and status='FAILED' and srcip='{SuspectHost}'
+
+stream=authentication where sourcename='WINDOWS' and action='LOGIN' and status='PASSED' | duration 30m | groupby user, action | having count_col1 > 50
+
+stream=authentication where sourcename='WINDOWS' and action='LOGIN' and status='PASSED' and action='{SuspectAction}' | duration=30m
+
+stream=WIN-AUDIT where sourcename='WINDOWS' and action='SECURITY_LOG_FULL' and status='PASSED' and event='The security Log is now full.' and category='POLICY' and srcip='{SuspectHost}'
+
+stream=WIN-AUDIT where sourcename='WINDOWS' and action='SECURITY_LOG_FULL' and status='PASSED' and event='The security Log is now full.' and category='POLICY' | groupby srcip 
+
+stream=IAM where sourcename='WINDOWS' and sourcetype='OS' and action='GROUP_CHANGED' and status='PASSED' and eid in ('4735','4736','4737') and user='ANONYMOUS LOGON' | groupby user, targetuser
+
+stream=IAM where sourcename='WINDOWS' and sourcetype='OS' and action='GROUP_CHANGED' and status='PASSED' and eid in ('4735','4736','4737') and user='ANONYMOUS LOGON' and user='{SuspectUser}' and targetuser='{TargetUser}'
+
+stream=IAM where sourcename='WINDOWS' and sourcetype='OS' and action='PASSWORD_CHANGED' and status='PASSED' and user like '%adm%' and user='{SuspectUser}' and targetuser='{TargetUser}'
+
+stream=IAM where sourcename='WINDOWS' and sourcetype='OS' and action='PASSWORD_CHANGED' and status='PASSED' and user like '%adm%' | groupby user, targetuser
+
+stream=EP-PROCESS where sourcename='WINDOWS' and action='PROCESS_ADDED' and status='PASSED' and srcip='{SuspectHost}'
+
+stream=EP-PROCESS where sourcename='WINDOWS' and action='PROCESS_ADDED' and status='PASSED' | groupby srcip
+
+stream=AUTHENTICATION where sourcename='WINDOWS' and sourcetype='OS' and action='LOGIN' and status='FAILED' and  reason='BAD_USER_PASSWORD' and @SubStatus='0xc000006e' and srcip='{SuspectHost}'
+
+stream=AUTHENTICATION where sourcename='WINDOWS' and sourcetype='OS' and action='LOGIN' and status='FAILED' and  reason='BAD_USER_PASSWORD' and @SubStatus='0xc000006e' | groupby srcip, user
+
+stream=authentication where sourcename='WINDOWS' and action='LOGIN' and status='FAILED' and not srcip='-' | duration 15m |  groupby srcip, action, status, user, system | having count_col1 > 50
+
+stream=authentication where sourcename='WINDOWS' and action='LOGIN' and status='FAILED' and not srcip='-' and status='{SuspectHost}'
+
+stream=IAM where sourcename='WINDOWS' and action='PASSWORD_CHANGED' and status='PASSED' and role='User Account Management' and user='{SuspectUser}' and targetuser='{TargetUser}'
+
+stream=IAM where sourcename='WINDOWS' and action='PASSWORD_CHANGED' and status='PASSED' and role='User Account Management' | groupby user, targetuser |  duration 15m
+
+stream=AUTHENTICATION where sourcename='WINDOWS' and action='LOGIN' and status='FAILED' and eid='4625' | groupby srcip, user, eid, @Message 
+
+stream=AUTHENTICATION where sourcename='WINDOWS' and action='LOGIN' and status='FAILED' and eid='4625' and srcip='{SuspectHost}'
+
+stream=authentication where sourcename='BLUECOAT' and sourcetype='WEBFILTER' and action='LOGIN' and status='FAILED' and user='{SuspectUser}'
+
+stream=authentication where sourcename='BLUECOAT' and sourcetype='WEBFILTER' and action='LOGIN' and status='FAILED' | groupby user 
+
+stream=WIN-AUDIT where sourcename='WINDOWS' and sourcetype='OS' and action='POLICY_CHANGED' and status='PASSED' and category='POLICY' and eid in ('4706','4716') | groupby srcip
+
+stream=WIN-AUDIT where sourcename='WINDOWS' and sourcetype='OS' and action='POLICY_CHANGED' and status='PASSED' and category='POLICY' and eid in ('4706','4716') and srcip='{SuspectHost}'
+
+stream=WIN-AUDIT where sourcename='WINDOWS' and action='OBJECT_ACCESSED' and status='PASSED' and eid in ('4698','4699') and event='A scheduled task was created.' and category='NETWORK' and srcip='{SuspectHost}'
+
+stream=WIN-AUDIT where sourcename='WINDOWS' and action='OBJECT_ACCESSED' and status='PASSED' and eid in ('4698','4699') and event='A scheduled task was created.' and category='NETWORK' | groupby srcip
+
+stream=IAM where sourcename='WINDOWS' and sourcetype='OS' and action in ('GROUP_CREATED','GROUP_CHANGED','GROUP_DELETED') and status='PASSED' and eid in ('4764','4734','4754') and role like 'group' and user='{SuspectUser}'
+
+stream=IAM where sourcename='WINDOWS' and sourcetype='OS' and action in ('GROUP_CREATED','GROUP_CHANGED','GROUP_DELETED') and status='PASSED' and eid in ('4764','4734','4754') and role like 'group' | groupby user
+
+stream=IAM where sourcename='WINDOWS' and action='USER_DISABLED' and status='PASSED' and role='User Account Management' and user='{SuspectUser}' and targetuser='{TargetUser}'
+
+stream=IAM where sourcename='WINDOWS' and action='USER_DISABLED' and status='PASSED' and role='User Account Management' | groupby user, targetuser
+
+stream=THREAT where sourcename='TIPPINGPOINT' and action='THREAT_BLOCKED' and status='PASSED' and vector='NETWORK' and threat like '%DoS%' |  groupby srcip, dstip
+
+stream=THREAT where sourcename='TIPPINGPOINT' and action='THREAT_BLOCKED' and status='PASSED' and vector='NETWORK' and threat like '%DoS%' and srcip='{SuspectHost}' and dstip='{TargetHost}'
+
+stream=iam where sourcename='MS-O365' and action='PASSWORD_CHANGED' and status='PASSED' and not user like '%MAZVWPADCONN01%' | select cnamtime, user, targetuser | groupby cnamtime, user, targetuser |  duration 6h
+
+stream=authentication where sourcename='NIX' and action='LOGIN' and status='FAILED' and reason='INVALID_CREDENTIALS' and actiontaken='Failed password' and user='{SuspectUser}'
+
+stream=authentication where sourcename='NIX' and action='LOGIN' and status='FAILED' and reason='INVALID_CREDENTIALS' and action='Failed password' | groupby srcip, user
+
+stream=authentication where sourcename='WINDOWS' and action='LOGIN' and status='FAILED' and reason='PASSWORD_EXPIRED' and @Category='Credential Validation' | groupby user, system | having count_col1>100 |  duration 6h
+
+stream=iam where sourcename='NIX' and action='GROUP_CREATED' and status='PASSED' |  groupby user, targetuser
+
+stream=iam where sourcename='NIX' and action='GROUP_CREATED' and status='PASSED' and user='{SuspectUser}' and targetuser='{TargetUser}'
+
+stream=authentication where sourcename='NIX' and action='LOGIN' and status='FAILED' and reason='INVALID_CREDENTIALS' and actiontaken in ('invalid user', 'Invalid user') and srcip='{SuspectHost}'
+
+stream=authentication where sourcename='NIX' and action='LOGIN' and status='FAILED' and reason='INVALID_CREDENTIALS' and action in ('invalid user', 'Invalid user') |  groupby srcip, user
+
+stream=auditd where sourcename='NIX' and action='USER_COMMAND_EXECUTED' and status='PASSED' and rlike(cmd,".*wget.*") | groupby user | limit 10
+
+stream=auditd where sourcename='NIX' and action='USER_COMMAND_EXECUTED' and status='PASSED' and rlike(cmd,".*wget.*") and user='{SuspectUser}'
+
+stream=prisma where policytype='anomaly' |  groupby cnamtime, accountid, accountname, AlertStatus, CloudAccountOwner, CloudService, DevSrcIP, PolicyID, PolicyName, Reason, RegionID, ResourceAPI, ResourceID, ResourceName, RestrictedResourceName, Severity, SourceName, SourceType, URL, Logevent | duration 1h
+
+stream=prisma where policytype='anomaly' and accountid='{TargetResource}' | duration 1h | limit 1000
+
+stream=auditd where sourcename='NIX' and action='USER_COMMAND_EXECUTED' and status='PASSED' and user='{SuspectUser}'
+
+stream=auditd where sourcename='NIX' and action='USER_COMMAND_EXECUTED' and status='PASSED' |  groupby user, commandline
+

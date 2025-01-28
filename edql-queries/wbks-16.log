@@ -1,0 +1,284 @@
+stream=firewall where sourcetype="FIREWALL" and (dstport="3127" or dstport="3198" or dstport="6129" or dstport="7080")  and not action="PACKET_BLOCKED" and not (srcip='10.6.152.240' or srcip='172.16.9.110' or srcip='172.16.9.98') and not (dstip in ('172.16.19.19', '172.16.19.70', '172.16.6.61', '172.16.5.139', '172.16.5.218', '172.16.18.190', '172.16.9.110', '172.16.6.141', '172.16.18.50')) |  select srcip, dstip, dstport
+
+stream=WEBFILTER where action='URL_ALLOWED' and not category="-" and not domain='autodiscover.tatatechnologies.com' and not domain='www.aakashdoot.com' and not domain='aakashdoot.com' | groupby domain,category | duration 3m
+
+stream=threat where sourcename!='CISCO-ASA' and sender='hr-helpdesk@tatacapital.com' And logevent like '%13.126.94.72%' | duration 3h |  limit 10000 
+
+stream=iam where sourcename="WINDOWS" and (action="USER_CREATED" or action="USER_DELETED") and not targetuser like "%$" | groupby targetuser | select targetuser, distinct_count(action) as ActionCount | duration 1h |  having ActionCount > 1
+
+stream=firewall where srctype="PUBLIC" and not (dstport="80" or dstport="8080" or dstport="443") and not srcip like "157.227.4.%" and not srcip='180.151.253.114' and not srcip='61.246.171.222' | select srcip, srccn, dstport, distinct_count(dstip) as dstipcnt |  groupby srcip, srccn, dstport | having dstipcnt > 100
+
+stream=firewall where dstport='3389' and srctype='PUBLIC' and not act='deny' | groupby srcip, dstip, dstport, act, action |  duration 2h
+
+stream=signals |  duration 1d | limit 1
+
+stream=authentication where sourcename='MS-O365' and Reason='IdsLocked' | groupby srcip, user, config, Reason | having count_col1 > 5
+
+stream=firewall where sourcetype="FIREWALL" and srcport="53" and dsttype="PUBLIC" and srctype="PRIVATE" and not action="PACKET_BLOCKED" and not dstip="157.227.4.14" | groupby srcip, srcport, dstip, dstport
+
+stream=authentication where authenticationpackagename='NTLM' and eid='4624' and action='LOGIN' and not user='SA_L2System' and not user='sa_ccm' and not user='SA_Zabbix' | groupby systemtstamp, user, srcip, system, action, authenticationpackagename | duration from 2024-07-04T00:00:00 to 2024-07-04T06:00:00
+
+stream=authentication where sourcename='FORTIGATE' and action='LOGIN' and status='PASSED' and not user='N/A' | groupby cnamtime, srcip, user, action | duration from 2024-02-26T00:00:00 to 2024-02-26T06:00:00
+
+stream=win-audit where eid="4688" and (newprocess like '%procdump%.exe' or newprocess like '%mimikatz%.exe' or newprocess like '%procmon%.exe' or newprocess like '%gsecdump%.exe') | groupby system,newprocess,user
+
+stream=firewall where service='P2P' and status='PASSED' | groupby cnamtime, srcip, dstip, service, act, actiontaken | duration 30
+
+stream=win-audit where sourcename="WINDOWS" and action="PROCESS_CREATED" and (newprocess like "%vssadmin.exe" or newprocess like "%wmic.exe" or newprocess like "%wbadmin.exe" or newprocess like "%diskshadow.exe" or newprocess like "%pwsh.exe") and rlike(commandline, "delete|shadows|shadowstorage|Win32_Shadowcopy|resize") | select user, system, commandline
+
+stream=iam where sourcename="WINDOWS" and eid='4733' and status='PASSED' | groupby cnamtime, category, user, group, action, domain, event
+
+stream=THREAT where sourcename in ("MICROSOFT_GRAPH_API", "MICROSOFT") and servicesource='microsoftDefenderForOffice365' and not (severity in ("informational", "low")) and statustaken!='resolved' and not alerttitle='Email sending limit exceeded' | select alertid, alerttitle, servicesource, category
+
+stream=iam where sourcename="WINDOWS" and action="USER_DISABLED" and user!='SA_OneEngine' and user!='winadminL1' and user!='winadminL2' and user!='sa_TCLIDAM' and user!='99046186' and status="PASSED" and not targetuser like "%$"
+
+stream=threat where sourcetype="FIREWALL" and sourcename="FORTIGATE" and vector="WEB" |  groupby srcip, dstip, act, threat | having count_col1 > 50
+
+stream=AUTHENTICATION where action='LOGIN' and status='PASSED' and not (srcip in ('172.16.0.91', '172.16.5.2', '172.16.5.52', '172.16.5.43', '172.16.5.53', '192.168.16.27', '192.168.16.44', '172.16.5.101', '172.16.5.102', '172.28.1.6')) and not (user in ('Not Available', 'unknown', 'ANONYMOUS LOGON')) | select user, system, distinct_count(srcip) as CntSrcIP | groupby user, system | having CntSrcIP > 4
+
+stream=firewall where sourcetype="FIREWALL" and srctype="PUBLIC" and dsttype="PRIVATE" and not act in ("allow") | groupby srcip, dstip, dstport |  select srcip, dstip, dstport, count(*) as EVT_CNT | having EVT_CNT > 1999
+
+stream=firewall where sourcetype="FIREWALL" and srctype="PRIVATE" and dsttype="PUBLIC" and not (dstport="53" or dstport="3128") and (action="PACKET_BLOCKED" or (action="CONNECTION_ESTABLISHED" and status="FAILED")) |  groupby srcip, dstip, dstport | having count_col1 > 12999
+
+stream=THREAT where sourcename in ("MICROSOFT_GRAPH_API", "MICROSOFT") and not (severity in ("informational", "low")) and statustaken!='resolved' and not alerttitle='Email sending limit exceeded' | select alertid, alerttitle, servicesource, category
+
+stream=win-audit where sourcename="WINDOWS" and eid="1074" or eid="6008" and status="PASSED" and action="DIRECTORY_SERVICE_ACCESSED"
+
+stream=authentication where sourcename="NIX" and authproto="SSH" and action="LOGIN" and status="PASSED" and user="root" and not srcip='192.168.16.35' 
+
+stream=THREAT where sourcename in ("MICROSOFT_GRAPH_API", "MICROSOFT") and not (severity in ("informational", "low")) and statustaken!='resolved' and alerttitle='Email sending limit exceeded' | groupby cnamtime, action, description, logevent | duration 1h
+
+stream=authentication where authenticationpackagename='MICROSOFT_AUTHENTICATION_PACKAGE_V1_0' and action='LOGIN' and eid='4624' and not user in ('SA_L2System', 'sa_ccm', 'SA_Zabbix', 'Sa_EAIAD', 'sa_dlp') | groupby systemtstamp, srcip, system, user, action, authenticationpackagename | duration from 2024-02-27T00:00:00 to 2024-02-27T06:00:00
+
+stream=threat where sourcename in ("MICROSOFT", "MICROSOFT_GRAPH_API") |  groupby category | duration 1h
+
+stream=authentication where sourcename='WINDOWS' and action='LOGIN' and status='FAILED' and not srcip='-' and not user='-' | groupby system, srcip, user, reason | duration from 2024-02-27T00:00:00 to 2024-02-27T23:59:59
+
+stream=authentication where sourcetype="FIREWALL" and action="LOGIN" and status="FAILED" and srctype="PUBLIC" and subtype='vpn' | groupby srcip, user, subtype, reason | having count_col1 > 5
+
+stream=firewall where sourcetype="FIREWALL" and not (act in ("accept", "start", "ip-conn", "pass", "server-rst")) and dsttype="PUBLIC" and srctype="PRIVATE" | select dstip, count(srcip) as EVT_CNT, distinct_count(srcip) as SRC_CNT |  groupby dstip | having EVT_CNT > 2999 and SRC_CNT > 3
+
+stream=authentication where action="LOGIN" and not (user="-" or user="None" or user like "%$" or user="Not Available" or user='unknown') and not (srcip="None" or srcip="-" or srcip='45.114.77.112') and not reason='AuthenticationFailedSasError' |  groupby srcip, user | select srcip, user, count_if(status=="FAILED") as FailCnt, count_if(status=="PASSED") as PassCnt | having FailCnt > 100 and PassCnt > 0 | duration 30m
+
+stream=THREAT where sourcename in ("MICROSOFT_GRAPH_API", "MICROSOFT") and not (incidentid="None") and not (detectionsource="None") and severity!='informational' | groupby incidentid, detectionsource, severity, alerttitle
+
+stream=AUTHENTICATION where sourcename='Microsoft Defender' and detectionsource='azureAdIdentityProtection' |  groupby incidentid, alerttitle, accountname, alerturl
+
+stream=threat where sourcename="MS-O365" |  groupby threat | duration 1h
+
+stream=documents where sourcename="MS-O365" |  groupby operation |  select operation, count(*) | duration 1h
+
+stream=iam where sourcename="MS-O365" |  groupby operation |  select operation, count(*) | duration 1h
+
+stream=ms-o365 where operation="MipLabel" |  groupby user |  select user, count(*) | duration 1h | last 5
+
+stream=webfilter where not url in ('-','') |  groupby URL |  duration 1h | last 10
+
+stream=authentication where action="LOGIN" |  groupby sourcename | duration 1h
+
+stream=threat where sourcename='MICROSOFT' and detectionsource='Office 365 Security and Compliance' and severity in ('high','medium') |  groupby alertid, alerttitle
+
+stream=ms-o365 | groupby operation | duration 1h | checkif operation in m365operations.operation
+
+stream=signals | duration 1h
+
+stream=configuration where sourcename="MS-O365" and not (operation in ("UpdateInboxRules", "Update device.")) | groupby operation | duration 1h
+
+stream=firewall where sourcetype="FIREWALL" and actiontaken in ("accept", "start", "ip-conn") and not app="" | groupby app | select app, sum(txlen)/1048576 as Data_OUT_MBs | duration 1h | last 10
+
+stream=threat where sourcename="MS-O365" and recipient like "%tatacapital.com" |  groupby recipient | duration 1h
+
+stream=firewall where sourcetype="FIREWALL" and srctype="PUBLIC" and not (dstport in ("-", "None")) and actiontaken in ("accept", "start", "ip-conn") | groupby dstport | duration 1h | last 10
+
+stream=firewall where sourcetype="FIREWALL" and dstport in ("20", "21") and actiontaken in ("accept", "start", "ip-conn") | groupby dstip | duration 1h | last 10
+
+stream=firewall where srccn!='-' and action='PACKET_ALLOWED' and threattype='Malicious' | select cnamtime, srcip, srccn, dstip, dstport, proto, action, threattype, sourcelist | duration 4h | limit 50
+
+stream=firewall where sourcetype="FIREWALL" and not (act in ("accept", "start", "ip-conn", "pass", "server-rst")) and srctype="PRIVATE" and dsttype="PUBLIC" | select srcip, count(*) as EVT_CNT | groupby srcip | having EVT_CNT > 999
+
+stream=webfilter where action='URL_ALLOWED' | groupby user |  select user, sum(txlen), sum(rxlen) |  duration 1h | last 10
+
+stream=signals | duration 7d
+
+stream=signals
+
+stream=other | limit 1
+
+stream=win-audit where action="POLICY_CHANGED" and status="PASSED" and not (user like "%$" or user="-") |  groupby user | duration 1h | last 10
+
+stream=configuration where sourcetype="FIREWALL" and action="CONFIGURATION_CHANGED" |  groupby system, msg | duration 1h | last 10
+
+stream=other | limit 1
+
+stream=authentication where sourcetype="FIREWALL" and action="LOGIN" and status="FAILED" |  groupby srcip, user | having count_col1 > 40
+
+stream=other | limit 1
+
+stream=iam where sourcename="WINDOWS" and action="USER_ENABLED" and user!='SA_OneEngine' and user!='winadminL1' and user!='winadminL2' and user!='WinAdminL2' and user!='sa_TCLIDAM' and user!='99046186' and status="PASSED" and not targetuser like "%$" |  duration 15m
+
+stream=firewall where sourcetype="FIREWALL" and threattype="Malicious" and not (action="PACKET_BLOCKED" or (action="CONNECTION_ESTABLISHED" and status="FAILED")) and actiontaken in ('accept', 'ssl-alert') and not (srcip='127.0.0.1' or dstip='127.0.0.1' or dstip='8.8.8.8') | groupby srcip, dstip, dstport, indicatortype | having count_col1 > 5 
+
+stream=webfilter where category='Phishing and Other Frauds'|  groupby user | last 100
+
+stream=firewall where sourcetype="FIREWALL" and dstport="22" and actiontaken in ("accept", "start", "ip-conn") | groupby dstip | duration 1h | last 10
+
+stream=firewall where sourcetype="FIREWALL" and srctype="PUBLIC" and not srccn="-" |  groupby srccn
+
+stream=webfilter where not user in ('-','') | groupby user | duration 1h | last 10
+
+stream=firewall where srctype='PRIVATE' and not dstcn='-' and action='PACKET_ALLOWED' and threattype='Malicious' | select cnamtime, srcip, srctype, dstip, dstport, dstcn, proto, action, threattype, sourcelist | duration 4h | limit 50
+
+stream=iam where action="USER_LOCKOUT" |  groupby targetuser | duration 1h | last 5
+
+stream=firewall where sourcetype="FIREWALL" and srctype="PUBLIC" and not (srcip='157.227.4.3' or dstport="80" or dstport="8080" or dstport="443") |  select srcip, dstport, distinct_count(dstip) as dstipcnt, count_if(action=="PACKET_ALLOWED" or action=="ACCEPT" or action=="ALLOW") as actioncnt |  groupby srcip, dstport | having dstipcnt > 300 and actioncnt > 1
+
+stream=authentication where action="LOGIN" and status in ("PASSED", "FAILED") |  groupby status | duration 1h
+
+stream=firewall where sourcetype='FIREWALL' and srctype='PUBLIC' and (dstport='3389') and threattype='Malicious' and not (action='PACKET_BLOCKED' or action='SESSION_TERMINATED') and not (act='deny' or act='drop') | groupby dstip, action
+
+stream=firewall where sourcetype="FIREWALL" and srctype="PUBLIC" | duration 15m | groupby srcip, dstip | select srcip, dstip, count(*) as EVT_CNT | having EVT_CNT > 99999
+
+stream=threat where sourcetype="FIREWALL" and logevent like "%robots.txt%" and not act="dropped"
+
+stream=webfilter where not dstcn in ('-','') | groupby dstcn |  duration 1h
+
+stream=webfilter | groupby domain |  duration 1h |  last 10
+
+stream=webfilter where action='URL_BLOCKED' |  groupby url | duration 1h | last 10
+
+stream=firewall where sourcetype="FIREWALL" and not (dstcn in ("-", "")) |  groupby dstcn
+
+stream=firewall where sourcetype="FIREWALL" and srctype="PUBLIC" and not srcip='180.151.253.114' and not srcip='61.246.171.222' |  select srcip, srccn, dstip, distinct_count(dstport) as cntdstport, count_if(action=="PACKET_ALLOWED" or action=="ACCEPT" or action=="ALLOW") as actioncnt |  groupby srcip, srccn, dstip |  having cntdstport>500 and actioncnt > 1
+
+stream=authentication where action='LOGIN' and status='PASSED' and logontype='10' and not (srcip in ('172.16.5.143', '172.16.5.149', '172.16.5.243', '172.28.0.13', '172.27.32.20', '172.27.32.21', '172.27.32.27')) | select srcip, system, user |  duration 3h
+
+stream=firewall where sourcetype="FIREWALL" and srctype="PUBLIC" | duration 15m | groupby dstip | select dstip, distinct_count(srcip) as SRC_CNT, count(*) as EVT_CNT | having EVT_CNT > 99999 and SRC_CNT > 3
+
+stream=authentication where action="LOGIN" and status="FAILED" and not srccn in ("None", "-") |  groupby srccn | duration 1h
+
+stream=authentication where action="LOGIN" and not user like "%$" and not (user in ("None", "-", "Not Available", "unknown")) |  groupby user | duration 1h | last 5
+
+stream=firewall where threattype="Malicious" AND srccn!="-" |  duration 1h |  groupby srccn
+
+stream=firewall where sourcetype="FIREWALL" and srctype="PUBLIC" | duration 15m | groupby srcip, dstip | select srcip, dstip, count(*) as EVT_CNT | having EVT_CNT > 99999
+
+stream=firewall where srctype='PRIVATE' and dstport='3389' and (act='accept' or (action='CONNECTION_ESTABLISHED' and status='PASSED')) | groupby cnamtime, srcip, dstip, dstport | duration from 2023-07-23T00:00:00 to 2023-07-23T23:59:00 |  limit 9999
+
+stream=authentication where sourcename="WINDOWS" and action="LOGIN" and status="PASSED" and not user='-' and not (workstationname="-" or workstationname="None") and not (user in ("ANONYMOUS LOGON", "Sa_cronuser")) |  groupby user | select user, distinct_count(workstationname) | having distinct_count_col1 > 5
+
+stream=configuration where action="CONFIGURATION_DELETED" and not user="None" |  groupby user | duration 1h | last 10
+
+stream=authentication where action="LOGIN" and status="PASSED" and not srccn in ("None", "-") |  groupby srccn | duration 1h
+
+stream=webfilter where action='URL_BLOCKED' and not user='None'|  groupby user |  duration 1h |  last 10
+
+stream=other | limit 1
+
+stream=firewall where sourcetype='FIREWALL' and dstport='3389' and actiontaken in ('accept', 'start', 'ip-conn') and not (srcip in ('172.16.5.143', '172.16.5.149', '172.16.5.243', '172.28.0.13', '172.27.32.20', '172.27.32.21', '172.27.32.27')) | groupby dstip | duration 1h
+
+stream=other | limit 1
+
+stream=firewall where sourcetype="FIREWALL" and dstport in ("20", "21") and actiontaken in ("accept", "start", "ip-conn") | groupby srcip | duration 1h | last 10
+
+stream=other | limit 1
+
+stream=firewall where sourcetype="FIREWALL" and dstport="3389" and actiontaken in ("accept", "start", "ip-conn") | groupby srcip | duration 1h
+
+stream=authentication where sourcename="MS-O365" and action="LOGIN" and status="FAILED" and reason="UserStrongAuthClientAuthNRequiredInterrupt" and not user="Not Available" |  groupby user, srcip | having count_col1 > 10
+
+stream=configuration where sourcetype="FIREWALL" and action="CONFIGURATION_CHANGED" and status="PASSED" | duration 6h |  groupby cnamtime, srcip, user, config, devsrcip | limit 250
+
+stream=authentication where sourcename="WINDOWS" and action="LOGIN" and status="PASSED" and eid="4624" and logontype="Remote Interactive Logon" and not (srcip in ("172.16.5.143", "172.16.5.149", "172.16.5.243", "172.28.0.13", "172.27.32.20", "172.27.32.21", "172.27.32.27")) |  groupby cnamtime, devsrcip, srcip, system, user | duration from 2024-06-19T00:00:00 to 2024-06-19T23:59:59
+
+stream=firewall where sourcetype="FIREWALL" and dstport="22" and actiontaken in ("accept", "start", "ip-conn") | groupby srcip | duration 1h | last 10
+
+stream=* | groupby devsrcip | duration 1d
+
+stream=firewall where dstport='3389' and srctype='PUBLIC'and action='PACKET_ALLOWED'| select cnamtime, srcip, srcport, dstip, dstport, proto | duration 6h | limit 250
+
+stream=* |  duration 3h | groupby stream
+
+stream=authentication where sourcename="WINDOWS" and action="LOGIN" and status="FAILED" and not (user="-" or user like "%$") and not srcip="-" | groupby srcip |  select srcip, distinct_count(user) as countOfUsers |  having countOfUsers > 50 | duration 1h
+
+stream=threat where sourcetype="FIREWALL" and subtype="ips" and not act="dropped" | duration 6h | groupby cnamtime, srcip, dstip, srcport, dstport, threat | limit 250
+
+stream=authentication where sourcename="WINDOWS" and action="LOGIN" and status="FAILED" and reason="USER_DISABLED" and not user like "%$" and not user="Mehmaan" | groupby user |  having count_col1 > 10
+
+stream=firewall where sourcetype="FIREWALL" and srctype="PUBLIC" and dstport in ("21", "22", "23", "25", "137", "135", "139", "445", "3389") and act="accept" and threattype="Malicious" |  groupby srcip, dstip, dstport
+
+stream=win-audit where sourcename="WINDOWS" and action="OBJECT_ACCESSED" and status="PASSED" and (eid="4698" or eid="4699" or eid="4700" or eid="4702") and not user like "%$" and taskname not like "%Optimize Start Menu Cache%" | groupby user, system, taskname |  duration 2h
+
+stream=authentication where sourcename='WINDOWS' and eid='4624' and ((logontype='3' and logonprocessname='NtLmSsp') or (logontype='9' and logonprocessname='seclogo')) and not user='ANONYMOUS LOGON' | groupby user, system
+
+stream=threat where action='THREAT_DETECTED' AND status='PASSED' AND sourcename='WINDOWS' AND eid='4649' | groupby srcip, system, user
+
+stream=iam where sourcename='WINDOWS' and action='USER_CREATED' and user!='SA_OneEngine' and user!='winadminL1' and user!='winadminL2' and user!='WinAdminL2' and user!='sa_TCLIDAM' and user!='arjun' and user!='99046186' | groupby user, targetuser, system
+
+stream=iam where sourcename='WINDOWS' and action='USER_DELETED' and user!='SA_OneEngine' and user!='winadminL1' and user!='winadminL2' and user!='99046186' and not targetuser like "%$" |  groupby user, targetuser
+
+stream=firewall where sourcetype="FIREWALL" and proto="icmp" and srctype="PRIVATE" and not srcip='172.16.9.110' and not dstip="150" |  groupby srcip, dstip | having count_col1 > 500
+
+stream=authentication where action="LOGIN" and not (user like "%$" or user="None" or srcip="-") and not srccn="IN" |  groupby user, srcip | select user, srcip, count_if(status=="PASSED") as PassCount, count_if(status=="FAILED") as FailCount, (max(xminute)-min(xminute)) as diff | duration 12h | having PassCount > 1 and FailCount > 40 and FailCount < 60 and diff > 1000
+
+stream=win-audit where sourcename="WINDOWS" and eid="4662" and not user like "%$" and objectserver="DS" and object="DomainDNS" and rlike(properties, "19195a5b-6da0-11d0-afd3-00c04fd930c91131f6ad-9c07-11d1-f79f-00c04fc2dcd2|1131f6aa-9c07-11d1-f79f-00c04fc2dcd2|9923a32a-3607-11d2-b9be-0000f87a36b2|89e95b76-444d-4c62-991a-0facbeda640c") |  groupby user, devsrcip
+
+stream=firewall where sourcetype="FIREWALL" and sourcename="FORTIGATE" and proto="P2P" | groupby devsrcip, dstip, dstport, srcip
+
+stream=firewall where srctype="PUBLIC" and action="PACKET_ALLOWED" and (dstport="3127" or dstport="3198" or dstport="6129" or dstport="7080") | groupby srcip, dstip, dstport, action | having count_col1 > 1
+
+stream=win-audit where sourcename="WINDOWS" and action="PROCESS_CREATED" and rlike(newprocess, "bloodhound|mimikatz|gsecdump|secretdump|impacket|sharphound|winpeas|njrat|nmap|10phtcrack|sqlmap|nikto") | groupby user, parentprocess, newprocess, system
+
+stream=authentication where sourcename="MS-O365" AND operation="ThreatIntelligence" AND not action="Blocked" and (subject like "%password%" or subject like "%payroll%") and not sender2='no-reply@tte-lighthouse.com' | groupby sender2,recipient,devsrcip,subject
+
+stream=win-audit where sourcename="WINDOWS" and action="OBJECT_ACCESSED" and eid="4657" and status="PASSED" and not user like "%$" | groupby user, system
+
+stream=iam where sourcename="WINDOWS" and action="USER_ADDED" and status="PASSED" and not (user like "%-%" or user like "%$" or user="routeadd")
+
+stream=firewall where sourcetype="FIREWALL" and srctype="PRIVATE" and dsttype="PUBLIC" and dstport="3389" and not (action="PACKET_BLOCKED" or (action="CONNECTION_ESTABLISHED" and status="FAILED")) and not dstip like "157.227.4.%" 
+
+stream=authentication where sourcename="WINDOWS" and action="LOGIN" and status="FAILED" and not user like "%$" and not user='Sa_BOFTP' and user like "Sa_%" | groupby user | having count_col1 > 5
+
+stream=firewall where sourcetype="FIREWALL" and srctype="PUBLIC" and proto="TCP" and action="PACKET_ALLOWED" and dstport="23" |  groupby srcip, dstip
+
+stream=authentication where sourcename="MS-O365" AND operation="ThreatIntelligence" and not sender2="HR-Helpdesk@tatacapital.com" and not sender2='Knowledge_Square@tatacapital.com' and not sender2='shreyash_thakre@persistent.com' and not action="Blocked" | groupby sender2,devsrcip | select devsrcip,sender2,distinct_count(recipient) as Identity | having Identity>50
+
+stream=win-audit where sourcename="WINDOWS" and action="AUDIT_LOG_CLEARED" |  groupby user, system
+
+stream=WEBFILTER where category='Compromised Websites' and action='URL_ALLOWED' and not domain='www.aakashdoot.com' | groupby user, srcip, domain
+
+stream=authentication where sourcename="WINDOWS" and action="LOGIN" and status="FAILED" and not (user like "%$" or user like "%-%") and not reason="PASSWORD_EXPIRED" and not (srcip like "%-%" or srcip="127.0.0.1") | groupby user | having count_col1 > 80
+
+stream=authentication where sourcename="WINDOWS" and action="KERBEROS_AUTHENTICATION_TICKET_REQUESTED" and status="PASSED" and ticketoptions="0x40810010"  and (ticketencryptiontype="0x1" or ticketencryptiontype="0x11" or ticketencryptiontype="0x3") and not user like "%$" | groupby user, system
+
+stream=win-audit where sourcename="WINDOWS" and action="DIRECTORY_SERVICE_ACCESSED" and NOT User LIKE '%$' and eid in ("5136", "5137", "5141") and status="PASSED" and objectclass="groupPolicyContainer" |  groupby user, system
+
+stream=WEBFILTER where sourcename="FORCEPOINT" and action='URL_ALLOWED' and httpmethod='POST' and not category='-' | groupby domain,category | duration 3m
+
+stream=win-audit where sourcename="WINDOWS" and action="OBJECT_ACCESSED" and status="PASSED"  and eid="5140" and not user like "%$" |  groupby user, srcip |  select user, srcip, distinct_count(object) as ObjCnt | having ObjCnt > 10
+
+stream=webfilter where sourcename="FORCEPOINT" and rlike(useragent, "hydra|arachni|BFAC|brutus|cgichk|core-project|crimscanner|datacha0s|dirbuster|domino\shunter|dotdotpwn|FHScan\sCore|floodgate|get-minimal|gootkit\sauto-rooter\sscanner|grendel-scan|inspath|internet\sninja|jaascois|zmeu|masscan|metis|morfeus\sfucking\sscanner|n-stealth|nsauditor|pmafind|security\sscan|springenwerk|teh\sforest\slobster|toata\sdragostea|vega|voideye|webshag|webvulnscan|whcc|Havij|absinthe|bsqlbf|mysqloit|pangolin|sql\spower\sinjector|sqlmap|sqlninja|uil2pn|ruler|pt-PT") |  groupby srcip, url, action, category, useragent
+
+stream=iam where sourcename="WINDOWS" and action in ("USER_DISABLED","USER_ENABLED") and not targetuser like "%$" | groupby user, targetuser | select user, targetuser, distinct_count(action) as ActCnt | duration 15m | having ActCnt > 1
+
+stream=authentication where sourcename="WINDOWS" and action="KERBEROS_SERVICE_TICKET_REQUESTED" and status="PASSED" and (ticketoptions="0x40810000" or ticketoptions="0x40800000" or ticketoptions="0x40810010") and ticketencryptiontype="0x17" |  groupby user, system, ticketencryptiontype
+
+stream=authentication where sourcename="NIX" and action="LOGIN" and status="FAILED" and authproto="SSH" and not user="None" and not srcip="None" and not system="None" |  groupby user, system, srcip | having count_col1 > 9
+
+stream=authentication where action="LOGIN" and status="PASSED" and not (srccn="-" or srccn="None" or user="-" or user="None" or user="Not Available" or user="ANONYMOUS LOGON") |  groupby user |  select user, distinct_count(srccn) | duration 2h | having distinct_count_col1 > 2
+
+stream=threat where sourcetype="FIREWALL" and threat like "%Log4j%" and not (act="drop" or act="deny") | groupby srcip, dstip, act, threat
+
+stream=authentication where sourcename="NIX" and status="FAILED" and (authproto="SUDO" or authproto="sudo" or authproto="Sudo") |  groupby user, system
+
+stream=webfilter where sourcename="FORCEPOINT" and category="Peer-to-Peer File Sharing" and action='URL_ALLOWED' |  groupby srcip, domain, category
+
+stream=threat where sourcetype="FIREWALL" and srctype="PUBLIC" and subtype="ips" | duration 30m | select srcip, dstip, distinct_count(threat) as threatcnt | groupby srcip, dstip |  having threatcnt>10
+
+stream=win-audit where sourcename="WINDOWS" and action="OBJECT_ACCESSED" and status="PASSED" and (eid="4698" or eid="4699") and not user like "%$" |  duration 30m |  groupby system, taskname | select system, taskname, distinct_count(eid) as CntAct | having CntAct > 1
+
+stream=firewall where sourcetype="FIREWALL" and srctype="PRIVATE" and dsttype="PUBLIC" and (dstport="139" or dstport="445") and not action="PACKET_BLOCKED" and not status="FAILED" |  groupby srcip, dstip, dstport | having count_col1 > 1
+
+stream=webfilter where sourcename="FORCEPOINT" | groupby domain, category | duration 2m
+
+stream=iam where sourcename="WINDOWS" and eid="4740" and targetdomain!='\\\\TATACAPCPPMPUB' | duration 1h | select targetdomain, distinct_count(targetuser) as cntuser, count(*) as cntevent | groupby targetdomain | having cntevent>60
+

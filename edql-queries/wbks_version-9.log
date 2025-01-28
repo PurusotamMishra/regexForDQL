@@ -1,0 +1,18 @@
+stream=signals |  duration 1d | limit 1
+
+stream=signals |  duration 1h
+
+stream=threat where sourcetype="FIREWALL" and subtype="ips" and not act="dropped" | duration 6h |  groupby cnamtime, srcip, dstip, srcport, dstport, threat | limit 250
+
+stream=configuration where sourcetype="FIREWALL" and action="CONFIGURATION_CHANGED" and status="PASSED" | duration 6h |  groupby cnamtime, srcip, user, config, devsrcip | limit 250
+
+stream=firewall where dstport='3389' and srctype='PUBLIC'and action='PACKET_ALLOWED'| select cnamtime, srcip, srcport, dstip, dstport, proto | duration 6h | limit 250
+
+stream=firewall where srctype='PRIVATE' and not dstcn='-' and action='PACKET_ALLOWED' and threattype='Malicious' | select cnamtime, srcip, srctype, dstip, dstport, dstcn, proto, action, threattype, sourcelist | duration 4h | limit 50
+
+stream=* | groupby devsrcip | duration 1d
+
+stream=firewall where srccn!='-' and action='PACKET_ALLOWED' and threattype='Malicious' | select cnamtime, srcip, srccn, dstip, dstport, proto, action, threattype, sourcelist | duration 4h | limit 50
+
+stream=* |  duration 3h | groupby stream
+

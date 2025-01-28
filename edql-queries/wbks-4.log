@@ -1,0 +1,142 @@
+stream=signals where detectionseverity='High' | duration 5m | limit 100
+
+stream=signals where detectionseverity='Critical' | duration 5m | limit 100
+
+stream=signals where (detectionSeverity='High' or detectionSeverity='Critical') | duration 5m | limit 100
+
+stream=* where devsrcip='10.170.10.21' | duration 2d | timeslice 1h
+
+stream=* | duration 7d | timeslice 1h
+
+stream=IAM where action='USER_CREATED' and status='PASSED' and User='{SuspectUser}' | duration 7d
+
+stream=Configuration where sourcetype='FIREWALL' and (config='set' or config='edit' or config='move' or config='delete' or config='user set a value for a configuration') | duration 3d
+
+stream=* | duration from 2024-05-05T00:00:00 to 2024-05-05T23:59:59 | timeslice 1h 
+
+stream=* | duration 1h | select distinct(devsrcip) as devsrcip | limit 10000
+
+stream=email-gateway where sourcename = "MS-O365" and action="EMAIL_DELETED" |  groupby Sender | duration 1d | limit 10
+
+stream=DOCUMENTS where action='ACCESSED' AND sourcename="MS-O365" | duration 1d | groupby user | select user, count(*) as access_count | limit 10
+
+stream=documents where sourcename="MS-O365" | duration 1h | groupby action, operation
+
+stream=* where SrcIP='10.100.10.208' | groupby stream | duration 1d
+
+stream=* where SrcIP='10.100.10.208' | groupby SrcIP | duration 24h
+
+stream=* where SrcIP='10.100.10.208' | duration 1d 
+
+stream=AUTHENTICATION where action='LOGIN' and status='FAILED' and reason='USER_DISABLED' | duration 15m | groupby user | having count_col1 > 3
+
+stream=AUTHENTICATION where action='LOGIN' and status='FAILED' and reason='USER_DISABLED' and user='{SuspectUser}' | duration 16m
+
+stream=* | duration from 2024-06-04T00:00:00 to 2024-06-04T23:59:59 | timeslice 1d
+
+stream=FIREWALL where action='PACKET_ALLOWED' and dstport='3389' and srctype='PUBLIC' | groupby srcip, dstip | duration from 2024-06-17T00:00:00 to 2024-06-17T11:59:59
+
+stream=IAM where action ='USER_ENABLED' AND not User='Okta System' AND not User='OktaService' | select cnamtime, user, targetuser | duration 7d
+
+stream=firewall | duration 10m | limit 1
+
+stream=CONFIGURATION where action='CONFIGURATION_CHANGED' and sourcetype='FIREWALL' and (config='set' or config='edit' or config='move' or config='delete' or config='Commit' or config='upload') | groupby user, system ,sourcetype, action, config | duration 7d
+
+stream=threat where sourcename="MS-O365" | duration 1d |  groupby threat, @ThreatsAndDetectionTech[1] 
+
+stream=DOCUMENTS where sourcename="MS-O365" and action="UPLOADED"  | duration 1d | groupby user | select user, count(*) as upload_count | limit 10
+
+stream=authentication where SourceName="MS-O365" and action='LOGIN' and not user="Not Available" | duration 1h | groupby user, status | select user, status, count(*) as login_attempts | limit 10
+
+stream=IAM where action='USER_CREATED' and status='PASSED' and user='{SuspectUser}' | duration 7d
+
+stream=IAM where action="USER_CREATED" | duration 7d | groupby action, user | select action, user, distinct_count(system), percentage_of(status="PASSED")
+
+stream=iam where action='USER_DELETED' and status='PASSED' and user='{SuspectUser}' | duration 1h
+
+stream=CONFIGURATION where action='CONFIGURATION_CHANGED' and sourcetype='FIREWALL' and system='{TargetHost}' and user='{SuspectUser}' | duration 1d
+
+stream=CONFIGURATION where action='CONFIGURATION_CHANGED' and sourcetype='FIREWALL' and (config='set' or config='edit' or config='move' or config='delete' or config='user set a value for a configuration' or config='Commit' or config='upload') | groupby user, system ,sourcetype, action, config | duration 2d
+
+stream=* where devsrcip='10.180.0.63' | duration 7d
+
+stream=WIN-Audit where devsrcip='10.180.0.63' and action='EXTERNAL_DEVICE_PLUGGED' | duration 7d
+
+stream=WIN-Audit where devsrcip='10.180.0.63' | groupby action | duration 7d
+
+stream=* where devsrcip='10.180.0.63' | groupby stream | duration 7d
+
+stream=authentication where SourceName="MS-O365" and action="LOGIN" and status="PASSED" | groupby user | select user, distinct_count(srccn) as country_count | duration 1h | having country_count > 1 | limit 10
+
+stream=CONFIGURATION where action='CONFIGURATION_CHANGED' and sourcetype='FIREWALL' and (config='set' or config='edit' or config='move' or config='delete' or config='user set a value for a configuration' or config='Commit' or config='upload') | groupby user, system ,sourcetype, action, config | duration 1h
+
+stream=CONFIGURATION where action='CONFIGURATION_CHANGED' and sourcetype='FIREWALL' and system='{TargetHost}' and user='{SuspectUser}' | duration 1h
+
+stream=email-gateway where sourcename="MS-O365" and action="EMAIL_ACCEPTED"  | duration 1h | groupby sender | select sender, count(*) as acceptance_count | limit 10
+
+stream=ep-process where (commandline like '%rundll32.exe%url%dll%OpenURL%' or commandline like '%rundll32%exe%url%dll%OpenURLA%' or commandline like '%rundll32%exe%url%dll%FileProtocolHandler%' or commandline like '%rundll32%exe%%zipfldr%dll%RouteTheCall%' or commandline like '%rundll32%exe%Shell32%dll%Control%RunDLL%' or commandline like '%rundll32%exe%javascript%:%' or commandline like '%url%dll%OpenURL%' or commandline like '%url%dll%OpenURLA%' or commandline like '%url%dll%FileProtocolHandler%' or commandline like '%zipfldr%dll%RouteTheCall%' or commandline like '%Shell32%dll%Control%RunDLL%' or commandline like '%javascript%:%' or commandline like '%RegisterXLL%') and system='{TargetHost}' and user='{SuspectUser}' | duration 16m
+
+stream=ep-process where (commandline like '%rundll32.exe%url%dll%OpenURL%' or commandline like '%rundll32%exe%url%dll%OpenURLA%' or commandline like '%rundll32%exe%url%dll%FileProtocolHandler%' or commandline like '%rundll32%exe%%zipfldr%dll%RouteTheCall%' or commandline like '%rundll32%exe%Shell32%dll%Control%RunDLL%' or commandline like '%rundll32%exe%javascript%:%' or commandline like '%url%dll%OpenURL%' or commandline like '%url%dll%OpenURLA%' or commandline like '%url%dll%FileProtocolHandler%' or commandline like '%zipfldr%dll%RouteTheCall%' or commandline like '%Shell32%dll%Control%RunDLL%' or commandline like '%javascript%:%' or commandline like '%RegisterXLL%') | groupby user, system | duration 15m
+
+stream=documents where action='DELETED' and user='{SuspectUser}' | duration 7d
+
+Stream=WEBFILTER where action='URL_BLOCKED' and URL='ind1.prohance.io:8443'| duration 1h
+
+Stream=WEBFILTER where action='URL_BLOCKED' and URL='ind1.prohance.io:8443'| groupby User, Action| duration 1h
+
+stream=IAM where sourcename="MS-O365" | duration 1h |  groupby action, operation
+
+stream=CONFIGURATION where action='CONFIGURATION_CHANGED' and sourcetype='FIREWALL' and (config='set' or config='edit' or config='move' or config='delete' or config='Commit' or config='upload') | groupby user, system ,sourcetype, action, config | duration 7d
+
+stream=FIREWALL where dstport in ('9001','9030') and srctype='PRIVATE' and dsttype='PUBLIC' and proto='TCP' | select srcip, count(dstip) as count_dstip | groupby srcip | duration 15m
+
+stream=FIREWALL where dstport in ('9001','9030') and srctype='PRIVATE' and dsttype='PUBLIC' and proto='TCP' and srcip='{SuspectHost}' | duration 16m
+
+stream=email-gateway where sourcename="MS-O365" | duration 1h |  groupby action, operation
+
+stream=ep-process where originalfilename='sc.exe' and image like '%sc.exe' and (commandline like '%create%' or commandLine like '%config%') | groupby system | duration 15m
+
+stream=ep-process where originalfilename='sc.exe' and image like '%sc.exe' and (commandline like '%create%' or commandLine like '%config%') and system='{TargetHost}' | duration 16m
+
+stream=IAM where (action='USER_DISABLED' or action='USER_ENABLED') | select user, targetuser, distinct_count(action) as countaction | groupby user, targetuser | having countaction==2 | duration 15m
+
+stream=IAM where (action='USER_DISABLED' or action='USER_ENABLED') and targetuser='{TargetUser}' and user='{SuspectUser}' | duration 16m
+
+stream=firewall where action='PACKET_BLOCKED' and status='PASSED' and srctype='PRIVATE' | select srcip, count(action) as totalcount | groupby srcip | having totalcount > 30000 | duration 15m
+
+stream=firewall where action='PACKET_BLOCKED' and status='PASSED' and srctype='PRIVATE' and srcip='{SuspectHost}' | duration 16m
+
+stream=IAM where action ='USER_CREATED' AND not User='Okta System' |  select user, targetuser | duration 5m
+
+stream=IAM where action='USER_CREATED' and targetuser='{TargetUser}' and user='{SuspectUser}' | duration 6m
+
+stream=CONFIGURATION where action='CONFIGURATION_CHANGED' and sourcetype='FIREWALL' and (config='set' or config='edit' or config='move' or config='delete' or config='user set a value for a configuration' or config='commit' or config='upload') or config='rename' or config='commit-all' or config='commit-and-push' or config='delete' or config='multi-clone' or config='Configuration changed' | groupby user, cnamtime, system, config | duration 20d
+
+stream=webfilter | where action='URL_BLOCKED' AND (category='Nudity' or category='Adult Sex Education' or category='Adult Themes' or category='Pornography' or category='K-12 Sex Education' or category='Lingerie/Bikini' or category='Other Adult Material') | duration 1h
+
+stream=WEBFILTER where action='URL_BLOCKED' and URL='{TargetResource}' and user='{SuspectUser}' | duration 1h
+
+stream=* where devsrcip='10.100.10.34' and logevent like "%ZIA-Admin Audit%" | duration 1h
+
+stream=* where devsrcip='10.170.10.22' | duration 2d | timeslice 1h
+
+stream=signals where suspecthost='10.170.10.24' | groupby cnamtime,detectionname |  duration 7d
+
+stream=signals where suspecthost='10.170.10.21' | groupby cnamtime,detectionname |  duration 7d
+
+stream=signals where suspecthost='10.170.10.22' | groupby cnamtime,detectionname |  duration 7d
+
+stream=signals where suspecthost='10.170.10.23' | groupby cnamtime,detectionname |  duration 7d
+
+stream=signals where suspecthost='10.170.10.25' | groupby cnamtime,detectionname |  duration 7d
+
+stream=* where devsrcip='10.170.10.23' | duration 2d | timeslice 1h
+
+stream=signals where suspecthost='10.170.10.26' | groupby cnamtime,detectionname |  duration 7d
+
+stream=* where devsrcip='10.170.10.24' | duration 2d | timeslice 1h
+
+stream=* where devsrcip='10.170.10.25' | duration 2d | timeslice 1h
+
+stream=* | duration 3h | timeslice 1m
+

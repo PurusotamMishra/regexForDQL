@@ -1,0 +1,371 @@
+stream=IAM where system='MS-O365' and not user like 'ServicePrincipal_%' and action='USER_LICENSE_CHANGED' 
+| duration 1d | groupby cnamtime,action,user,targetuser,operation,status,@Workload
+
+stream=firewall | limit 1
+
+stream=EP-PROCESS where NOT User='NT AUTHORITY\\SYSTEM' AND action='PROCESS_ADDED' and NOT image like '%csc.exe' and image like '%sc.exe' and (commandline like '%config%' or commandline like '%binPath%' or commandline like '%failure%' or commandline like '%command%') and eid='1' | groupby system, image, commandline
+
+stream=EP-PROCESS where action='PROCESS_ADDED' and system='{TargetHost}' and image like '%sc.exe' and (commandline like '%config%' or commandline like '%binPath%' or commandline like '%failure%' or commandline like '%command%') and eid='1'
+
+stream=documents where action in ('ACCESSED', 'DOWNLOADED') and srccn in ('CN', 'KR') and not RemoteISP='Microsoft Corporation' | groupby user
+
+stream=documents where action in ('ACCESSED', 'DOWNLOADED') and srccn in ('CN', 'KR') and user='{SuspectUser}' | duration 6m
+
+stream=ep-registry where action='OBJECT_MODIFIED' and eid='13' and (targetobject like '%SOFTWARE%Microsoft%Windows%CurrentVersion%Run%' or targetobject like '%SOFTWARE%Microsoft%Windows%CurrentVersion%RunOnce%') and (details like '%C:%Windows%Temp%' or details like '%AppData%' or details like '%C:%$Recycle.bin%' or details like '%C:%Temp%' or details like '%C:%Users%Public%' or details like '%Public%' or details like '%C:%Users%Default%' or details like 'C:%Users%Desktop%' or details like 'wscript%' or details like 'cscript%' or details like '%AppData%Local%Microsoft%OneDrive%') and system='{TargetHost}' | duration 6m
+
+stream=ep-registry where not user='SYSTEM' and action='OBJECT_MODIFIED' and eid='13' and (targetobject like '%SOFTWARE%Microsoft%Windows%CurrentVersion%Run%' or targetobject like '%SOFTWARE%Microsoft%Windows%CurrentVersion%RunOnce%') and (details like '%C:%Windows%Temp%' or details like '%AppData%' or details like '%C:%$Recycle.bin%' or details like '%C:%Temp%' or details like '%C:%Users%Public%' or details like '%Public%' or details like '%C:%Users%Default%' or details like 'C:%Users%Desktop%' or details like 'wscript%' or details like 'cscript%' or details like '%AppData%Local%Microsoft%OneDrive%') and not (details like '%C:%Users%Admin%AppData%Local%Programs%Opera%') and not details like '%GoogleUpdate%' | groupby system
+
+stream=ep-file where targetfilename like '%Recycle.Bin%' and image not like '%explorer.exe' and system='{TargetHost}' | duration 6m
+
+stream=ep-file where targetfilename like '%Recycle.Bin%' and image not like '%explorer.exe'  and not user='SYSTEM' and not (targetfilename like '%.xls' or targetfilename like '%.docx') | groupby system
+
+stream=IAM where system='MS-O365' and not user like 'ServicePrincipal_%' and action='USER_DELETED' 
+| duration 1d | groupby cnamtime,action,user,targetuser,operation,status
+
+stream=CONFIGURATION where sourcetype='FIREWALL' AND config='Configuration changed' AND system in ('UNIFIFW-PRI', 'Unifi-Mumbai', 'UNIFI_HYDRABAD', 'UNIFI-BANGALORE') 
+| duration 1d |  groupby cnamtime,system,action,user,config,message
+
+stream=FIREWALL where (((app='HTTP' or app='http') and not dstport in ('80','8080','8000')) or ((app='ssl' or app='SSL') and not dstport in ('443','8443')) or ((app='smtp' or app='SMTP') and not dstport in ('25'))) and not dstport in ('7426', '1443', '853', '5223', '993', '587') | groupby srcip
+
+stream=FIREWALL where (((app='HTTP' or app='http') and not dstport in ('80','8080','8000')) or ((app='ssl' or app='SSL') and not dstport in ('443','8443')) or ((app='smtp' or app='SMTP') and not dstport in ('25'))) and srcip='{SuspectHost}' | duration 6m
+
+stream=CONFIGURATION where sourcename='MS-O365' and user in ('admin@unificapital.onmicrosoft.com', 'itmanager@unificap.com', 'itprojects@unificap.com', '4dsupport@unificap.com', 'ithelpdesk@unificap.com')
+|  duration 1d |  groupby config,user,action
+
+stream=email-gateway where sourcename = "MS-O365" and action="EMAIL_DELETED" |  groupby Sender | duration 1d | limit 10
+
+stream=signals | duration 1d |  select cnamtime,detectionname,detectionconfidence,targethost,targetuser,suspecthost
+
+
+stream=IAM where  not system='MS-O365' and not user='UNIFI-DC$' and not domain='NT AUTHORITY' and action='COMPUTER_ACCOUNT_CREATED'
+| duration 7d |  groupby cnamtime,Action,eid,user,targetuser,event,status
+
+stream=DOCUMENTS where action='ACCESSED' AND sourcename="MS-O365" | duration 1d | groupby user | select user, count(*) as access_count | limit 10
+
+stream=IAM where system='MS-O365' and not user like 'ServicePrincipal_%' and action='USER_ADDED' and operation='SiteCollectionAdminAdded'
+| duration 1d |  groupby cnamtime,action,role,user,targetuser,status,@EventSource
+
+stream=CONFIGURATION where config='Interface status changed' AND system in ('UNIFIFW-PRI', 'Unifi-Mumbai', 'UNIFI_HYDRABAD', 'UNIFI-BANGALORE') 
+| duration 1d | groupby cnamtime,system,action,user,actiontaken,config,message
+
+stream=documents where sourcename="MS-O365" | duration 1h | groupby action, operation
+
+stream=AUTHENTICATION where action='LOGIN' and status='PASSED' and user='{SuspectUser}' | duration 31m
+
+stream=AUTHENTICATION where action='LOGIN' and status='PASSED' and not Operation='TeamsSessionStarted' | duration 30m | select user, distinct_count(srccn) as CountSrcCN | groupby user | having CountSrcCN > 1
+
+stream=ep-registry where action='OBJECT_MODIFIED' and eid in ('12','13','14') and not User='SYSTEM' and targetobject like '%HKLM%SOFTWARE%Microsoft%Windows NT%CurrentVersion%Image File Execution Options%' | groupby system
+
+stream=ep-registry where action='OBJECT_MODIFIED' and eid in ('12','13','14') and targetobject like '%HKLM%SOFTWARE%Microsoft%Windows NT%CurrentVersion%Image File Execution Options%' and system='{TargetHost}' | duration 6m
+
+stream=EP-PROCESS where (image like "%net%exe%" or image like "%net1%exe%") and (commandline like "%group%" or commandline like "%localgroup%" or commandline like "%user%" or commandline like "%view%" or commandline like "%share" or commandline like "%accounts%" or commandline like "%use%" or commandline like "%stop %") and not user='NT AUTHORITY\\SYSTEM'| groupby system, user
+
+stream=EP-PROCESS where (image like "%net%exe%" or image like "%net1%exe%") and (commandline like "%group%" or commandline like "%localgroup%" or commandline like "%user%" or commandline like "%view%" or commandline like "%share" or commandline like "%accounts%" or commandline like "%use%" or commandline like "%stop %") and system='{TargetHost}' and user='{SuspectUser}' | duration 6m
+
+stream=ep-process where action='PROCESS_ADDED' and eid='1' and (image like "%tshark.exe" or image like "%windump.exe" or image like "%logman.exe" or image like "%tcpdump.exe" or image like "%wprui.exe" or image like "%wpr.exe") and system='{TargetHost}' | duration 6m
+
+stream=ep-process where action='PROCESS_ADDED' and not User='NT AUTHORITY\\SYSTEM' and eid='1' and (image like "%tshark.exe" or image like "%windump.exe" or image like "%logman.exe" or image like "%tcpdump.exe" or image like "%wprui.exe" or image like "%wpr.exe") | groupby system
+
+stream=threat where sourcename="MS-O365" | duration 1d |  groupby threat, @ThreatsAndDetectionTech[1] 
+
+stream=ep-registry where action='OBJECT_MODIFIED' and not User='SYSTEM' and eid in ('12','13','14') and targetobject like '%Software%Classes%CLSID%' | groupby system, user
+
+stream=ep-registry where action='OBJECT_MODIFIED' and eid in ('12','13','14') and targetobject like '%Software%Classes%CLSID%' and system='{TargetHost}' | duration 6m
+
+stream=IAM where  not system='MS-O365' and not user='UNIFI-DC$' and not domain='NT AUTHORITY' and action='COMPUTER_ACCOUNT_CHANGED'
+| duration 7d |  groupby cnamtime,action,eid,user,targetuser,event,status
+
+stream=IAM where  not system='MS-O365' and not user='UNIFI-DC$' and not domain='NT AUTHORITY' and action='COMPUTER_ACCOUNT_DELETED'
+| duration 7d |  groupby cnamtime,action,eid,user,targetuser,event,status
+
+stream=IAM where  not system='MS-O365' and not user='UNIFI-DC$' and not domain='NT AUTHORITY' and action='USER_ACCOUNT_CHANGED'
+| duration 7d |  groupby cnamtime,action,eid,user,targetuser,homepath,event,status
+
+stream=EP-NETWORK where system='Unifi-DC.Unifi.com' and  eid = '3'
+ and not srcip='0:0:0:0:0:0:0:1' 
+  |  duration 4h |  groupby cnamtime,user,dstip,srcip,dstport
+
+stream=IAM where  not system='MS-O365' and not user='UNIFI-DC$' and not domain='NT AUTHORITY' and action='USER_CREATED'
+| duration 10d | groupby cnamtime,action,eid,user,displayname,userprincipalname,event,role,status
+
+stream=CONFIGURATION where config='Routing information changed' AND system in ('UNIFIFW-PRI', 'Unifi-Mumbai', 'UNIFI_HYDRABAD', 'UNIFI-BANGALORE') 
+| duration 1d | groupby cnamtime,system,action,user,actiontaken,config,message
+
+stream=IAM where system='MS-O365' and not user like 'ServicePrincipal_%' and action='PASSWORD_CHANGED' 
+| duration 1d |  groupby cnamtime,action,User,targetuser,operation,@Workload
+
+stream=DOCUMENTS where sourcename="MS-O365" and action="UPLOADED"  | duration 1d | groupby user | select user, count(*) as upload_count | limit 10
+
+stream=signals where not detectionname in ('suspicious port communication - external', 'Data Loss Prevention')
+| duration 15m |  groupby sourcestream,detectionname,detectionseverity,targethost,suspecthost
+
+stream=IAM where  not system='MS-O365' and not user='UNIFI-DC$' and not domain='NT AUTHORITY' and action='GROUP_CHANGED'
+| duration 7d |  groupby cnamtime,action,eid,user,group,event,status
+
+stream=IAM where  not system='MS-O365' and not user='UNIFI-DC$' and not domain='NT AUTHORITY' and action='PASSWORD_CHANGED'
+| duration 7d |  groupby cnamtime,action,eid,status,system,targetuser,event
+
+stream=IAM where  not system='MS-O365' and not user='UNIFI-DC$' and not domain='NT AUTHORITY' and action in ('USER_ENABLED', 'USER_UNLOCKED', 'USER_LOCKOUT')
+| duration 7d |  groupby cnamtime,action,eid,user,targetuser,status,event
+
+stream=IAM where  not system='MS-O365' and not user='UNIFI-DC$' and not domain='NT AUTHORITY' and action='USER_ADDED'
+| duration 7d |  groupby cnamtime,action,eid,user,group,membername,status,event
+
+stream=authentication where SourceName="MS-O365" and action='LOGIN' and not user="Not Available" | duration 1h | groupby user, status | select user, status, count(*) as login_attempts | limit 10
+
+stream=FIREWALL where not SrcType='PRIVATE' AND not DstType='PRIVATE' and NOT (dstport='443' OR dstport='80') and NOT (dstip in ( '52.163.189.191', '157.245.105.204', '172.105.62.132', '139.59.31.224', '172.105.57.246') AND not dstport='514') | duration 30m
+| select srcip,dstip, distinct_count(dstPort) as CountDstport 
+| groupby srcip,dstip
+| having CountDstport > 50
+
+stream=threat where vector='HOST' and sourcename='TREND-MICRO-ENDPOINT' and action='THREAT_DETECTED' and threat is not null and system is not null and file is not null and not threat='Data Loss Prevention'
+| groupby action,dstip,file,threat,user,virusname,@cs5
+
+stream=THREAT where SourceName='MS-O365' and not @LatestDeliveryLocation='Quarantine' |  duration 15m 
+| select sender,distinct_count(recipient) as recipient_count |  groupby sender |  having recipient_count>10
+
+
+stream=authentication where SourceName="MS-O365" and action="LOGIN" and status="PASSED" | groupby user | select user, distinct_count(srccn) as country_count | duration 1h | having country_count > 1 | limit 10
+
+stream=MS-O365 where sourcename='MS-O365' and operation='Remove member from role.' and user in ('admin@unificapital.onmicrosoft.com', 'itmanager@unificap.com', 'itprojects@unificap.com', '4dsupport@unificap.com', 'ithelpdesk@unificap.com') and @ModifiedProperties[1].Name='Role.DisplayName' | select cnamtime, user, targetuser, @ModifiedProperties[1].OldValue as RoleName | duration 1h
+
+stream=TREND-MICRO-ENDPOINT where sourcetype='ENDPOINT-SECURITY' and sourcename='TREND-MICRO-ENDPOINT' and threat='Intrusion Prevention' and not dstip like ('192.168.40.%')
+|  groupby actiontaken,threat,virusname,dstip,@TMCMLogDetectedHost 
+
+stream=IAM where  not system='MS-O365' and not user='UNIFI-DC$' and not domain='NT AUTHORITY' and action='USER_REMOVED'
+| duration 7d | groupby cnamtime,action,eid,group,membername,status,user
+
+stream=email-gateway where sourcename="MS-O365" and action="EMAIL_ACCEPTED"  | duration 1h | groupby sender | select sender, count(*) as acceptance_count | limit 10
+
+stream=MS-O365 where sourcename='MS-O365' and operation='Add member to role.' and user in ('admin@unificapital.onmicrosoft.com', 'itmanager@unificap.com', 'itprojects@unificap.com', '4dsupport@unificap.com', 'ithelpdesk@unificap.com') and @ModifiedProperties[1].Name='Role.DisplayName' | select cnamtime, user, targetuser, @ModifiedProperties[1].NewValue as NewRoleName | duration 1h
+
+stream=THREAT where sourcename='MS-O365' and not @PolicyAction='Quarantine'
+|  duration 1d |  select recipient,sender,threat,@PolicyAction |  groupby recipient,sender,threat,@PolicyAction
+
+stream=CONFIGURATION where config='Object attribute configured' and actiontaken='Add' and message like ('Add user.local%') AND sourcetype='FIREWALL' AND system in ('UNIFIFW-PRI', 'Unifi-Mumbai', 'UNIFI_HYDRABAD', 'UNIFI-BANGALORE') 
+| groupby cnamtime,system,action,user,actiontaken,config,message
+
+stream=authentication where sourcename='MS-O365' and user in ('admin@unificapital.onmicrosoft.com', 'itmanager@unificap.com', 'itprojects@unificap.com', '4dsupport@unificap.com', 'ithelpdesk@unificap.com') and not operation='TeamsSessionStarted'
+|  duration 1M | groupby cnamtime,user,Operation,@Workload
+
+
+stream=THREAT where system='UNIFIFW-PRI' and sourcename='FORTIGATE' and sourcetype='FIREWALL' and threat='malicious-url'
+| groupby srcip,dstip,threat,@level,@severity,@msg,@action 
+
+stream=CONFIGURATION where config='Object attribute configured' AND sourcetype='FIREWALL' AND system in ('UNIFIFW-PRI', 'Unifi-Mumbai', 'UNIFI_HYDRABAD', 'UNIFI-BANGALORE') 
+| duration 1d | groupby cnamtime,system,action,user,actiontaken,config,message
+
+stream=IAM where system='MS-O365' and not user like 'ServicePrincipal_%' and action='USER_ADDED' and operation='Add user.'
+| duration 1d |  groupby cnamtime,Action,user,targetuser,operation,status
+
+stream=THREAT where system='UNIFIFW-PRI' and sourcename='FORTIGATE' and sourcetype='FIREWALL' and threat='Malicious_Behavior.SB'
+| groupby srcip,dstip,threat,@level,@msg,@action,@url
+
+stream=CONFIGURATION where config='Routing information changed' AND system in ('UNIFIFW-PRI', 'Unifi-Mumbai', 'UNIFI_HYDRABAD', 'UNIFI-BANGALORE') 
+| groupby cnamtime,system,action,user,actiontaken,config,message
+
+stream=FIREWALL where SrcType='PRIVATE' AND DstType='PRIVATE' and NOT (dstport='443' OR dstport='80') | duration 30m 
+| select srcip,dstip, distinct_count(dstPort) as CountDstport 
+| groupby srcip,dstip
+| having CountDstport > 50
+
+stream=EMAIL-GATEWAY where sourcename='MS-O365' and not Operation='SoftDelete' and sender in ('admin@unificapital.onmicrosoft.com', 'itmanager@unificap.com', 'itprojects@unificap.com', '4dsupport@unificap.com', 'ithelpdesk@unificap.com')
+|  duration 1d | groupby cnamtime,action,Operation, sender,subject
+
+
+stream=TREND-MICRO-ENDPOINT where sourcetype='ENDPOINT-SECURITY' and sourcename='TREND-MICRO-ENDPOINT' and threat='Behavior Monitoring'
+ |  groupby cnamtime,threat,@cs5,@cs2,@cs3,@TMCMLogTarget,@shost
+
+stream=THREAT where sourcetype='ENDPOINT-SECURITY' and sourcename='TREND-MICRO-ENDPOINT' and threat='HTTP_REMOTECODE_EXECUTION_REQUEST_NC_'
+ |  groupby cnamtime,action,threat,srcip,dstip,process,@act
+
+stream=MS-O365 where sourcename='MS-O365' and user in ('admin@unificapital.onmicrosoft.com', 'itmanager@unificap.com', 'itprojects@unificap.com', '4dsupport@unificap.com', 'ithelpdesk@unificap.com')
+|  duration 1d |  groupby cnamtime,user,Operation
+
+stream=IAM where sourcename="MS-O365" | duration 1h |  groupby action, operation
+
+stream=authentication where sourcename='MS-O365' and user in ('admin@unificapital.onmicrosoft.com', 'itmanager@unificap.com', 'itprojects@unificap.com', '4dsupport@unificap.com', 'ithelpdesk@unificap.com') and not operation='TeamsSessionStarted'
+|  duration 1M | groupby cnamtime,user,Operation,@Workload
+
+
+stream=THREAT where system='UNIFIFW-PRI' and sourcename='FORTIGATE' and sourcetype='FIREWALL' and threat='certificate-anomaly'
+| groupby srcip,dstip,threat,@level,@msg,@action,@authalgo,@hostname
+
+stream=THREAT where system='UNIFIFW-PRI' and sourcename='FORTIGATE' and sourcetype='FIREWALL' and threat='SSL.Anonymous.Ciphers.Negotiation'
+| groupby srcip,dstip,threat,@level,@severity,@msg,@action 
+
+stream=THREAT where system='UNIFIFW-PRI' and sourcename='FORTIGATE' and sourcetype='FIREWALL' and threat='TCP.Split.Handshake'
+| groupby cnamtime,srcip,dstip,threat,@level,@severity,@msg,@action
+
+stream=TREND-MICRO-ENDPOINT where not threat in ('Pattern Update Status', 'Engine Update Status', 'Product Auditing Events')
+| duration 7d |  groupby srcip,dstip,actiontaken,threat
+
+stream=THREAT where system='UNIFIFW-PRI' and sourcename='FORTIGATE' and sourcetype='FIREWALL' and threat='TCP.Split.Handshake'
+| groupby cnamtime,srcip,dstip,threat,@level,@severity,@msg,@action 
+
+stream=email-gateway where sourcename="MS-O365" | duration 1h |  groupby action, operation
+
+stream=THREAT where action='THREAT_DETECTED' and vector='EMAIL' and threat is not null and sender is not null and recipient is not null AND not @DeliveryAction='Blocked' 
+| groupby action,recipient,sender,@SenderIp,@DeliveryAction,systemtstamp,@DetectionMethod,@PolicyAction,@LatestDeliveryLocation
+
+
+stream=EP-NETWORK where action='NETWORK_CONNECTION' and status='PASSED' and image like '%rundll32%exe%' and not dsttype='PRIVATE' and not dstip='127.0.0.1' and not User='NT AUTHORITY\\SYSTEM'
+| groupby system 
+
+stream=EP-NETWORK where action='NETWORK_CONNECTION' and status='PASSED' and image like '%rundll32%exe%' and not dsttype='PRIVATE' and not dstip='127.0.0.1' and system='{TargetHost}' | duration 6m
+
+stream=THREAT where sourcetype='ENDPOINT-SECURITY' and sourcename='TREND-MICRO-ENDPOINT' and threat='Web reputation'
+ |  groupby cnamtime,action,threat,srcip,user,@request,@deviceProcessName
+
+stream=IAM where sourcename='MS-O365' and not @Workload='MicrosoftTeams' and not user like 'ServicePrincipal_%' and user in ('admin@unificapital.onmicrosoft.com', 'itmanager@unificap.com', 'itprojects@unificap.com', '4dsupport@unificap.com', 'ithelpdesk@unificap.com')
+|  duration 1d
+|  groupby cnamtime,user,action,targetuser, @Workload
+
+stream=FIREWALL where proto='TCP' and dstport in (20,21) and srctype='PRIVATE' and dsttype='PUBLIC' and srcip='{SuspectHost}' and dstip='{TargetHost}' | duration 6m
+
+stream=FIREWALL where proto='TCP' and dstport in (20,21) and srctype='PRIVATE' and dsttype='PUBLIC' and not dstip in ('121.241.2.20', '125.22.48.88') 
+| groupby srcip, dstip 
+
+stream=THREAT where system='UNIFIFW-PRI' and sourcename='FORTIGATE' and sourcetype='FIREWALL' and threat='JS/ScrInject.B!tr'
+| groupby srcip,dstip,threat,@level,@severity,@msg,@action 
+
+stream=* |  duration from 2024-08-08T00:00:00 to 2024-08-08T23:59:00  |  groupby devsrcip |  select devsrcip, sum(evtlen)
+
+stream=WIN-AUDIT where sourcename='WINDOWS' and system='UNIFI-Backup.Unifi.com'
+ and category='Removable Storage'
+ and not user like ('%$%')
+ and not category in ('File System', 'Other Object Access Events', 'File Share', 'Detailed File Share', 'Handle Manipulation', 'Sensitive Privilege Use')
+| duration 30d
+| groupby cnamtime,action,category,event,eid,user
+
+stream=ep-registry where action='OBJECT_MODIFIED' and not User='SYSTEM' and targetobject like '%Explorer%FileExts%' and not image in ('%Explorer.EXE%', '%OpenWith.exe%') | groupby system
+
+stream=ep-registry where action='OBJECT_MODIFIED' and targetobject like '%Explorer%FileExts%' and not image in ('%Explorer.EXE%', '%OpenWith.exe%') and system='{TargetHost}' | duration 6m
+
+stream=ep-registry where action='OBJECT_MODIFIED' and eid in ('12','13','14') and (targetobject like '%SOFTWARE%Classes%' or targetobject like '%SOFTWARE%Microsoft%Windows%CurrentVersion%Explorer%GlobalAssocChangedCounter%') and system='{TargetHost}' | duration 6m
+
+stream=ep-registry where action='OBJECT_MODIFIED' and not User='SYSTEM' and eid in ('12','13','14') and (targetobject like '%SOFTWARE%Classes%' or targetobject like '%SOFTWARE%Microsoft%Windows%CurrentVersion%Explorer%GlobalAssocChangedCounter%') | groupby system
+
+stream=CONFIGURATION where config='Interface status changed' AND system in ('UNIFIFW-PRI', 'Unifi-Mumbai', 'UNIFI_HYDRABAD', 'UNIFI-BANGALORE') 
+| groupby cnamtime,system,action,user,actiontaken,config,message
+
+stream=WIN-AUDIT where sourcename='WINDOWS' and system='UNIFI-Backup.Unifi.com' and not user like ('%$%')
+ and category in ('File System', 'File Share') and eid in ('4659', '4660', '5143') and user like '%dministrator'
+|  duration 30d
+|  groupby cnamtime,action,category,event,eid,user
+ 
+
+stream=ep-process where parentimage like "%spoolsv.exe" and not image like "%regsvr32.exe%" and not image like "C:%Windows%System32%HP1100SM.EXE%" and not image like "C:%Windows%System32%ZSHP1020.EXE%" and not originalfilename='splwow64.exe' | groupby system
+
+stream=ep-process where parentimage like "%spoolsv.exe" and not image like "%regsvr32.exe%"" and system='{TargetHost}' | duration 6m
+
+stream=AUTHENTICATION where sourcetype='FIREWALL' and srcip like '10.212.%'
+| duration 1d |  groupby CNAMTime,Action,User,Srcip,message
+
+stream=ep-process where originalfilename='sc.exe' and image like '%\sc.exe' and (commandline like '%create%' or commandLine like '%\config%') and system='{TargetHost}' | duration 6m
+
+stream=ep-process where originalfilename='sc.exe' and image like '%\sc.exe' and (commandline like '%create%' or commandLine like '%\config%') and not (ParentCommandLine LIKE "%\WaAppAgent.exe" OR ParentUser LIKE "%AUTHORITY%" ) | groupby system
+
+stream=THREAT where sourcetype='ENDPOINT-SECURITY' and sourcename='TREND-MICRO-ENDPOINT' and threat='Possible_SMPARROTTDSAYXCHEZ'
+  |  groupby cnamtime,action,dstip,process,threat,user,virusname,@dhost,@act,@msg
+
+
+
+stream=AUTHENTICATION where sourcetype='FIREWALL'  and not srcip like '10.212.%' and not reason='sslvpn_login_permission_denied'
+| duration 1d |  groupby CNAMTime,Devsrcip,Action,user,srcip,message,reason
+
+stream=THREAT where system='UNIFIFW-PRI' and sourcename='FORTIGATE' and sourcetype='FIREWALL' and threat like '%JS%'
+| groupby srcip,dstip,threat,@level,@severity,@msg,@action,@direction,@url,@httpmethod 
+
+stream=AUTHENTICATION where sourcename='WINDOWS' and system like '%SharePro%' and user like '%dmin%' and not ( @LogonType=3 or @LogonType=4 )
+|  duration 10d |  groupby cnamtime,eid,user,action,@LogonType
+
+stream=THREAT where system='UNIFIFW-PRI' and sourcename='FORTIGATE' and sourcetype='FIREWALL' and threat='DNS.PTR.Records.Scan'
+| groupby srcip,dstip,threat,@level,@severity,@msg,@action
+
+stream=THREAT where sourcetype='ENDPOINT-SECURITY' and sourcename='TREND-MICRO-ENDPOINT' and threat='Spyware Detected'
+|  groupby cnamtime,action,threat,file,virusname,dstip,user,@TMCMLogDetectedHost,@cs5
+ 
+
+stream=THREAT where vector='HOST' and sourcename='TREND-MICRO-ENDPOINT' and threat is not null and system is not null and file is not null and @fsize>67108864 
+| select @request,@filePath,sourcename,srcip,File,@fsize,@cs4,threat
+
+stream=AUTHENTICATION where sourcename='MS-O365' and action='LOGIN' and not remotecn='IN' and operation='UserLoginFailed'
+| groupby action,user,status
+
+stream=THREAT where sourcetype='ENDPOINT-SECURITY' and sourcename='TREND-MICRO-ENDPOINT' and threat='Intrusion Prevention'
+ |  groupby cnamtime,action,threat,@dst,@dpt,@act,@deviceDirection,@cs2,@cs1
+
+ 
+
+stream=THREAT where sourcetype='ENDPOINT-SECURITY' and sourcename='TREND-MICRO-ENDPOINT' and threat='CnC Callback'
+|  groupby cnamtime,action,threat,process,srcip,dstip,@act
+ 
+
+stream=THREAT where sourcetype='ENDPOINT-SECURITY' and sourcename='TREND-MICRO-ENDPOINT' and not threat in ('Data Loss Prevention', 'Web reputation', 'CnC Callback', 'HTTP_REMOTECODE_EXECUTION_REQUEST_NC_', 'Intrusion Prevention', 'Possible_SMPARROTTDSAYXCHEZ', 'Spyware Detected' )
+| groupby threat
+
+
+stream=THREAT where system='UNIFIFW-PRI' and sourcename='FORTIGATE' and sourcetype='FIREWALL' and not threat in ( 'DNS.PTR.Records.Scan', 'JS/Agent.37B0!tr', 'JS/ScrInject.B!tr', 'certificate-blocklisted', 'certificate-anomaly', 'Malicious_Behavior.SB', 'TCP.Split.Handshake', 'malicious-url', 'SSL.Anonymous.Ciphers.Negotiation')
+|  groupby threat
+
+
+stream=AUTHENTICATION where sourcename='WINDOWS' and system='UNIFI-Backup.Unifi.com' and user like '%dministrator' and  not ( @LogonType=3 or @LogonType=4 )
+|  duration 30d
+|  groupby cnamtime,@LogonType,eid,user,action
+
+stream=Threat where sourcename='MS-O365' and not threat='Data Loss Prevention' and not @OriginalDeliveryLocation='Quarantine'
+ and not @DeliveryAction='Blocked' and not sender='krishna@unifiinvestment.com' and not Recipient='baidik.research4@gmail.com' 
+  and not @SystemOverrides='[{"Details":"Sender address list (Safe sender / Blocked sender)","FinalOverride":"No","Result":"Block","Source":"Tenant"}]' 
+   and not ((@P2Sender='maheshwarifamilyoffice@gmail.com' and Threat='Phish: [Impersonation brand]') or @P2Sender='newsletter@indianchemicalnews.com' or (@P2Sender='instresearch@acm.co.in' and Threat='Phish: [Spoof DMARC]'))
+|  groupby @P2Sender,Recipient,@DeliveryAction,@OriginalDeliveryLocation,threat 
+
+stream=IAM where sourcename='WINDOWS' and system='Unifi-DC.Unifi.com' and user like '%dministrator'
+ and not action in ('CREDENTIAL_ACQUIRED', 'PRIVILEGE_OBJECT_ACCESSED') and role='Security Group Management'
+|  duration 10d |  groupby cnamtime,system,action,User,category,event,targetuser,group,membername
+
+stream=CONFIGURATION where config='Object attribute configured' AND sourcetype='FIREWALL' AND system in ('UNIFIFW-PRI', 'Unifi-Mumbai', 'UNIFI_HYDRABAD', 'UNIFI-BANGALORE') 
+| duration 1M | groupby cnamtime,system,action,user,actiontaken,config,message
+
+
+stream=IAM where sourcename='WINDOWS' and system='Unifi-DC.Unifi.com' and user like '%dministrator'
+ and not action in ('CREDENTIAL_ACQUIRED', 'PRIVILEGE_OBJECT_ACCESSED') and role='User Account Management'
+| duration 10d | groupby cnamtime,system,action,User,category,event,targetuser
+
+stream=ep-process where action='PROCESS_ADDED' and eid='1' and not user='NT AUTHORITY\\SYSTEM' and (image like '%taskeng.exe' or not image like '%schtasks.exe' or (image like '%svchost.exe%' and parentcommandline like 'C:%Windows%System32%services.exe')) and not parentimage='C:\\Windows\\explorer.exe'  and not ( image like '%SysWOW64%' or image like  '%ManageEngine%' or image like  '%Microsoft%Edge%' or image like  'C:%Windows%System32%' or image like 'C:%Program Files (x86)%Trend Micro%Security Agent%' or image like '%Microsoft Office%' or image like '%Adobe%' or image like '%VMware Tools%' or image like '%Microsoft.NET%' or image like '%Microsoft%' or image like '%WindowsAzure%' or image like '%Google%' or image like '%Mozilla Firefox%' or image like '%Java%' or image like '%AnyDesk%' or image like '%HP%' or image like '%Teams%' or image like 'C:%Windows%explorer.exe' or image like '%ADMINI~1%' or image like '%AppData%' or image like '%Trend Micro%' or image like '%TallyPrime%' or image like '%Windows Defender%' or  image like '%Notepad%' or image like '%MongoDB%' or image like '%Internet Explorer%' or image like '%internet explorer%' or image like '%nodejs%' or image like '%OdinIntegrated%' or image like '%microsoft shared%' or image like '%splwow64%' or image like '%FortiClient%' or image like '%Indium%'  or image like '%SAG Infotech%'  or image like '%MySQL%'  or image like '%HyperPKI%' or image like '%SuperSigner Plus Client%'  or image like  '%ManageEngine%' or image like  '%HelpPane.exe%' or image like '%TDS%' or image like '%acregl.exe%' or image like '%sqlwriter.exe%' or image like '%git.exe%' or image like '%SqlDumper.exe%' or image like '%Indium%' or image like '%Odin Integrated%' or image like '%SAG Infotech%' or image like '%HyperPKI%' or image like '%certutil.exe%' or image like  '%MoNotificationUx.exe%' or image like  '%node.exe%' or image like  '%SystemSettings.exe%' or image like  '%FTUpdateService.exe%' or image like  '%FTUpdateService.exe%' or image like  '%mcafee-security-ft.exe%' or image like  '%LogMeInRescue.exe%' or image like  '%SnoreToast.exe%' or image like  '%JetBrains%' or image like  '%acregl.exe%' or image like  '%TreeSizeFreeSetup.exe%' or image like  '%JetBrains%' or image like  '%RegBootClean64.exe%' or image like  '%Flow.exe%' or image like  'fsnotifier.exe%' or image like  '%UltraViewer_Desktop.exe%' or image like  '%java.exe%' or image like  '%LogMeInRescue%' or image like  'UploadService.exe%' or image like  '%UltraViewer%' or image like  '%Mozilla Maintenance Service%') and not (user='NT AUTHORITY\\SYSTEM' and (image like 'C:%Program Files%' or parentimage like 'C:%Windows%System32%'))
+| groupby system,user
+
+stream=ep-process where action='PROCESS_ADDED' and system='{TargetHost}' and eid='1' and (image like '%taskeng.exe' or image like '%schtasks.exe' or (image like '%svchost.exe%' and parentcommandline like 'C:%Windows%System32%services.exe')) and system='{TargetHost}' | duration 1h
+
+stream=AUTHENTICATION where sourcetype='FIREWALL'  and not srcip like '10.212.%' and not reason='sslvpn_login_permission_denied'
+| duration 30d |  groupby CNAMTime,Devsrcip,Action,user,srcip,message,reason
+
+stream=IAM where sourcename='MS-O365' and not @Workload='MicrosoftTeams' and not user like 'ServicePrincipal_%' and user in ('admin@unificapital.onmicrosoft.com', 'itmanager@unificap.com', 'itprojects@unificap.com', '4dsupport@unificap.com', 'ithelpdesk@unificap.com')
+|  duration 1M
+|  groupby cnamtime,user,action,targetuser, @Workload
+
+stream=AUTHENTICATION where sourcetype='FIREWALL' and srcip like '10.212.%'
+| duration 1M |  groupby CNAMTime,Action,User,Srcip,message
+
+stream=AUTHENTICATION where sourcename='MS-O365' and action='LOGIN' and not remotecn='IN' and not operation='UserLoginFailed'
+| groupby cnamtime,action,remotecn,srcip,user 
+
+stream=AUTHENTICATION where system='Unifi-DC.Unifi.com' and not logontype in ('Network Logon', 'Service Logon') and eid in ('4648', '4624') and not srcip='-'
+    and not targetdomain in ('Window Manager', 'Font Driver Host')
+|  duration 10d 
+|  groupby cnamtime,user,srcip,eid,logontype
+
+stream=threat where vector='HOST' and action='THREAT_DETECTED' and threat is not null and system is not null and file is not null and not threat='Data Loss Prevention'
+ and not (file='EncryptNew.exe' and hash='374F451162BD436116E8B69DDD7FC6B92C4604A3')
+| groupby threat, system, file 
+
+stream=threat where vector='HOST' and action='THREAT_DETECTED' and threat is not null and system is not null and file is not null and system='{TargetHost}' and file='{SuspectObject}' | duration 6m
+
+stream=* where stream in ( 'AUTHENTICATION', 'HYPERCLOUD') and sourcename='HYPERCLOUD' |  duration 1M | groupby CNAMTime, User, SrcIP, ActionTaken, EmailID
+
+stream=authentication where action='LOGIN' and status='FAILED' and srcip='{SuspectHost}' and system='{TargetHost}' and (reason like 'sslvpn_login_permission_denied' or reason like 'sslvpn_login_unknown_user')
+
+stream=authentication where action='LOGIN' and status='FAILED' and (reason like 'sslvpn_login_permission_denied' or reason like 'sslvpn_login_unknown_user') | groupby  system, user, reason, srcip, SrcCN |  having count_col1>2 
+
+stream=FIREWALL where Proto='TCP' AND (DstPort=1080 OR  DstPort=3128 OR DstPort=8080) AND SrcType='PRIVATE' AND DstType!='PRIVATE' AND NOT (DstIP LIKE '129.227.17.%' OR DstIP LIKE '192.169.107.%') | groupby SrcIP, DstIP
+

@@ -1,0 +1,314 @@
+stream=IAM where  not system='MS-O365' and not domain='NT AUTHORITY' and action='USER_UNLOCKED'
+| duration 7d | groupby cnamtime,action,eid,group,membername,status,user,@TargetUserName
+
+stream=* where intel = "True" |  duration 30m | limit 100
+
+stream=CONFIGURATION where sourcename='CHECKPOINT-FIREWALL' and action='CONFIGURATION_CHANGED' 
+| duration 5d
+| groupby CNAMTime,user,config,operation,@client_ip
+
+stream=THREAT where sourcename='CHECKPOINT-FIREWALL' and not threat in ('Search Engines / Portals', 'Syslog Protocol Violation', 'HTTPEmulation')
+ and  action='THREAT_DETECTED'
+ and ( @action='Detect' or @action='Redirect' )
+|  duration 1d
+|  groupby @action,threat
+
+stream=FIREWALL where (((app='HTTP' or app='http') and not dstport in ('80','8080','8000')) or ((app='smtp' or app='SMTP') and not dstport in ('25'))) | groupby app, dstport 
+
+stream=FIREWALL where (((app='HTTP' or app='http') and not dstport in ('80','8080','8000')) or ((app='smtp' or app='SMTP') and not dstport in ('25'))) and srcip='{SuspectHost}' | duration 6m
+
+stream=iam where eid IN (4720, 4722, 4725, 4728, 4732, 4756, 4740)  | duration 7d |  groupby eid | limit 10
+
+stream=AUTHENTICATION where devsrcip='10.10.1.253' and sourcetype='FIREWALL' and sourcename='CHECKPOINT-FIREWALL'
+ and @client_name='Mobile VPN'
+| duration 3d
+|  groupby @client_name,actiontaken,@host_ip,srcip,@status,user
+
+stream=iam where eid IN (4728,4732,4756) | groupby cnamtime, eid, user, group, action |  duration 7d
+
+stream=AUTHENTICATION where devsrcip='10.10.1.253' and sourcetype='FIREWALL' and sourcename='CHECKPOINT-FIREWALL'
+ and @client_name='Check Point Mobile'
+| duration 3d
+|  groupby @client_name,actiontaken,@host_ip,@hostname,srcip,status,reason,user 
+
+
+stream=AUTHENTICATION where devsrcip='10.10.1.253' and sourcetype='FIREWALL' and sourcename='CHECKPOINT-FIREWALL'
+ and @client_name='Endpoint Security VPN'
+| duration 3d
+|  groupby @client_name,@hostname,@host_ip,srcip,@status,@tunnel_protocol,user
+
+stream=configuration where eid IN (7036,7040) and object is not null  | duration 7d |  groupby object , action, cnamtime
+
+stream=IAM where sourcename='CHECKPOINT-FIREWALL'
+| duration 10d
+|  groupby cnamtime,user,operation,@client_ip,@fieldschanges,@logic_changes
+
+stream=*  where extractorid='710' | duration 7d  | groupby devsrcip |  select distinct_count(devsrcip)
+
+stream=*  where extractorid='710' | duration 7d  | groupby eid | limit 10
+
+stream=authentication where eid IN (4624,4625)| groupby cnamtime, action, user, system |  duration 7d
+
+stream=iam where eid IN (4720,4722,4725,4740)|  groupby cnamtime, eid, user,action |  duration 7d
+
+stream=IAM where  not system='MS-O365' and not domain='NT AUTHORITY' and action='USER_ADDED'
+| duration 7d | groupby cnamtime,action,eid,group,membername,status,user
+
+stream=authentication where SourceName="MS-O365" and action="LOGIN" and status="PASSED" | groupby user | select user, distinct_count(srccn) as country_count | duration 1h | having country_count > 1 | limit 10
+
+stream=email-gateway where sourcename="MS-O365" and action="EMAIL_ACCEPTED"  | duration 1h | groupby sender | select sender, count(*) as acceptance_count | limit 10
+
+stream=Signals |  duration 1d  |  groupby detectionname,detectionconfidence,sourcestream
+
+stream=threat where sourcename="MS-O365" | duration 1d |  groupby threat, @ThreatsAndDetectionTech[1] 
+
+stream=DOCUMENTS where sourcename="MS-O365" and action="UPLOADED"  | duration 1d | groupby user | select user, count(*) as upload_count | limit 10
+
+stream=authentication where SourceName="MS-O365" and action='LOGIN' and not user="Not Available" | duration 1h | groupby user, status | select user, status, count(*) as login_attempts | limit 10
+
+stream=DOCUMENTS where action='ACCESSED' AND sourcename="MS-O365" | duration 1d | groupby user | select user, count(*) as access_count | limit 10
+
+stream=email-gateway where sourcename="MS-O365" | duration 1h |  groupby action, operation
+
+stream=IAM where sourcename="MS-O365" | duration 1h |  groupby action, operation
+
+stream=documents where sourcename="MS-O365" | duration 1h | groupby action, operation
+
+stream=email-gateway where sourcename = "MS-O365" and action="EMAIL_DELETED" |  groupby Sender | duration 1d | limit 10
+
+stream=threat where sourcename="MS-O365" | duration 1d |  groupby threat, @ThreatsAndDetectionTech[1] 
+
+stream=AUTHENTICATION where devsrcip='10.10.1.253' and sourcetype='FIREWALL' and sourcename='CHECKPOINT-FIREWALL'
+ and not (@client_name='Endpoint Security VPN' or @client_name='Active Directory Query' or @client_name='Mobile VPN' or @client_name='Check Point Mobile')
+ and @identity_src='AD Query'
+| duration 3h
+|  groupby srcip,action,@Description,@domain_name,@identity_src,user,@termination_reason
+
+stream=IAM where  not system='MS-O365' and not domain='NT AUTHORITY' and action='GROUP_CHANGED'
+| duration 7d | groupby cnamtime,action,eid,group,membername,status,user
+
+stream=CONFIGURATION where sourcename='MS-O365' and not (user like 'NT AUTHORITY%SYSTEM%' or user like 'ServicePrincipal%') and not operation='UpdateInboxRules'
+|  duration 2d
+ |  groupby cnamtime,action,user,operation
+
+stream=AUTHENTICATION where sourcename='MS-O365' and action='LOGIN' and operation='UserLoginFailed'
+| groupby action,user,status,reason,srccn
+| duration 2d
+
+stream=THREAT where sourcename='CHECKPOINT-FIREWALL'
+ and not threat in ('Search Engines / Portals', 'Syslog Protocol Violation', 'HTTPEmulation', 'SMTP Protection Violation')
+ and  action='THREAT_DETECTED'
+ and  @action='Detect'
+|  groupby cnamtime,srcip,dstip,@action,threat,@resource,@src_user_name
+
+stream=IAM where sourcename='CHECKPOINT-FIREWALL'
+| duration 10d
+|  groupby cnamtime,user,operation,@client_ip,@fieldschanges,@logic_changes
+
+stream=IAM where  not system='MS-O365' and not domain='NT AUTHORITY' and action='USER_ACCOUNT_CHANGED'
+| duration 7d | groupby cnamtime,action,eid,status,user,targetuser
+
+stream=THREAT where sourcename='CHECKPOINT-FIREWALL' and not threat in ('Search Engines / Portals', 'Syslog Protocol Violation', 'HTTPEmulation')
+ and  action='THREAT_DETECTED'
+ and ( @action='Detect' or @action='Redirect' )
+|  duration 5d
+|  groupby srcip,dstip,@action,threat,@resource,@src_user_name
+
+stream=Threat where sourcename='MS-O365' and not @LatestDeliveryLocation='Quarantine'
+| duration 3d 
+| groupby cnamtime,@P2Sender,recipient,threat,@DeliveryAction,@LatestDeliveryLocation,@PolicyAction
+
+
+stream=CONFIGURATION where sourcename='MS-O365' and not (user like 'NT AUTHORITY%SYSTEM%' or user like 'ServicePrincipal%')
+|  duration 2d
+ |  groupby cnamtime,action,config,user
+
+stream=AUTHENTICATION where devsrcip='10.10.1.253' and sourcetype='FIREWALL' and sourcename='CHECKPOINT-FIREWALL'
+ and not (@client_name='Endpoint Security VPN' or @client_name='Active Directory Query' or @client_name='Mobile VPN' or @client_name='Check Point Mobile')
+ and @identity_src='VPN Remote Access'
+| duration 3h
+|  groupby cnamtime,user,action,@auth_status,@endpoint_ip,@roles,@identity_src,@description
+
+stream=IAM where  not system='MS-O365' and not domain='NT AUTHORITY' and action='USER_LOCKOUT' and not user='PDC$'
+| duration 7d | groupby cnamtime,action,eid,status,user,targetuser
+
+stream=IAM where  not system='MS-O365' and not domain='NT AUTHORITY' and action='PASSWORD_CHANGED'
+| duration 7d |  groupby cnamtime,action,eid,status,system,targetuser,event
+
+stream=IAM where sourcename='MS-O365' and not( @Workload='MicrosoftTeams' or @Workload='OneDrive')
+ and not ( user like 'ServicePrincipal_%' or user like 'Sync_TSLWSUS%' or user like 'NT AUTHORITY%' )
+|  duration 1d
+|  groupby user,action,targetuser,@Workload
+
+stream=AUTHENTICATION where sourcename='MS-O365' and action='LOGIN' and operation='UserLoggedIn' and not srccn='IN'
+ | groupby cnamtime,user,srcip,srccn
+ |  duration 2d
+
+stream=email-gateway where action='EMAIL_ACCEPTED' and rlike(file, "\\.(apk|app|bat|bin|cgi|com|dll|dmg|exe|jar|js|jse|msi|py|scr|sh|vbs|wsf|wsh|xap|x86|xex)\\.")  and sender='{SuspectUser}' | duration 6m
+
+stream=email-gateway where action='EMAIL_ACCEPTED' and rlike(file, "\\.(apk|app|bat|bin|cgi|com|dll|dmg|exe|jar|js|jse|msi|py|scr|sh|vbs|wsf|wsh|xap|x86|xex)\\.") | groupby sender
+
+stream=signals where sourcestream='THREAT' and occurrences > 5 and targethost='{TargetHost}' | duration 1h
+
+stream=signals where sourcestream='THREAT' and occurrences > 5 | duration 1h | groupby targethost
+
+stream=signals where sourcestream='THREAT' and occurrences > 5 and targethost='{TargetHost}' | duration 1h
+
+stream=signals where sourcestream='THREAT' and occurrences > 5 | duration 1h | groupby targethost
+
+stream=AUTHENTICATION where action='LOGIN' and status='PASSED' | duration 1h | select user, distinct_count(system) as CountSystem | groupby user | having CountSystem > 2
+
+stream=AUTHENTICATION where action='LOGIN' and status='PASSED' and user='{SuspectUser}' | duration 1h
+
+stream=EMAIL-GATEWAY where action='EMAIL_REDIRECTED' and rlike(recipient,"(gmail|yahoo|rediffmail|outlook|hotmail|proton)") and sender='{SuspectUser}' | duration 6m
+
+stream=EMAIL-GATEWAY where action='EMAIL_REDIRECTED' and rlike(recipient,"(gmail|yahoo|rediffmail|outlook|hotmail|proton)") | select sender, count(action) as CntEmails | groupby sender | having CntEmails >= 2
+
+stream=EMAIL-GATEWAY where action='EMAIL_REDIRECTED' and rlike(recipient,"(gmail|yahoo|rediffmail|outlook|hotmail|proton)") and sender='{SuspectUser}' | duration 6m
+
+stream=EMAIL-GATEWAY where action='EMAIL_REDIRECTED' and rlike(recipient,"(gmail|yahoo|rediffmail|outlook|hotmail|proton)") | select sender, count(action) as CntEmails | groupby sender | having CntEmails >= 2
+
+stream=IAM where (action='USER_DISABLED' or action='USER_ENABLED') | select user, targetuser, distinct_count(action) as countaction | groupby user, targetuser | having countaction==2
+
+stream=IAM where (action='USER_DISABLED' or action='USER_ENABLED') and targetuser='{TargetUser}' and user='{SuspectUser}'
+
+stream=THREAT where sourcename='CHECKPOINT-FIREWALL'
+ and not threat in ('Search Engines / Portals', 'Syslog Protocol Violation', 'HTTPEmulation', 'SMTP Protection Violation')
+ and  action='THREAT_DETECTED'
+ and  @action='Detect'
+|  groupby cnamtime,srcip,dstip,@action,threat,@resource,@src_user_name
+
+stream=email-gateway where action='EMAIL_ACCEPTED' and rlike(file, "\\.(apk|app|bat|bin|cgi|com|dll|dmg|exe|jar|js|jse|msi|py|scr|sh|vbs|wsf|wsh|xap|x86|xex)") and sender='{SuspectUser}' | duration 6m
+
+stream=email-gateway where action='EMAIL_ACCEPTED' and rlike(file, "\\.(apk|app|bat|bin|cgi|com|dll|dmg|exe|jar|js|jse|msi|py|scr|sh|vbs|wsf|wsh|xap|x86|xex)")  | groupby sender
+
+stream=IAM where (action='USER_DISABLED' or action='USER_ENABLED') | select user, targetuser, distinct_count(action) as countaction | groupby user, targetuser | having countaction==2
+
+stream=IAM where (action='USER_DISABLED' or action='USER_ENABLED') and targetuser='{TargetUser}' and user='{SuspectUser}'
+
+stream=firewall where action='PACKET_BLOCKED' and status='PASSED' and srctype='PRIVATE' | select srcip, count(action) as totalcount | groupby srcip | having totalcount > 1000
+
+stream=firewall where action=PACKET_BLOCKED' and status='PASSED' and srctype='PRIVATE' and srcip='{SuspectHost}' | duration 6m
+
+stream=THREAT where sourcename='CHECKPOINT-FIREWALL'
+ and not (threat in ('Search Engines / Portals', 'Syslog Protocol Violation', 'HTTPEmulation') or (srcip='10.10.1.110' and threat='SMTP Protection Violation'))
+ and  action='THREAT_DETECTED'
+ and  @action='Detect'
+|  groupby cnamtime,srcip,dstip,@action,threat,@resource,@src_user_name
+
+
+stream=FIREWALL where (((app='HTTP' or app='http') and not dstport in ('80','8080','8000')) or ((app='ssl' or app='SSL') and not dstport in ('443','8443')) or ((app='smtp' or app='SMTP') and not dstport in ('25')))
+ and not ((srcip in ('10.10.1.17', '10.10.1.171') and dstport='5666') or (dstip in ('192.168.2.1', '172.16.2.1') and dstport in ('4444', '4434')))
+ |  groupby srcip,dstip,dstport,app
+
+stream=FIREWALL where (((app='HTTP' or app='http') and not dstport in ('80','8080','8000')) or ((app='ssl' or app='SSL') and not dstport in ('443','8443')) or ((app='smtp' or app='SMTP') and not dstport in ('25'))) and srcip='{SuspectHost}' | duration 6m
+
+stream=* where violatedfield= "SrcIP" AND intel = "True" |  duration 30m | limit 100
+
+stream=FIREWALL where (((app='HTTP' or app='http') and not dstport in ('80','8080','8000')) or ((app='ssl' or app='SSL') and not dstport in ('443','8443')) or ((app='smtp' or app='SMTP') and not dstport in ('25')))
+ and not ((srcip in ('10.10.1.17', '10.10.1.171') and dstport='5666') or (dstip in ('192.168.2.1', '172.16.2.1') and dstport in ('4444', '4434')))
+ |  groupby srcip,dstip,dstport,app
+
+stream=FIREWALL where (((app='HTTP' or app='http') and not dstport in ('80','8080','8000')) or ((app='ssl' or app='SSL') and not dstport in ('443','8443')) or ((app='smtp' or app='SMTP') and not dstport in ('25'))) and srcip='{SuspectHost}' | duration 6m
+
+stream=* where violatedfield= "SrcIP" AND intel = "True" |  duration 30m | limit 100
+
+stream=* where violatedfield= "SrcIP" AND intel = "True" |  duration 30m | limit 100
+
+stream=ep-file where eid='11'| duration 1d |  groupby system , user, image, targetfilename, systemtstamp | select system, user, image as dropper_process, targetfilename as dropped_file, systemtstamp as file_creation_time 
+
+stream=* where violatedfield= "SrcIP" AND intel = "True" |  duration 30m | limit 100
+
+stream=win-audit where (eid='5136' or eid='5137') and not user like '%$%' and not user like '%@%' | groupby user, objectclass | duration 7d | limit 10
+
+stream=signals where sourcestream='THREAT' and occurrences > 5 and targethost='{TargetHost}' | duration 1h
+
+stream=signals where sourcestream='THREAT' and occurrences > 5 | duration 1h | groupby targethost
+
+stream=ep-process where eid = '1' | duration 1d  | checkif image in dropped_file_store.dropped_file
+
+stream=ep-file where eid='11'| duration 1d |  groupby system , user, image, targetfilename, systemtstamp | select system, user, image as dropper_process, targetfilename as dropped_file, systemtstamp as file_creation_time 
+
+stream=ep-image-load |  duration 1h | checkif image in dropped_file_store.dropped_file |  groupby system, user , signed, imageloaded
+
+stream=ep-network where eid = '3' | duration 1h  | checkif image in dropped_file_store.dropped_file |  groupby system, user , image , dstip , dstport
+
+stream=ep-process where eid = '10' | duration 1d |  groupby @SourceImage , system , user
+
+stream=ep-file where eid='11'| duration 1d |  groupby system , user, image, targetfilename, systemtstamp | select system, user, image as dropper_process, targetfilename as dropped_file, systemtstamp as file_creation_time 
+
+stream=windows-event where eid = '39' and user is not null | duration 15m |  groupby user , @Subject 
+
+stream=AUTHENTICATION where sourcename='PALOALTO'  |  duration 10d |  groupby cnamtime,system,user,@msg
+
+stream=FIREWALL where (((app='HTTP' or app='http') and not dstport in ('80','8080','8000')) or ((app='ssl' or app='SSL') and not dstport in ('443','8443')) or ((app='smtp' or app='SMTP') and not dstport in ('25')))
+ and not ((srcip in ('10.10.1.17', '10.10.1.171') and dstport='5666') or (dstip in ('192.168.2.1', '172.16.2.1') and dstport in ('4444', '4434')) or dstisp='Microsoft Corporation')
+ |  groupby srcip,dstip,dstport,app,dstisp
+
+stream=FIREWALL where (((app='HTTP' or app='http') and not dstport in ('80','8080','8000')) or ((app='ssl' or app='SSL') and not dstport in ('443','8443')) or ((app='smtp' or app='SMTP') and not dstport in ('25'))) and srcip='{SuspectHost}' | duration 6m
+
+stream=IAM where sourcename='CHECKPOINT-FIREWALL'
+| duration 10d
+|  groupby cnamtime,user,operation,@client_ip,@fieldschanges,@logic_changes
+
+stream=IAM where sourcename='CHECKPOINT-FIREWALL'
+| duration 10d
+|  groupby cnamtime,user,operation,@client_ip,@fieldschanges,@logic_changes
+
+stream=iam where (eid='4728' or eid='4729' or eid='4732' or eid='4733') and not user like '%$%' and not user like '%@%'  | duration 7d |  groupby group, user, action, membername | limit 10
+
+stream=iam where (eid='4723' or eid='4724') and not user like '%$%' and not user like '%@%' | groupby targetUser, user | duration 7d | limit 10
+
+stream=iam where eid='4720' and not user like '%$%' and not user like '%@%'  | duration 7d |  groupby targetuser, displayname, user   | limit 10
+
+stream=authentication where eid='4771' and not user like '%$%' and not user like '%@%' | groupby user, system | duration 7d | limit 10
+
+stream=authentication where (eid='4768' or eid='4769' or eid='4771' or eid='4776') and not user like '%$%' and not user like '%@%' | groupby user, system, action | duration 1d | limit 10
+
+stream=authentication where eid='4740' and not user like '%$%' and not user like '%@%' | groupby user | duration 7d | limit 10
+
+stream=authentication where eid='4768' and not user like '%$%' and not user like '%@%' | groupby user, system, action | duration 7d | limit 10
+
+stream=THREAT where sourcename='PALOALTO' and not subtype in ('file', 'url') and not threat='Microsoft Windows NTLMSSP Detection(92322)'
+|  groupby actiontaken,system,threat,@Rule,@usrName,@Application
+|  duration 1d
+
+stream=THREAT where sourcename='CHECKPOINT-FIREWALL'
+ and not (threat in ('Search Engines / Portals', 'Syslog Protocol Violation', 'HTTPEmulation') or (srcip='10.10.1.110' and threat='SMTP Protection Violation'))
+ and  action='THREAT_DETECTED'
+ and  @action='Detect'
+|  groupby cnamtime,srcip,dstip,@action,threat,@resource,@src_user_name
+
+
+stream=win-audit where eid="4673" and status="failed" and user='{SuspectUser}' and system='{TargetHost}' | duration 24h
+
+stream=THREAT where sourcename='CHECKPOINT-FIREWALL'
+ and not (threat in ('Search Engines / Portals', 'Syslog Protocol Violation', 'HTTPEmulation') or (srcip='10.10.1.110' and threat='SMTP Protection Violation'))
+ and  action='THREAT_DETECTED'
+ and  @action='Detect'
+|  groupby cnamtime,srcip,dstip,@action,threat,@resource,@src_user_name
+
+
+stream=win-audit where eid="4673" and status="FAILED" and user='{SuspectUser}' and system='{TargetHost}' | duration 24h
+
+stream=* | duration from 2024-08-06T00:00:00 to 2024-08-06T23:59:00 |  groupby devsrcip |  select devsrcip, sum(evtlen)
+
+stream=* where devsrcip="172.16.0.1" | duration from 2024-08-15T00:00:00 to 2024-08-15T23:59:00
+
+stream=* where devsrcip='10.10.1.253'
+|  groupby stream 
+| duration from 2024-08-01T00:00:00 to 2024-08-05T23:59:00 
+|  select stream, sum(evtlen)
+
+stream=* | duration from 2024-08-06T00:00:00 to 2024-08-06T23:59:00 |  groupby devsrcip |  select devsrcip, sum(evtlen)
+
+stream=* where devsrcip='10.10.1.253'
+|  groupby stream 
+| duration from 2024-08-01T00:00:00 to 2024-08-05T23:59:00 
+|  select stream, sum(evtlen)
+
+stream=* where stream in ('FIREWALL', 'THREAT') and devsrcip='10.10.1.253' and sourcename='CHECKPOINT-FIREWALL'  and  srcip like '10.10.58.%'
+|  groupby stream 
+| duration from 2024-08-07T00:00:00 to 2024-08-07T23:59:00 
+|  select stream, sum(evtlen)
+

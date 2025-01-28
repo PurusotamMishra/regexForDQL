@@ -20,7 +20,7 @@ function promptUserForQuery() {
 //     console.log('23', result.markers, result.time);
 
 
-    fs.readFile("./eDQL_queries/wbks-8.log", "utf8", (err, file) => {
+    fs.readFile("./edql-queries/wbks-12.log", "utf8", (err, file) => {
         // console.log(file.split(/\n/gm).filter(item => item !== '').filter(item => !/^stream/igm.test(item)))
         let queries = file.split(/\n/gm).filter(item => item !== '')
         var result = []
@@ -41,6 +41,7 @@ function promptUserForQuery() {
         }
         downloadCSV(result, 'resultwithHaving.xlsx')
         console.log(result)
+        // console.log(file, err)
       });
     
     rl.close();

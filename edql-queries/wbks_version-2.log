@@ -1,0 +1,349 @@
+stream=Firewall where sourcename="FORTIGATE" and action="PACKET_BLOCKED" | groupby srcip , system , dstip |  duration 15m 
+
+stream=firewall | groupby action, srcip | duration 1d
+
+stream=firewall | groupby action, srcip | duration 1d | limit 5
+
+stream=authentication where action="LOGIN" | duration 20m |groupby user, srcip, system | select user, srcip , system , count_if(status="PASSED") AS passed_count , count_if(status="FAILED") AS failed_count | having failed_count>50 and failed_count >5*passed_count
+
+stream=authentication where action="LOGIN" and system='{TargetHost}' and srcip= '{SuspectHost}' 
+
+stream=authentication where action="LOGIN" and system='{TargetHost}' and srcip='{SuspectHost}'
+
+stream=authentication where action="LOGIN" | duration 15m | groupby user , srcip , system | select user , srcip , system , count_if(status="PASSED") AS Passed_count , count_if(status="FAILED") AS Failed_count | having Failed_count>50 and Failed_count >5*Passed_count
+
+stream=Firewall where sourcename="FORTIGATE" and action="PACKET_BLOCKED" and srcip='{SuspectHost}' and dstip='{TargetHost}'
+
+stream=Firewall where sourcename="FORTIGATE" and action="PACKET_BLOCKED" | groupby srcip , system , dstip |  duration 15m 
+
+stream=authentication where action="LOGIN" and system='{TargetHost}' and srcip='{SuspectHost}'
+
+stream=authentication where action="LOGIN" | duration 15m | groupby user , srcip , system | select user , srcip , system , count_if(status="PASSED") AS Passed_count , count_if(status="FAILED") AS Failed_count | having Failed_count>50 and Failed_count >5*Passed_count
+
+stream=Firewall where sourcename="FORTIGATE" and action="PACKET_BLOCKED" and srcip='{SuspectHost}' and dstip='{TargetHost}'
+
+stream=Firewall where sourcename="FORTIGATE" and action="PACKET_BLOCKED" | groupby srcip , system , dstip |  duration 15m 
+
+stream=authentication where action="LOGIN" and system='{TargetHost}' and srcip= '{SuspectHost}' 
+
+stream=authentication where action="LOGIN" | duration 20m |groupby user, srcip, system | select user, srcip , system , count_if(status="PASSED") AS passed_count , count_if(status="FAILED") AS failed_count | having failed_count>50 and failed_count >5*passed_count
+
+stream=Firewall where sourcename="FORTIGATE" and action="PACKET_BLOCKED" | groupby srcip , system , dstip |  duration 15m 
+
+stream=Firewall where sourcename="FORTIGATE" and action="PACKET_BLOCKED" and srcip='{SuspectHost}' and dstip='{TargetHost}'
+
+stream=authentication where  action="LOGIN" and status="FAILED" | groupby user
+
+
+stream=authentication | where user= "theo.hamilton@plutusinc.org" and action='LOGIN' |groupby user, status| select user, status
+
+stream=authentication where action="LOGIN" | duration 20m |groupby srcip , system, user |  select user , srcip , system , count_if(status="PASSED") AS Passed_count , count_if(status="FAILED") AS Failed_count | having Failed_count>50 and Failed_count >5*Passed_count
+
+stream=authentication where action="LOGIN" | duration 20m |groupby user, srcip, system | select user, srcip , system , count_if(status="PASSED") AS passed_count , count_if(status="FAILED") AS failed_count | having failed_count>50 and failed_count >5*passed_count
+
+stream=authentication where action="LOGIN" | duration 20m |groupby srcip , system, user |  select user , srcip , system , count_if(status="PASSED") AS Passed_count , count_if(status="FAILED") AS Failed_count | having Failed_count>50 and Failed_count >5*Passed_count
+
+stream=authentication where action="LOGIN" | duration 20m |groupby srcip , system, user |  select user , srcip , system , count_if(status="PASSED") AS Passed_count , count_if(status="FAILED") AS Failed_count | having Failed_count>50 and Failed_count >5*Passed_count
+
+stream=authentication where action="LOGIN" | duration 20m |groupby srcip , system, user |  select user , srcip , system , count_if(status="PASSED") AS Passed_count , count_if(status="FAILED") AS Failed_count | having Failed_count>50 and Failed_count >5*Passed_count
+
+stream=authentication where action="LOGIN" | duration 20m |groupby srcip , system, user |  select user , srcip , system , count_if(status="PASSED") AS Passed_count , count_if(status="FAILED") AS Failed_count | having Failed_count>50 and Failed_count >5*Passed_count
+
+stream=authentication where action="LOGIN" | duration 20m |groupby srcip , system, user |  select user , srcip , system , count_if(status="PASSED") AS Passed_count , count_if(status="FAILED") AS Failed_count | having Failed_count>50 and Failed_count >5*Passed_count
+
+stream=authentication where action="LOGIN" and system='{TargetHost}' and srcip= '{SuspectHost}'
+
+stream=authentication where action="LOGIN" | duration 20m |groupby srcip , system, user |  select user , srcip , system , count_if(status="PASSED") AS Passed_count , count_if(status="FAILED") AS Failed_count | having Failed_count>50 and Failed_count >5*Passed_count
+
+stream=authentication where action="LOGIN" and system='{TargetHost}' and srcip= '{SuspectHost}'
+
+stream=authentication where action="LOGIN" | duration 20m |groupby user, srcip, system | select user, srcip , system , count_if(status="PASSED") AS passed_count , count_if(status="FAILED") AS failed_count | having failed_count>50 and failed_count >5*passed_count
+
+stream=authentication where action="LOGIN" and system='{TargetHost}' and srcip= '{SuspectHost}' 
+
+stream=authentication where action="LOGIN" | duration 20m |groupby srcip , system, user |  select user , srcip , system , count_if(status="PASSED") AS Passed_count , count_if(status="FAILED") AS Failed_count | having Failed_count>50 and Failed_count >5*Passed_count
+
+stream=authentication where action="LOGIN" | duration 20m |groupby user, srcip, system | select user, srcip , system , count_if(status="PASSED") AS passed_count , count_if(status="FAILED") AS failed_count | having failed_count>50 and failed_count >5*passed_count
+
+stream=authentication where action="LOGIN" and system='{TargetHost}' and srcip= '{SuspectHost}' 
+
+stream=authentication where action="LOGIN" | duration 20m |groupby srcip , system, user |  select user , srcip , system , count_if(status="PASSED") AS Passed_count , count_if(status="FAILED") AS Failed_count | having Failed_count>50 and Failed_count >5*Passed_count
+
+stream=authentication where action="LOGIN" and system='{TargetHost}' and srcip= '{SuspectHost}'
+
+stream=authentication where action="LOGIN" | duration 20m |groupby srcip , system, user |  select user , srcip , system , count_if(status="PASSED") AS Passed_count , count_if(status="FAILED") AS Failed_count | having Failed_count>50 and Failed_count >5*Passed_count
+
+stream=authentication where action="LOGIN" and system='{TargetHost}' and srcip= '{SuspectHost}'
+
+stream=Firewall where sourcename="FORTIGATE" and srcip='{SuspectHost}' and dstip='{TargetHost}'
+
+stream=Firewall where srctype='PRIVATE' and dsttype='PUBLIC' | groupby srcip , system , dstip |  duration 10m
+
+stream=Firewall where sourcename="FORTIGATE" and srcip='{SuspectHost}' and dstip='{TargetHost}'
+
+stream=Firewall where sourcename="FORTIGATE"  | groupby srcip , system , dstip |  duration 1m
+
+stream=authentication where action="LOGIN" and system='{TargetHost}' and srcip='{SuspectHost}'
+
+stream=authentication where action="LOGIN" | duration 15m | groupby user , srcip , system | select user , srcip , system , count_if(status="PASSED") AS Passed_count , count_if(status="FAILED") AS Failed_count | having Failed_count>50 and Failed_count >5*Passed_count
+
+stream=Firewall where sourcename="FORTIGATE" and srcip='{SuspectHost}' and dstip='{TargetHost}'
+
+stream=Firewall where sourcename="FORTIGATE"  | groupby srcip , system , dstip |  duration 1m
+
+stream=Firewall where srctype='PRIVATE' and dsttype='PUBLIC' | groupby srcip , system , dstip |  duration 10m
+
+stream=Firewall where sourcename="FORTIGATE" and srcip='{SuspectHost}' and dstip='{TargetHost}'
+
+stream=authentication where action="LOGIN" and system='{TargetHost}' and srcip='{SuspectHost}'
+
+stream=authentication where action="LOGIN" | duration 15m | groupby user , srcip , system | select user , srcip , system , count_if(status="PASSED") AS Passed_count , count_if(status="FAILED") AS Failed_count | having Failed_count>50 and Failed_count >5*Passed_count
+
+stream=authentication |  groupby user | select user,count (user) |  limit 20
+
+stream=authentication where action = 'LOGIN' and system= '{TargetHost}' and srcip = '{SuspectHost}'
+
+stream=authentication  where action='LOGIN'  | duration=10h |  groupby user,srcip,system | select user,srcip,system, count_if(Status='PASSED') AS PASSED_COUNT, count_if(Status='FAILED') AS FAILED_COUNT | having FAILED_COUNT>10 and FAILED_COUNT>10*PASSED_COUNT
+
+stream=authentication where action="LOGIN" and system='{TargetHost}' and srcip= '{SuspectHost}' 
+
+stream=authentication where action="LOGIN" | duration 20m |groupby user, srcip, system | select user, srcip , system , count_if(status="PASSED") AS passed_count , count_if(status="FAILED") AS failed_count | having failed_count>50 and failed_count >5*passed_count
+
+stream=authentication where action="LOGIN" | duration 20m |groupby srcip , system, user |  select user , srcip , system , count_if(status="PASSED") AS Passed_count , count_if(status="FAILED") AS Failed_count | having Failed_count>50 and Failed_count >5*Passed_count
+
+stream=authentication where action="LOGIN" and system='{TargetHost}' and srcip= '{SuspectHost}'
+
+stream=authentication where action="LOGIN" and system='{TargetHost}' and srcip= '{SuspectHost}'
+
+stream=authentication  where action='LOGIN'  | duration=10h |  groupby user,srcip,system | select user,srcip,system, count_if(Status='PASSED') AS PASSED_COUNT, count_if(Status='FAILED') AS FAILED_COUNT | having FAILED_COUNT>10 and FAILED_COUNT>10*PASSED_COUNT
+
+stream=authentication where action="LOGIN" | duration 20m |groupby user, srcip, system | select user, srcip , system , count_if(status="PASSED") AS passed_count , count_if(status="FAILED") AS failed_count | having failed_count>50 and failed_count >5*passed_count
+
+stream=authentication where action="LOGIN" | duration 20m |groupby srcip , system, user |  select user , srcip , system , count_if(status="PASSED") AS Passed_count , count_if(status="FAILED") AS Failed_count | having Failed_count>50 and Failed_count >5*Passed_count
+
+stream=authentication where action="LOGIN" and system='{TargetHost}' and srcip= '{SuspectHost}'
+
+stream=authentication where action="LOGIN" | duration 20m |groupby srcip , system, user |  select user , srcip , system , count_if(status="PASSED") AS Passed_count , count_if(status="FAILED") AS Failed_count | having Failed_count>50 and Failed_count >5*Passed_count
+
+stream=authentication where action="LOGIN" and system='{TargetHost}' and srcip= '{SuspectHost}'
+
+stream=authentication where action="LOGIN" and system='{TargetHost}' and srcip= '{SuspectHost}'
+
+stream=authentication  where action='LOGIN'  | duration=10h |  groupby user,srcip,system | select user,srcip,system, count_if(Status='PASSED') AS PASSED_COUNT, count_if(Status='FAILED') AS FAILED_COUNT | having FAILED_COUNT>10 and FAILED_COUNT>10*PASSED_COUNT
+
+stream=authentication where action="LOGIN"
+
+
+stream=authentication where  action="LOGIN" and status="FAILED" | groupby user
+
+
+stream=authentication where action="LOGIN" and system='{TargetHost}' and srcip= '{SuspectHost}'
+
+stream=authentication  where action='LOGIN'  | duration=10h |  groupby user,srcip,system | select user,srcip,system, count_if(Status='PASSED') AS PASSED_COUNT, count_if(Status='FAILED') AS FAILED_COUNT | having FAILED_COUNT>10 and FAILED_COUNT>10*PASSED_COUNT
+
+stream=authentication where action="LOGIN" and status="FAILED" |  groupby  user
+
+
+Stream=authentication where action= 'LOGIN' and status= "PASSED' and system = '{Targethost}' and srcip= '{SuspectHost}' | duration 1h
+
+stream=AUTHENTICATION where action='LOGIN' and status='PASSED' | duration 1h | select system, distinct_count(srcip) as CountSrcIP | groupby system | having CountSrcIP>3
+
+stream=authentication where action="LOGIN" | duration 20m |groupby srcip , system, user |  select user , srcip , system , count_if(status="PASSED") AS Passed_count , count_if(status="FAILED") AS Failed_count | having Failed_count>50 and Failed_count >5*Passed_count
+
+stream=authentication where action="LOGIN" and system='{TargetHost}' and srcip= '{SuspectHost}'
+
+Stream=authentication where action= 'LOGIN' and status= "PASSED' and system = '{Targethost}' and srcip= '{SuspectHost}' | duration 1h
+
+stream=AUTHENTICATION where action='LOGIN' and status='PASSED' | duration 1h | select system, distinct_count(srcip) as CountSrcIP | groupby system | having CountSrcIP>3
+
+Stream=authentication where action= 'LOGIN' and status= "PASSED' and system = '{Targethost}' and srcip= '{SuspectHost}' | duration 1h
+
+stream=AUTHENTICATION where action='LOGIN' and status='PASSED' | duration 1h | select system, distinct_count(srcip) as CountSrcIP | groupby system | having CountSrcIP>3
+
+stream=Firewall where sourcename="FORTIGATE" and action="PACKET_BLOCKED" | groupby srcip , system , dstip |  duration 15m 
+
+stream=Firewall where sourcename="FORTIGATE" and action="PACKET_BLOCKED" and srcip='{SuspectHost}' and dstip='{TargetHost}'
+
+stream=authentication where action="LOGIN" | duration 20m |groupby srcip , system, user |  select user , srcip , system , count_if(status="PASSED") AS Passed_count , count_if(status="FAILED") AS Failed_count | having Failed_count>50 and Failed_count >5*Passed_count
+
+stream=authentication where action="LOGIN" and system='{TargetHost}' and srcip= '{SuspectHost}'
+
+stream=authentication where action="LOGIN" | duration 20m |groupby srcip , system, user |  select user , srcip , system , count_if(status="PASSED") AS Passed_count , count_if(status="FAILED") AS Failed_count | having Failed_count>50 and Failed_count >5*Passed_count
+
+stream=authentication where action="LOGIN" and system='{TargetHost}' and srcip= '{SuspectHost}'
+
+stream=authentication where action="LOGIN" | duration 20m |groupby srcip , system, user |  select user , srcip , system , count_if(status="PASSED") AS Passed_count , count_if(status="FAILED") AS Failed_count | having Failed_count>50 and Failed_count >5*Passed_count
+
+stream=authentication where action="LOGIN" and system='{TargetHost}' and srcip= '{SuspectHost}'
+
+stream=authentication where action="LOGIN" | duration 20m |groupby srcip , system, user |  select user , srcip , system , count_if(status="PASSED") AS Passed_count , count_if(status="FAILED") AS Failed_count | having Failed_count>50 and Failed_count >5*Passed_count
+
+stream=authentication where action="LOGIN" and system='{TargetHost}' and srcip= '{SuspectHost}'
+
+stream=authentication where  action="LOGIN" and status="FAILED" | groupby user
+
+
+stream=authentication where action="LOGIN" and system='{TargetHost}' and srcip= '{SuspectHost}'
+
+stream=authentication where action="LOGIN" | duration 20m |groupby srcip , system, user |  select user , srcip , system , count_if(status="PASSED") AS Passed_count , count_if(status="FAILED") AS Failed_count | having Failed_count>30 or Failed_count >5*Passed_count
+
+stream=authentication where action="LOGIN" and system='{TargetHost}' and srcip= '{SuspectHost}' 
+
+stream=authentication where action="LOGIN" | duration 20m |groupby user, srcip, system | select user, srcip , system , count_if(status="PASSED") AS passed_count , count_if(status="FAILED") AS failed_count | having failed_count>50 and failed_count >5*passed_count
+
+stream=authentication |  groupby user | select user,count (user) |  limit 20
+
+stream=authentication where action="LOGIN" | duration 20m |groupby srcip , system, user |  select user , srcip , system , count_if(status="PASSED") AS Passed_count , count_if(status="FAILED") AS Failed_count | having Failed_count>50 and Failed_count >5*Passed_count
+
+stream=authentication where action="LOGIN" and system='{TargetHost}' and srcip= '{SuspectHost}'
+
+stream=authentication where action="LOGIN" | duration 20m |groupby srcip , system, user |  select user , srcip , system , count_if(status="PASSED") AS Passed_count , count_if(status="FAILED") AS Failed_count | having Failed_count>50 and Failed_count >5*Passed_count
+
+stream=authentication where action="LOGIN" and system='{TargetHost}' and srcip= '{SuspectHost}'
+
+stream=authentication | where action= "LOGIN" and status= "FAILED" | groupby user | limit 10
+
+stream=authentication where action="LOGIN" | duration 20m |groupby srcip , system, user |  select user , srcip , system , count_if(status="PASSED") AS Passed_count , count_if(status="FAILED") AS Failed_count | having Failed_count>50 and Failed_count >5*Passed_count
+
+stream=authentication where action="LOGIN" and system='{TargetHost}' and '{SuspectHost}'
+
+stream=authentication where action="LOGIN" | duration 20m |groupby srcip , system, user |  select user , srcip , system , count_if(status="PASSED") AS Passed_count , count_if(status="FAILED") AS Failed_count | having Failed_count>50 and Failed_count >5*Passed_count
+
+stream=authentication where action="LOGIN" and system='{TargetHost}' and '{SuspectHost}'
+
+stream=authentication where action="LOGIN" | duration 20m |groupby srcip , system, user |  select user , srcip , system , count_if(status="PASSED") AS Passed_count , count_if(status="FAILED") AS Failed_count | having Failed_count>50 and Failed_count >5*Passed_count
+
+stream=authentication where action="LOGIN" and system='{TargetHost}' and '{SuspectHost}'
+
+stream=authentication where action="LOGIN" | duration 20m |groupby srcip , system, user |  select user , srcip , system , count_if(status="PASSED") AS Passed_count , count_if(status="FAILED") AS Failed_count | having Failed_count>50 and Failed_count >5*Passed_count
+
+stream=authentication where action="LOGIN" and system='{TargetHost}' and '{SuspectHost}'
+
+stream=authentication where action="LOGIN" | duration 20m |groupby srcip , system, user |  select user , srcip , system , count_if(status="PASSED") AS Passed_count , count_if(status="FAILED") AS Failed_count | having Failed_count>50 and Failed_count >5*Passed_count
+
+stream=authentication where action="LOGIN" and system='{TargetHost}' and srcip= '{SuspectHost}'
+
+Stream=authentication where action= 'LOGIN' and status= "PASSED' and system = '{Targethost}' and srcip= '{SuspectHost}' | duration 1h
+
+stream=AUTHENTICATION where action='LOGIN' and status='PASSED' | duration 1h | select system, distinct_count(srcip) as CountSrcIP | groupby system | having CountSrcIP>3
+
+stream=Firewall where sourcename="FORTIGATE" and action="PACKET_BLOCKED" | groupby srcip , system , dstip |  duration 15m 
+
+stream=authentication where action="LOGIN" | duration 20m |groupby srcip , system, user |  select user , srcip , system , count_if(status="PASSED") AS Passed_count , count_if(status="FAILED") AS Failed_count | having Failed_count>50 and Failed_count >5*Passed_count
+
+stream=authentication where action="LOGIN" and system='{TargetHost}' and srcip= '{SuspectHost}'
+
+stream=Firewall where sourcename="FORTIGATE" and action="PACKET_BLOCKED" | groupby srcip , system , dstip |  duration 15m 
+
+stream=Firewall where sourcename="FORTIGATE" and action="PACKET_BLOCKED" and srcip='{SuspectHost}' and dstip='{TargetHost}'
+
+stream=authentication where action="LOGIN" | duration 20m |groupby srcip , system, user |  select user , srcip , system , count_if(status="PASSED") AS Passed_count , count_if(status="FAILED") AS Failed_count | having Failed_count>50 and Failed_count >5*Passed_count
+
+stream=authentication where action="LOGIN" and system='{TargetHost}' and '{SuspectHost}'
+
+stream=authentication where action="LOGIN" | duration 20m |groupby srcip , system, user |  select user , srcip , system , count_if(status="PASSED") AS Passed_count , count_if(status="FAILED") AS Failed_count | having Failed_count>50 and Failed_count >5*Passed_count
+
+stream=authentication where action="LOGIN" and system='{TargetHost}' and '{SuspectHost}'
+
+stream=authentication where action="LOGIN" | duration 20m |groupby user, srcip, system | select user, srcip , system , count_if(status="PASSED") AS passed_count , count_if(status="FAILED") AS failed_count | having failed_count>50 and failed_count >5*passed_count
+
+stream=authentication where action="LOGIN" | duration 20m |groupby user, srcip, system | select user, srcip , system , count_if(status="PASSED") AS passed_count , count_if(status="FAILED") AS failed_count | having failed_count>50 and failed_count >5*passed_count
+
+stream=authentication where action="LOGIN" and system='{TargetHost}' and srcip= '{SuspectHost}' 
+
+stream=authentication where action="LOGIN" and system='{TargetHost}' and srcip='{SuspectHost}'
+
+stream=authentication where action="LOGIN" | duration 15m | groupby user , srcip , system | select user , srcip , system , count_if(status="PASSED") AS Passed_count , count_if(status="FAILED") AS Failed_count | having Failed_count>50 and Failed_count >5*Passed_count
+
+stream=authentication where action="LOGIN" and system='{TargetHost}' and srcip='{SuspectHost}'
+
+stream=authentication where action="LOGIN" | duration 15m | groupby user , srcip , system | select user , srcip , system , count_if(status="PASSED") AS Passed_count , count_if(status="FAILED") AS Failed_count | having Failed_count>50 and Failed_count >5*Passed_count
+
+stream=authentication where action="LOGIN" and system='{TargetHost}' and srcip='{SuspectHost}'
+
+stream=authentication where action="LOGIN" | duration 15m | groupby user , srcip , system | select user , srcip , system , count_if(status="PASSED") AS Passed_count , count_if(status="FAILED") AS Failed_count | having Failed_count>50 and Failed_count >5*Passed_count
+
+stream=authentication where action="LOGIN" | duration 15m | groupby user , srcip , system | select user , srcip , system , count_if(status="PASSED") AS Passed_count , count_if(status="FAILED") AS Failed_count | having Failed_count>50 and Failed_count >5*Passed_count
+
+stream=authentication where action="LOGIN" and system='{TargetHost}' and srcip='{SuspectHost}'
+
+stream=authentication where action="LOGIN" | duration 20m |groupby srcip , system, user |  select user , srcip , system , count_if(status="PASSED") AS Passed_count , count_if(status="FAILED") AS Failed_count | having Failed_count>30 and Failed_count >5*Passed_count
+
+stream=authentication where action="LOGIN" and system='{TargetHost}' and srcip= '{SuspectHost}'
+
+stream=authentication where action="LOGIN" and system='{TargetHost}' and srcip='{SuspectHost}'
+
+stream=authentication where action="LOGIN" | duration 15m | groupby user , srcip , system | select user , srcip , system , count_if(status="PASSED") AS Passed_count , count_if(status="FAILED") AS Failed_count | having Failed_count>50 and Failed_count >5*Passed_count
+
+stream=authentication where action="LOGIN" | duration =20m | groupby user, srcip, system| select user, srcip, system, count_if(status="PASSED") AS PASS ,count_if(status="FAILED") AS FAIL| having FAIL>10 or FAIL>5*PASS
+
+stream=authentication where action="LOGIN" and system='{TargetHost}' and srcip='{SuspectHost}'
+
+stream=authentication where action="LOGIN" and system='{TargetHost}' and srcip='{SuspectHost}'
+
+stream=authentication where action="LOGIN" | duration 15m | groupby user , srcip , system | select user , srcip , system , count_if(status="PASSED") AS Passed_count , count_if(status="FAILED") AS Failed_count | having Failed_count>50 and Failed_count >5*Passed_count
+
+stream=authentication where action="LOGIN" and system='{TargetHost}' and srcip= '{SuspectHost}'
+
+stream=authentication  where action='LOGIN'  | duration=10h |  groupby user,srcip,system | select user,srcip,system, count_if(Status='PASSED') AS PASSED_COUNT, count_if(Status='FAILED') AS FAILED_COUNT | having FAILED_COUNT>10 and FAILED_COUNT>10*PASSED_COUNT
+
+stream=authentication where action="LOGIN" | duration =20m | groupby user, srcip, system| select user, srcip, system, count_if(status="PASSED") AS PASS ,count_if(status="FAILED") AS FAIL| having FAIL>10 or FAIL>5*PASS
+
+stream=authentication where action="LOGIN" and system='{TargetHost}' and srcip='{SuspectHost}'
+
+stream=authentication where action="LOGIN" | duration =20m | groupby user, srcip, system| select user, srcip, system, count_if(status="PASSED") AS PASS ,count_if(status="FAILED") AS FAIL| having FAIL>10 or FAIL>5*PASS
+
+stream=authentication where action="LOGIN" and system='{TargetHost}' and srcip='{SuspectHost}'
+
+Stream=authentication where action= 'LOGIN' and status= "PASSED' and system = '{Targethost}' and srcip= '{SuspectHost}' | duration 1h
+
+stream=AUTHENTICATION where action='LOGIN' and status='PASSED' | duration 1h | select system, distinct_count(srcip) as CountSrcIP | groupby system | having CountSrcIP>3
+
+stream=authentication where action="LOGIN" | duration =20m | groupby user, srcip, system| select user, srcip, system, count_if(status="PASSED") AS PASS ,count_if(status="FAILED") AS FAIL| having FAIL>10 or FAIL>5*PASS
+
+stream=authentication where action="LOGIN" and system='{TargetHost}' and srcip='{SuspectHost}'
+
+stream=authentication | where action= "LOGIN" and status= "PASSED" | groupby user | limit 10
+
+stream=authentication where action= "LOGIN" | duration 20m |  groupby user , srcip , system | select user , srcip , system , count_if(status="PASSED") AS passed_count , count_if(status="FAILED") AS failed_count |  having failed_count>50 and failed_count >5* passed_count
+
+stream=authentication where action="LOGIN" | duration =20m | groupby user, srcip, system| select user, srcip, system, count_if(status="PASSED") AS PASS ,count_if(status="FAILED") AS FAIL| having FAIL>10 or FAIL>5*PASS
+
+stream=authentication where action="LOGIN" and system='{TargetHost}' and srcip='{SuspectHost}'
+
+stream=authentication where action="LOGIN" and system='{TargetHost}' and srcip= '{SuspectHost}'
+
+stream=authentication where action="LOGIN" | duration 20m |groupby srcip , system, user |  select user , srcip , system , count_if(status="PASSED") AS Passed_count , count_if(status="FAILED") AS Failed_count | having Failed_count>30 or Failed_count >5*Passed_count
+
+stream=authentication where action="LOGIN" and system='{TargetHost}' and srcip='{SuspectHost}'
+
+stream=authentication where action="LOGIN" | duration 15m | groupby user , srcip , system | select user , srcip , system , count_if(status="PASSED") AS Passed_count , count_if(status="FAILED") AS Failed_count | having Failed_count>50 and Failed_count >5*Passed_count
+
+stream=authentication where  action='LOGIN' and status='FAILED' |  groupby user | limit 5
+
+stream=authentication where  action='LOGIN' and status='FAILED' |  groupby user | limit 5
+
+stream=authentication where action="LOGIN" | duration =20m | groupby user, srcip, system| select user, srcip, system, count_if(status="PASSED") AS PASS ,count_if(status="FAILED") AS FAIL| having FAIL>10 or FAIL>5*PASS
+
+stream=authentication where action="LOGIN" and system='{TargetHost}' and srcip='{SuspectHost}'
+
+stream=authentication where action="LOGIN" and system='{TargetHost}' and srcip='{SuspectHost}'
+
+stream=authentication where action="LOGIN" | duration 15m | groupby user , srcip , system | select user , srcip , system , count_if(status="PASSED") AS Passed_count , count_if(status="FAILED") AS Failed_count | having Failed_count>50 and Failed_count >5*Passed_count
+
+stream=authentication where action="LOGIN" | duration 20m |groupby srcip , system, user |  select user , srcip , system , count_if(status="PASSED") AS Passed_count , count_if(status="FAILED") AS Failed_count | having Failed_count>50 and Failed_count >5*Passed_count
+
+stream=authentication where action="LOGIN" and system='{TargetHost}' and '{SuspectHost}'
+
+stream=authentication where action="LOGIN" | duration 20m |groupby srcip , system, user |  select user , srcip , system , count_if(status="PASSED") AS Passed_count , count_if(status="FAILED") AS Failed_count | having Failed_count>50 and Failed_count >5*Passed_count
+
+stream=authentication where action="LOGIN" and system='{TargetHost}' and '{SuspectHost}'
+
+stream=authentication where action="LOGIN" | duration 20m |groupby srcip , system, user |  select user , srcip , system , count_if(status="PASSED") AS Passed_count , count_if(status="FAILED") AS Failed_count | having Failed_count>50 and Failed_count >5*Passed_count
+
+stream=authentication where action="LOGIN" and system='{TargetHost}' and '{SuspectHost}'
+
+stream=authentication where action="LOGIN" and system='{TargetHost}' and srcip= '{SuspectHost}'
+
+stream=authentication where action="LOGIN" | duration 20m |groupby srcip , system, user |  select user , srcip , system , count_if(status="PASSED") AS Passed_count , count_if(status="FAILED") AS Failed_count | having Failed_count>30 or Failed_count >5*Passed_count
+

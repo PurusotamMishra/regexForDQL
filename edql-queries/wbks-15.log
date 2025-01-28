@@ -1,0 +1,120 @@
+stream=* |  duration from 2024-06-04T00:00:00 to 2024-06-04T23:59:59 |  groupby devsrcip
+
+stream=signals where detectionname='PaloAlto Brute Force Access' | duration 7d | groupby TargetUser, SuspectHost | select TargetUser, SuspectHost, count(TargetUser, SuspectHost) as AttackCount
+
+stream=AUTHENTICATION where action='LOGIN' and sourcename='PALOALTO' and srcType='PUBLIC'| duration 1d | select CNAMTime, sourcename, system, user, srccn, srcip
+
+stream=AUTHENTICATION where action='LOGIN' and srcType='PUBLIC' and status='PASSED'| duration 7d | groupby srccn
+
+stream=AUTHENTICATION where action='LOGIN' and srcType='PUBLIC' and status='FAILED' and not user=''| duration 24h | groupby user
+
+stream=firewall where app='open-vpn' | duration 1d | select systemtstamp, app, srcip, dstip, proto, rulename, srctype, status, logevent
+
+stream=authentication where status='FAILED' AND action='LOGIN' AND sourcename='PALOALTO' AND (srctype='PUBLIC' or srctype is null) | duration 7d | groupby srcip
+
+stream=authentication where action='LOGIN' AND status='PASSED' AND substring(Xhour, 9, 10) <= 13 and  substring(Xhour, 9, 10) >= 22  and user='{SuspectUser}' and system='{TargetHost}' | duration 6m
+
+stream=authentication where action='LOGIN' AND status='PASSED' AND substring(Xhour, 9, 10) <= 13 and  substring(Xhour, 9, 10) >= 22 | groupby user, system
+
+stream=authentication where sourcename='CISCO-DUO'| duration 1d | select cnamtime, user, status, @access_device.hostname, @auth_device.name, @access_device.location.country, @auth_device.location.country, @adaptive_trust_assessments.remember_me.trust_level as Risk_Level, @adaptive_trust_assessments.remember_me.reason as Trust_Reason, logevent
+
+stream=AUTHENTICATION where action='LOGIN' and sourcename='PALOALTO' and srcType='PUBLIC'| duration 1d | groupby srccn
+
+stream=authentication where status='FAILED' AND action='LOGIN' AND sourcename='PALOALTO' | duration 7d | groupby user 
+
+stream=AUTHENTICATION where NOT srccn='-' AND sourcename='CISCO-DUO' | duration 7d | groupby srccn
+
+stream=firewall where dstport='3389' or dstport='22' and logevent like '%action=allow%'| duration 1d | groupby srccn
+
+stream=AUTHENTICATION where sourcename='CISCO-DUO' AND status='PASSED' | duration 1d | groupby user
+
+stream=authentication where status='PASSED' AND action='LOGIN' AND sourcename='PALOALTO' AND (srctype='PUBLIC' or srctype is null) | duration 7d | groupby srcip
+
+stream=signals where detectionname='PaloAlto Brute Force Access' | duration 7d | groupby TargetUser, SuspectHost | select TargetUser, SuspectHost, count(TargetUser, SuspectHost) as AttackCount
+
+stream=threat where sourcename='CROWDSTRIKE-FALCON' | duration 7d | select system, user, file, hash, message, @Cs3Label, logevent
+
+stream=signals where detectionname='PaloAlto Concurrent Failed Logins from multiple Sources' | duration 7d | groupby targetuser | select targetuser, distinct_count(signal_url) as Multi_Src_Failed_Occurence
+
+stream=AUTHENTICATION where sourcename='CISCO-DUO' and user='{TargetUser}' and srcip='{SuspectHost}' | duration 20m
+
+stream=AUTHENTICATION where sourcename='CISCO-DUO' | duration 15m | select srcip, user, srcip, count_if(status='FAILED') as failcount, count_if(status='PASSED') as passcount | groupby srcip, user | having failcount >= 5 and passcount >=1
+
+stream=signals where detectionname='PaloAlto Concurrent Failed Logins from multiple Sources' | duration 7d | select TargetUser, Signal_Url
+
+stream=AUTHENTICATION where sourcename='CISCO-DUO' AND status='FAILED' | duration 1d | groupby user
+
+stream=authentication where sourcename='CISCO-DUO' and SrcIp={SuspectHost}| duration 1d 
+
+stream=authentication where sourcename='CISCO-DUO' and not (@adaptive_trust_assessments.remember_me.trust_level='LOW' or @adaptive_trust_assessments.remember_me.trust_level='NORMAL')| duration 1d | select cnamtime, user, status, @access_device.hostname, @auth_device.name, @access_device.location.country, @auth_device.location.country, @adaptive_trust_assessments.remember_me.trust_level as Risk_Level, @adaptive_trust_assessments.remember_me.reason as Trust_Reason, logevent
+
+stream=firewall where action='PACKET_ALLOWED' and proto='icmp' and dsttype='PUBLIC' | select srcip, dstip, avg(txlen) as avgtxlen, count(srcip, dstip) as cntcount | groupby srcip, dstip | having avgtxlen > 1000 and cntcount > 20
+
+stream=firewall where action='PACKET_ALLOWED' and proto='ICMP' and dsttype='PUBLIC' and srcip='{TargetHost}' and dstip='{SuspectHost}' | duration 6m
+
+stream=Authentication where sourcename='CROWDSTRIKE-FALCON' and action='LOGIN'  | duration 7d | groupby user, status
+
+stream=AUTHENTICATION where sourcename='CISCO-DUO' | duration 7d | timeslice 1d
+
+stream=Authentication where sourcename='HYPERCLOUD' and action='LOGIN'  | duration 7d | groupby user, status
+
+stream=Authentication where sourcename='NIX' and action='LOGIN' and authproto='SSH'| groupby srcip, status, system  | duration 7d 
+
+stream=FIREWALL where action='PACKET_ALLOWED' and dstport='3389' and srctype='PRIVATE' and dsttype='PUBLIC' and srcip='{SuspectHost}' and dstip='{TargetHost}' | duration 6m
+
+stream=FIREWALL where action='PACKET_ALLOWED' and dstport='3389' and srctype='PRIVATE' and dsttype='PUBLIC' | groupby srcip, dstip | duration 6m
+
+stream=Authentication where sourcename='NIX' and action='LOGIN' and authproto='SSH' and SrcIP={SuspectUser} and System={TargetHost}
+
+stream=Authentication where sourcename='NIX' and action='LOGIN' and authproto='SSH' | duration 15min | select srcip, system, count_if(status='FAILED') as failcount, count_if(status='PASSED') as passcount | groupby srcip, system | having failcount >= 10 and passcount >=1
+
+stream=firewall where dsttype='PUBLIC' and action='PACKET_ALLOWED' and not srctype='PRIVATE' and dstport in ('139', '445') and srcip='{SuspectHost}' and dstip='{TargetHost}' and dstport='{TargetPort}' | duration 6m
+
+stream=firewall where dsttype='PUBLIC' and action='PACKET_ALLOWED' and not srctype='PRIVATE' and dstport in ('139', '445') | select srcip, dstip, dstport | groupby srcip, dstip, dstport
+
+stream=AUTHENTICATION where sourcename='CISCO-DUO' AND status='PASSED' AND @auth_device.location.country is not null AND @auth_device.location.state is not null AND @auth_device.location.city is not null | duration 7d | groupby @auth_device.location.country, @auth_device.location.state, @auth_device.location.city
+
+stream=AUTHENTICATION where sourcename='CISCO-DUO' AND status='FAILED' | duration 7d | groupby user | limit 10
+
+stream=AUTHENTICATION where sourcename='CISCO-DUO' AND status='FAILED' | duration 7d | groupby reason
+
+stream=AUTHENTICATION where sourcename='CISCO-DUO' AND status='FAILED' | duration 7d | groupby srccn
+
+stream=AUTHENTICATION where sourcename='CISCO-DUO' AND status='PASSED' | duration 7d | groupby @reason
+
+stream=AUTHENTICATION where sourcename='CISCO-DUO' AND status='FAILED' | duration 7d | groupby @factor
+
+stream=AUTHENTICATION where sourcename='CISCO-DUO' AND status='FAILED' | duration 7d | groupby @application.name
+
+stream=AUTHENTICATION where sourcename='CISCO-DUO' AND status='PASSED' | duration 7d | groupby user | limit 10
+
+stream=AUTHENTICATION where sourcename='CISCO-DUO' AND status='PASSED' | duration 7d
+
+stream=AUTHENTICATION where sourcename='CISCO-DUO' AND status='PASSED' | duration 7d | groupby @factor
+
+stream=AUTHENTICATION where sourcename='CISCO-DUO' AND status='FAILED' | duration 7d
+
+stream=AUTHENTICATION where sourcename='CISCO-DUO' AND status='FAILED' AND @auth_device.location.country is not null AND @auth_device.location.state is not null AND @auth_device.location.city is not null | duration 7d | groupby @auth_device.location.country, @auth_device.location.state, @auth_device.location.city
+
+stream=AUTHENTICATION where sourcename='CISCO-DUO' AND status='PASSED' | duration 7d | groupby srccn
+
+stream=AUTHENTICATION where sourcename='CISCO-DUO' AND status='PASSED' | duration 7d | groupby @application.name
+
+stream=AUTHENTICATION where action='LOGIN' and status='PASSED' and srcip not in ('127.0.0.1', '-', '::1') and system='{TargetHost}' and user='{TargetUser}' | duration 6m
+
+stream=AUTHENTICATION where action='LOGIN' and status='PASSED'  and srcip not in ('127.0.0.1', '-', '::1') | select user, system, distinct_count(srcip) as CntSrcIP | groupby user, system | having CntSrcIP > 3
+
+stream=AUTHENTICATION where sourcename='PALOALTO' AND status='FAILED' AND action='LOGIN' | groupby user, srcip | having count_col1 > 3
+
+stream=AUTHENTICATION where sourcename='PALOALTO' AND status='FAILED' AND action='LOGIN' and user='{TargetUser}' and srcip='{SuspectHost}' | duration 6m
+
+stream=authentication where status='PASSED' AND action='LOGIN' AND sourcename='PALOALTO' | duration 7d | groupby user
+
+stream=AUTHENTICATION where status='FAILED' AND action='LOGIN' AND sourcename='PALOALTO' | duration 15m | groupby user | select user, distinct_count(srcip) as ipcount | having ipcount > 2
+
+stream=AUTHENTICATION where status='FAILED' AND action='LOGIN' AND sourcename='PALOALTO' and user='{TargetUser}' | duration 16m
+
+stream=AUTHENTICATION where action='LOGIN' and srcip!='-' | duration 15m | select srcip, system, count_if(status='FAILED') as failcount, count_if(status='PASSED') as passcount | groupby srcip, system | having failcount >=50 and failcount >= passcount * 5
+
+stream=AUTHENTICATION where action='LOGIN' and system='{TargetHost}' and srcip='{SuspectHost}' | duration 16m
+

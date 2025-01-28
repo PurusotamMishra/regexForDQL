@@ -1,0 +1,869 @@
+stream=authentication where user='derika.toro@earnin.com' | duration 1d
+
+stream=authentication where action='LOGIN' AND user='derika.toro@earnin.com' | duration 4h
+
+stream=crowdstrike where rawaction="ProcessRollup2V19" and rlike(logevent, 'ImageFileName.*?WMIC.exe' | groupby agentid, logevent
+
+stream=aws-cloudtrail | groupby eventtype | limit 100
+
+stream=aws-cloudtrail | where eventsource='ec2.amazonaws.com' | groupby eventname | limit 100
+
+stream=authentication
+
+stream=aws-cloudtrail | where eventname='RunInstances' 
+
+stream=ep-process where action='PROCESS_ADDED' and image like '%lsass%exe%' and (grantedaccess='0x1010' or grantedaccess='0x1410' or grantedaccess='0x143A') | groupby user, system
+
+stream=ep-process where action='PROCESS_ADDED' and image like '%lsass%exe%' and (grantedaccess='0x1010' or grantedaccess='0x1410' or grantedaccess='0x143A') and system='{TargetHost}' and user='{SuspectUser}' | duration 6m
+
+stream=l7-edge-gateway where logevent like '%TCP%' and rlike(referer,'(?i).*[a-zA-Z]{4,5}\.(pw|us|club|info|site|top).*') and not domain like '%zoom%us%' AND User='{TargetUser}' AND SrcIP='{TargetHost}' AND URL='{SuspectHost}' | duration 10m
+
+stream=l7-edge-gateway where logevent like '%TCP%' and rlike(referer,'(?i).*[a-zA-Z]{4,5}\.(pw|us|club|info|site|top).*') and not domain like '%zoom%us%' | groupby User,URL,SrcIP 
+
+stream=l7-edge-gateway where url like '%/list/suc?name=%' | groupby User,URL,SrcIP
+
+stream=l7-edge-gateway where url like '%/list/suc?name=%' AND User='{TargetUser}' AND SrcIP='{TargetHost}' AND URL='{SuspectHost}' | duration 6m
+
+stream=authentication where sourcename='OKTA' and eventtype='group.user_membership.add' |  groupby actor |  duration 200d |  timeslice 1d
+
+stream=ztna-deviceposture where (posturecheckname='Mac OS Version' or posturecheckname='Windows OS Version') |  groupby user |  duration 7d
+
+stream=authentication where sourcename='OKTA' and @client.device = 'Computer' and eventtype='user.session.start' and user like '%earnin.com' and not srccn in ('PH')  |  groupby user |  duration 7d
+
+stream=crowdstrike 
+where rawaction='ProcessRollup2V19' 
+and (
+    (rlike(logevent, 'ImageFileName.*?wevtutil.exe') and (rlike(logevent, 'CommandLine.*?cl') or rlike(logevent, 'CommandLine.*?clear-log'))) 
+    or 
+    (rlike(logevent, 'ImageFileName.*?powershell.exe') and rlike(logevent, 'CommandLine.*?clear-eventlog'))
+) 
+| groupby agentid, logevent
+
+stream=crowdstrike where rawaction="ProcessRollup2V19" and rlike(logevent, 'ImageFileName.*?WMIC.exe' | groupby agentid, logevent
+
+stream=flow where dstport='22' and srctype='PUBLIC' and sourcename='AMAZON-VPC' and rawaction='ACCEPT' |  duration 2h | select srcip, srcport, srccn, srcisp, dstip, dstport, rawaction
+
+stream=crowdstrike where rawaction='ProcessRollup2V19'
+
+stream=l7-edge-gateway where user like '%earnin.com' and not srccn in ('-', 'CN') | select array_join(array(user,srccn), ',') as usercountry | groupby usercountry |  duration 1h
+
+stream=aws-cloudtrail where eventname='GetObject' AND logevent LIKE '%keerati.thiwanruk@earnin.com%' | duration 7d
+
+stream=aws-cloudtrail where eventname='GetObject' AND useraccesskeyid='ASIASP6HG52TQE7VXEHN' | duration 12d
+
+stream=aws-cloudtrail where eventname='GetObject' | limit 100
+
+stream=l7-edge-gateway where rlike(url,"\.exe|\.vbs|\.bat|\.rar|\.ps1|\.doc|\.docm|\.xls|\.xlsm|\.pptm|\.rtf|\.hta|\.dll|\.ws|\.wsf|\.sct|\.zip") and rlike(referer,"\.country|\.stream|\.gdn|\.mom|\.xin|\.kim|\.men|\.loan|\.download|\.racing|\.online|\.science|\.ren|\.gb|\.win|\.top|\.review|\.vip|\.party|\.tech|\.xyz|\.date|\.faith|\.zip|\.cricket|\.space|\.info|\.vn|\.cm|\.am|\.cc|\.asia|\.ws|\.tk|\.biz|\.su|\.st|\.ro|\.ge|\.ms|\.pk|\.nu|\.me|\.ph|\.to|\.tt|\.name|\.tv|\.kz|\.tc|\.mobi|\.study|\.click|\.link|\.trade|\.accountant|\.cf|\.gq|\.ml|\.ga|\.pw") AND User='{TargetUser}' AND SrcIP='{TargetHost}' AND URL='{SuspectHost}' | duration 10m
+
+stream=l7-edge-gateway where rlike(url,"\.exe|\.vbs|\.bat|\.rar|\.ps1|\.doc|\.docm|\.xls|\.xlsm|\.pptm|\.rtf|\.hta|\.dll|\.ws|\.wsf|\.sct|\.zip") and rlike(referer,"\.country|\.stream|\.gdn|\.mom|\.xin|\.kim|\.men|\.loan|\.download|\.racing|\.online|\.science|\.ren|\.gb|\.win|\.top|\.review|\.vip|\.party|\.tech|\.xyz|\.date|\.faith|\.zip|\.cricket|\.space|\.info|\.vn|\.cm|\.am|\.cc|\.asia|\.ws|\.tk|\.biz|\.su|\.st|\.ro|\.ge|\.ms|\.pk|\.nu|\.me|\.ph|\.to|\.tt|\.name|\.tv|\.kz|\.tc|\.mobi|\.study|\.click|\.link|\.trade|\.accountant|\.cf|\.gq|\.ml|\.ga|\.pw") |  groupby User,URL,SrcIP 
+
+stream=iam where sourcename="OKTA" and eventtype='security.threat.detected' and RawStatus in ('RATE_LIMIT','ALLOW') and devsrcip='{TargetResource}' and srcip='{SuspectHost}' and reason='{SuspectProcess}' | duration 6m
+
+stream=iam where sourcename="OKTA" and eventtype='security.threat.detected' and RawStatus in ('RATE_LIMIT','ALLOW') | groupby devsrcip, srcip, srcisp, srccn, rawstatus, reason 
+
+stream=l7-edge-ingress where action='URL_ALLOWED' and not srccn='PH' |  select srcip, distinct_count(requestpath) |  groupby srcip 
+
+stream=aws-cloudtrail where eventsource='sts.amazonaws.com' and user='daniel.jensen@earnin.com' and eventname in ('AssumeRole','AssumeRoleWithSAML','AssumeRoleWithWebIdentity','GetFederationToken','GetSessionToken') |  groupby @requestParameters.roleArn |  duration 60m
+
+stream=aws-cloudtrail where recipientaccountid='122473544600' and eventsource='ec2.amazonaws.com' and eventname in ('AuthorizeSecurityGroupEgress', 'AuthorizeSecurityGroupIngress', 'CreateSecurityGroup', 'DeleteSecurityGroup', 'ModifySecurityGroupRules', 'RevokeSecurityGroupEgress', 'RevokeSecurityGroupIngress') |  duration from 2024-01-01T00:00:00 to 2024-03-31T23:59:00
+
+stream=github where rawaction in ('dependabot_alerts.disable','dependabot_alerts_new_repos.disable','dependabot_security_updates.disable','dependabot_security_updates_new_repos.disable','repository_secret_scanning_push_protection.disable','secret_scanning.disable','secret_scanning_new_repos.disable','bypass','business.disable_oidc','business.disable_saml','business.disable_two_factor_requirement','business.members_can_update_protected_branches.disable','business.referrer_override_disable','business_advanced_security.disabled','business_advanced_security.disabled_for_new_repos','business_secret_scanning.disable','business_secret_scanning.disabled_for_new_repos','business_secret_scanning_custom_pattern_push_protection.disabled','business_secret_scanning_push_protection.disable','business_secret_scanning_push_protection.disabled_for_new_repos','business_secret_scanning_push_protection_custom_message.disable','org.advanced_security_disabled_for_new_repos','org.advanced_security_disabled_on_all_repos','org.advanced_security_policy_selected_member_disabled','repo.advanced_security_disabled','repo.advanced_security_policy_selected_member_disabled') | groupby rawaction, user, ResourceName
+
+stream=github where rawaction in ('dependabot_alerts.disable','dependabot_alerts_new_repos.disable','dependabot_security_updates.disable','dependabot_security_updates_new_repos.disable','repository_secret_scanning_push_protection.disable','secret_scanning.disable','secret_scanning_new_repos.disable','bypass','business.disable_oidc','business.disable_saml','business.disable_two_factor_requirement','business.members_can_update_protected_branches.disable','business.referrer_override_disable','business_advanced_security.disabled','business_advanced_security.disabled_for_new_repos','business_secret_scanning.disable','business_secret_scanning.disabled_for_new_repos','business_secret_scanning_custom_pattern_push_protection.disabled','business_secret_scanning_push_protection.disable','business_secret_scanning_push_protection.disabled_for_new_repos','business_secret_scanning_push_protection_custom_message.disable','org.advanced_security_disabled_for_new_repos','org.advanced_security_disabled_on_all_repos','org.advanced_security_policy_selected_member_disabled','repo.advanced_security_disabled','repo.advanced_security_policy_selected_member_disabled') and rawaction='{SuspectAction}' and user='{SuspectUser}' and resourcename='{TargetResource}' 
+
+stream=gsuite where app='login' and name='gov_attack_warning' | groupby user 
+
+stream=gsuite and app='login' and name='gov_attack_warning' and user='{SuspectUser}' | duration 1h
+
+stream=l7-edge-gateway where action='URL_BLOCKED' | groupby @Email, url  |select @Email, url, count(url) as url_count | having url_count > 100
+
+stream=l7-edge-gateway where action='URL_BLOCKED' and @Email='{TargetHost}' and url='{SuspectHost}' | duration 6m
+
+stream=nativeapi where attributesenv='production' and not attributesauthorizationhash = ''  |  select ipaddress, distinct_count(devicestaticid) |  groupby ipaddress |  duration 24h
+
+stream=l7-edge-gateway where url like "%index%index.php_h=%" | groupby User,URL,SrcIP 
+
+stream=l7-edge-gateway where url like "%index%index.php_h=%" AND User='{TargetUser}' AND SrcIP='{TargetHost}' AND URL='{SuspectHost}' | duration 10m
+
+stream=aws-rds where not databasename = '' | select array_join(array(devsrcip,databasename,user), ',') as EnvDBNameUserMapping | groupby EnvDBNameUserMapping 
+
+stream=aws-rds where not databasename = '' and array_join(array(devsrcip,databasename,user), ',') = '%{TargetResource}' | duration 6m 
+
+stream=l7-edge-gateway  where (useragent like 'XMRig%' or useragent like 'ccminer%')  AND User='{TargetUser}' AND SrcIP='{TargetHost}' AND URL='{SuspectHost}' | duration 10m
+
+stream=l7-edge-gateway  where (useragent like 'XMRig%' or useragent like 'ccminer%')  |  groupby User,URL,SrcIP 
+
+stream=aws-cloudtrail where errorcode is null and eventsource="route53.amazonaws.com" and eventname="DisableDomainTransferLock" and user like '%{SuspectUser}' and useraccountid like '%{TargetResource}' and userarn like '%{SuspectObject}' and srcip like '%{SuspectHost}' | duration 6m
+
+stream=aws-cloudtrail where errorcode is null and eventsource="route53.amazonaws.com" and eventname="DisableDomainTransferLock" | groupby user, userarn, srcip, useraccountid
+
+stream=l7-edge-ingress where action='URL_ALLOWED' and (targethost='ccc.earnin.net' or targethost='retool.earnin.com') and not srcisp='{SuspectHost}' | duration 6m
+
+stream=l7-edge-ingress where action='URL_ALLOWED' and (targethost='ccc.earnin.net' or targethost='retool.earnin.com') and not srcisp is null |  groupby srcisp 
+
+stream=aws-cloudtrail where eventsource='iam.amazonaws.com' and eventname in ('CreateSAMLProvider', 'DeleteSAMLProvider', 'UpdateSAMLProvider') and user like '%{SuspectUser}' and recipientaccountid like '%{TargetResource}' and userarn like '%{SuspectObject}' and srcip like '%{SuspectHost}' | duration 6m
+
+stream=aws-cloudtrail where eventsource='iam.amazonaws.com' and eventname in ('CreateSAMLProvider', 'DeleteSAMLProvider', 'UpdateSAMLProvider')  |  groupby user, userarn, srcip, recipientaccountid
+
+stream=aws-rds where srctype='PUBLIC'
+
+stream=aws-rds where srctype='PUBLIC' and databasename='{TargetHost}' and devsrcip='{TargetResource}' and user='{SuspectUser}' and srcip='{SuspectObject}' | duration 6m
+
+stream=* | groupby stream | duration from 2024-01-25T00:00:00 to 2024-01-25T23:59:00
+
+stream=l7-edge-gateway  where rlike(url,".*\.(rar|ps1).*") AND User='{TargetUser}' AND SrcIP='{TargetHost}' AND URL='{SuspectHost}' | duration 10m
+
+stream=l7-edge-gateway  where rlike(url,".*\.(rar|ps1).*") | groupby User,URL,SrcIP 
+
+stream=Nextdlp where httppath="/api/v1/login" and user="chris.clardy" and httpremoteaddress="71.218.187.83" | duration 7d
+
+stream=Nextdlp where httppath='/api/v1/login' and httpremoteaddress!='8.29.109.166' and httpremoteaddress!='8.29.228.146'| groupby cnamtime, user, role, httpremoteaddress, httpuseragent  | duration 1d
+
+stream=authentication where sourcename="OKTA" and srcip="71.218.187.83" | groupby cnamtime, user, srcip, sourcename, action, rawstatus, displaymessage, eventtype | duration 1d
+
+stream=* | groupby stream | duration from 2024-01-30T00:00:00 to 2024-01-30T23:59:00
+
+stream=aws-cloudtrail where eventname in ('AssumeRole','AssumeRoleWithSAML','AssumeRoleWithWebIdentity','GetFederationToken','GetSessionToken') and eventsource='sts.amazonaws.com' 
+
+stream=l7-edge-gateway where useragent=""  AND User='{TargetUser}' AND SrcIP='{TargetHost}' AND URL='{SuspectHost}' | duration 6m
+
+stream=l7-edge-gateway where useragent=""  |  groupby User,URL,SrcIP
+
+stream=iam where sourcename="OKTA" and status='PASSED' and eventtype in ('user.mfa.factor.deactivate', 'user.mfa.factor.suspend') and not displayMessage='Reset factor for user' and not status='SUCCESS' and user='{SuspectUser}' and eventtype='{TargetResource}' | duration 15m
+
+stream=iam where sourcename="OKTA" and status='PASSED' and eventtype in ('user.mfa.factor.deactivate', 'user.mfa.factor.suspend') and not displayMessage='Reset factor for user' and not status='SUCCESS' | groupby user, eventtype
+
+stream=crowdstrike-cspm where detectiontype='ioa' | duration 1d | groupby @CloudtrailTime, PolicyStatement, AwsAccountId, CloudService, EventName, ResourceName, UserArn, @LogEvent.user_agent, @PolicyID
+
+stream=l7-edge-gateway where useragent like '%WindowsPowerShell%' AND User='{TargetUser}' AND SrcIP='{TargetHost}' AND URL='{SuspectHost}' | duration 6m
+
+stream=l7-edge-gateway where useragent like '%WindowsPowerShell%' and not url like '%automox.com%' |  groupby User,URL,SrcIP 
+
+stream=l7-edge-gateway where ((useragent="Mozilla/5.0 (Windows NT 6.1; WOW64; Trident/7.0; rv:11.0) like Gecko" and dsthost="www.amazon.com" and HTTPmethod="GET" and url like "%/s/ref=nb\_sb\_noss\_1/167-3294888-0262949/field-keywords=books%" and cs-cookie like "%=csm-hit=s-24KU11BB82RZSYGJ3BDK|1419899012996") or (HTTPmethod="POST" and url like "%/N4215/adj/amzn.us.sr.aps%"))  AND User='{TargetUser}' AND SrcIP='{TargetHost}' AND URL='{SuspectHost}' | duration 10m
+
+stream=l7-edge-gateway where ((useragent="Mozilla/5.0 (Windows NT 6.1; WOW64; Trident/7.0; rv:11.0) like Gecko" and dsthost="www.amazon.com" and HTTPmethod="GET" and url like "%/s/ref=nb\_sb\_noss\_1/167-3294888-0262949/field-keywords=books%" and cs-cookie like "%=csm-hit=s-24KU11BB82RZSYGJ3BDK|1419899012996") or (HTTPmethod="POST" and url like "%/N4215/adj/amzn.us.sr.aps%")) | groupby User,URL,SrcIP | duration 10m
+
+stream=* |  groupby sourcename,stream | duration 30m
+
+stream=ztna-deviceposture where (posturecheckname='Mac OS Version' or posturecheckname='Windows OS Version') and user like '%earnin.com%' |  groupby user |  select lower(user) as blah |  duration 1d
+
+stream=databricks where servicename='{TargetResource}' and @requestParams.user = '{SuspectUser}' | duration 6m
+
+stream=databricks where servicename='genie' |  groupby servicename,@requestParams.user
+
+stream=aws-cloudtrail where recipientaccountid = '171679608487' and user = 'acante-sampler-lambda-role-us-west-2-vpc-758ccc0c' and errorcode != 'null' |  duration 1d
+
+stream=authentication where sourcename='OKTA' and reason='None' |  groupby user,srccn |  duration 7d
+
+stream=l7-edge-gateway  where useragent like '%Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/36.0.1985.143 Safari/537.36%' and referer like '%api.dropbox.com%' AND User='{TargetUser}' AND SrcIP='{TargetHost}' AND URL='{SuspectHost}' | duration 10m
+
+stream=l7-edge-gateway  where useragent like '%Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/36.0.1985.143 Safari/537.36%' and referer like '%api.dropbox.com%' |  groupby User,URL,SrcIP 
+
+stream=documents where sourcename='G-SUITE' and action='PERMISSION_CHANGED' and not targetuser like '%earnin.com' |  duration 7d | select cnamtime, user, file, targetuser
+
+stream=l7-edge-firewall where Action= 'URL_Allowed' | checkif srcip in greensnow.IP | duration 7d
+
+stream=* | duration 24h | groupby stream,sourcename | select array_join(array(stream,sourcename), ',') as StreamSourcename
+
+stream=crowdstrike 
+where rawaction='ProcessRollup2V19'
+and (
+    (rlike(logevent, 'ImageFileName.*?nc.exe') and (rlike(logevent, 'CommandLine.*?cmd.exe') or rlike(logevent, 'CommandLine.*?powershell.exe') or rlike(logevent,'CommandLine.*?command.exe'))) 
+    or 
+    (rlike(logevent, 'ImageFileName.*?ncat.exe') and (rlike(logevent, 'CommandLine.*?cmd.exe') or rlike(logevent, 'CommandLine.*?powershell.exe') or rlike(logevent,'CommandLine.*?command.exe'))) 
+    or
+    (rlike(logevent, 'ImageFileName.*?socat.exe') and (rlike(logevent, 'CommandLine.*?cmd.exe') or rlike(logevent, 'CommandLine.*?powershell.exe') or rlike(logevent,'CommandLine.*?command.exe'))) 
+    or
+    (rlike(logevent, 'ImageFileName.*?psexec.exe') and (rlike(logevent, 'CommandLine.*?cmd.exe') or rlike(logevent, 'CommandLine.*?powershell.exe') or rlike(logevent,'CommandLine.*?command.exe')))
+    or
+    (rlike(logevent, 'ImageFileName.*?python.exe') and (rlike(logevent, 'CommandLine.*?cmd.exe') or rlike(logevent, 'CommandLine.*?powershell.exe') or rlike(logevent,'CommandLine.*?command.exe')))
+    or
+    (rlike(logevent, 'ImageFileName.*?powershell.exe') and rlike(logevent, 'CommandLine.*?System.Net.Sockets.TopClient'))
+    or
+    (rlike(logevent, 'ImageFileName.*?php.exe') and (rlike(logevent, 'CommandLine.*?cmd.exe') or rlike(logevent, 'CommandLine.*?powershell.exe') or rlike(logevent,'CommandLine.*?command.exe')))    
+)
+| groupby agentid, logevent
+
+stream=crowdstrike where eventtype="custom_detection_policy" and policyid="1338" and awsaccountid in ( '171679608487', '185993409072', '122473544600', '387742709187', '675131061810', '506533127957', '948821884325' ) | groupby cloudaccountid, policystatement, resourceurl |  duration 6h
+
+stream=l7-edge-gateway where dstport in ('53','80','8080','443') and rlike(url,"(?i).*http:\/\/[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}\/cd.*") AND User='{TargetUser}' AND SrcIP='{TargetHost}' AND URL='{SuspectHost}' | duration 10m
+
+stream=l7-edge-gateway where dstport in ('53','80','8080','443') and rlike(url,"(?i).*http:\/\/[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}\/cd.*")  | groupby User,URL,SrcIP 
+
+stream=l7-edge-gateway  where status='PASSED' and not returncode='302' and proxy='httpreferer' and (referer like "%ipecho.net%" or referer like "%ipinfo.io%" or referer like "%ifconfig.co%" or referer like "%ifconfig.me%" or referer like "%icanhazip.com%" or referer like "%myexternalip.com%" or referer like "%api.ipify.org%" or referer like "%bot.whatismyipaddress.com%" or referer like "%ip.anysrc.net%" or referer like "%wtfismyip.com%") AND User='{TargetUser}' AND SrcIP='{TargetHost}' AND URL='{SuspectHost}' | duration 10m
+
+stream=l7-edge-gateway  where status='PASSED' and not returncode='302' and proxy='httpreferer' and (referer like "%ipecho.net%" or referer like "%ipinfo.io%" or referer like "%ifconfig.co%" or referer like "%ifconfig.me%" or referer like "%icanhazip.com%" or referer like "%myexternalip.com%" or referer like "%api.ipify.org%" or referer like "%bot.whatismyipaddress.com%" or referer like "%ip.anysrc.net%" or referer like "%wtfismyip.com%") |  groupby User,URL,SrcIP |  duration 10m
+
+stream=l7-edge-gateway where (useragent like "Internet Explorer %" or useragent like "Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1; InfoPath.2)" or useragent like "Mozilla/4.0 (compatible; Metasploit RSPEC)" or useragent like "Mozilla/4.0 (compatible; MSIE 6.1; Windows NT)" or useragent like "Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1)" or useragent like "Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 6.0)" or useragent like "Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 6.0; Trident/4.0)" or useragent like "Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 6.0; Trident/4.0; SIMBAR={7DB0F6DE-8DE7-4841-9084-28FA914B0F2E}; SLCC1; .N" or useragent like "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)" or useragent like "Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US) AppleWebKit/525.13 (KHTML, like Gecko) Chrome/4.0.221.6 Safari/525.13" or useragent like "Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; WOW64; Trident/5.0; MAAU)" or useragent like "Mozilla/5.0" or useragent like "Mozilla/4.0 (compatible; SPIPE/1.0" or useragent like "Mozilla/5.0 (Windows NT 6.3; rv:39.0) Gecko/20100101 Firefox/35.0" or useragent like "Sametime Community Agent" or useragent like "X-ForWARDED-For" or useragent like "DotDotPwn v2.1" or useragent like "SIPDROID" or useragent like "Mozilla/5.0 (Windows NT 10.0; Win32; x32; rv:60.0)" or useragent like "Mozilla/6.0 (X11; Linux x86\_64; rv:24.0) Gecko/20140205     Firefox/27.0 Iceweasel/25.3.0" or useragent like "%wordpress hash grabber%" or useragent like "%exploit%") |  groupby User,URL,SrcIP, useragent
+
+stream=l7-edge-gateway where (useragent like "Internet Explorer %" or useragent like "Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1; InfoPath.2)" or useragent like "Mozilla/4.0 (compatible; Metasploit RSPEC)" or useragent like "Mozilla/4.0 (compatible; MSIE 6.1; Windows NT)" or useragent like "Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1)" or useragent like "Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 6.0)" or useragent like "Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 6.0; Trident/4.0)" or useragent like "Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 6.0; Trident/4.0; SIMBAR={7DB0F6DE-8DE7-4841-9084-28FA914B0F2E}; SLCC1; .N" or useragent like "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)" or useragent like "Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US) AppleWebKit/525.13 (KHTML, like Gecko) Chrome/4.0.221.6 Safari/525.13" or useragent like "Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; WOW64; Trident/5.0; MAAU)" or useragent like "Mozilla/5.0" or useragent like "Mozilla/4.0 (compatible; SPIPE/1.0" or useragent like "Mozilla/5.0 (Windows NT 6.3; rv:39.0) Gecko/20100101 Firefox/35.0" or useragent like "Sametime Community Agent" or useragent like "X-ForWARDED-For" or useragent like "DotDotPwn v2.1" or useragent like "SIPDROID" or useragent like "Mozilla/5.0 (Windows NT 10.0; Win32; x32; rv:60.0)" or useragent like "Mozilla/6.0 (X11; Linux x86\_64; rv:24.0) Gecko/20140205     Firefox/27.0 Iceweasel/25.3.0" or useragent like "%wordpress hash grabber%" or useragent like "%exploit%")  AND User='{TargetUser}' AND SrcIP='{TargetHost}' AND URL='{SuspectHost}' | duration 10m
+
+stream=l7-edge-gateway where action='URL_BLOCKED' |  select URL, user, srcip, count(*) as count | groupby URL,user, srcip | having count > 200
+
+stream=l7-edge-gateway where action='URL_BLOCKED' AND URL='{TargetHost}' AND user='{SuspectUser}' and srcip='{SuspectSrcIP}' | duration 30m
+
+stream=crowdstrike where eventtype like '%cspm_policy%' and detectiontype="ioa" and  policyseverity in ('0', '1') and awsaccountid in ( '171679608487', '185993409072', '122473544600', '387742709187', '675131061810', '506533127957', '948821884325' ) and awsaccountid='{TargetResource}' and userarn='{SuspectUser}' and eventtype='{SuspectObject}'
+
+stream=crowdstrike where eventtype like 'cspm_policy%' and detectiontype="ioa" and  policyseverity in ('0', '1') and awsaccountid in ( '171679608487', '185993409072', '122473544600', '387742709187', '675131061810', '506533127957', '948821884325' ) | groupby awsaccountid, eventtype, userarn
+
+stream=l7-edge-gateway where (url like '%avsvmcloud%com%' or url like '%databasegalore%com%' or url like '%deftsecurity%com%' or url like '%freescanonline%com%' or url like '%panhardware%com%' or url like '%thedoccloud%com%' or url like '%incomeupdate%com%' or url like '%zupertech%com%' or url like '%digitalcollege%org%' or url like '%virtualdataserver%com%' or url like '%lcomputers%com%' or url like '%webcodez%com%')AND User='{TargetUser}' AND SrcIP='{TargetHost}' AND URL='{SuspectHost}' | duration 6m
+
+stream=l7-edge-gateway where (url like '%avsvmcloud%com%' or url like '%databasegalore%com%' or url like '%deftsecurity%com%' or url like '%freescanonline%com%' or url like '%panhardware%com%' or url like '%thedoccloud%com%' or url like '%incomeupdate%com%' or url like '%zupertech%com%' or url like '%digitalcollege%org%' or url like '%virtualdataserver%com%' or url like '%lcomputers%com%' or url like '%webcodez%com%') | groupby User,URL,SrcIP 
+
+stream=* where sourcename='G-SUITE' and app='login' and type='account_warning' and name='account_disabled_password_leak' | groupby user | having count_col1 >=1
+
+stream=gsuite where sourcename='G-SUITE' and app='login' and type='account_warning' and name='account_disabled_password_leak' and user='{SuspectUser}'
+
+stream=l7-edge-gateway where (((useragent like "user-agent%" or useragent like "Mozilla/3.0 %" or useragent like "Mozilla/2.0 %" or useragent like "Mozilla/1.0 %" or useragent like "Mozilla %" or useragent like " Mozilla/%" or useragent like "Mozila/%" or useragent like "Mozilla/4.0 (compatible; MSIE 6.0; MS Web Services Client Protocol%") or (useragent like "% (compatible;MSIE %" or useragent like "%.0;Windows NT %") or (useragent like "\_" or useragent like "CertUtil URL Agent" or useragent like "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:60.0)" or useragent like "Mozilla/5.0 (Windows NT 6.3; WOW64; rv:28.0) Gecko/20100101 Firefox/28.0" or useragent like "HTTPS")) and not (useragent like "Mozilla/3.0 % Acrobat %")) AND User='{TargetUser}' AND SrcIP='{TargetHost}' AND URL='{SuspectHost}' | duration 10m
+
+stream=l7-edge-gateway where (((useragent like "user-agent%" or useragent like "Mozilla/3.0 %" or useragent like "Mozilla/2.0 %" or useragent like "Mozilla/1.0 %" or useragent like "Mozilla %" or useragent like " Mozilla/%" or useragent like "Mozila/%" or useragent like "Mozilla/4.0 (compatible; MSIE 6.0; MS Web Services Client Protocol%") or (useragent like "% (compatible;MSIE %" or useragent like "%.0;Windows NT %") or (useragent like "\_" or useragent like "CertUtil URL Agent" or useragent like "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:60.0)" or useragent like "Mozilla/5.0 (Windows NT 6.3; WOW64; rv:28.0) Gecko/20100101 Firefox/28.0" or useragent like "HTTPS")) and not (useragent like "Mozilla/3.0 % Acrobat %")) | groupby User,URL,SrcIP
+
+stream=other where logevent like '%reveal%'
+
+stream=gsuite where sourcename='G-SUITE' and name in ('account_disabled_generic','account_disabled_spamming_through_relay','account_disabled_spamming','account_disabled_hijacked') and app='login' and user='{SuspectUser}'
+
+stream=* where sourcename='G-SUITE' and name in ('account_disabled_generic','account_disabled_spamming_through_relay','account_disabled_spamming','account_disabled_hijacked') and app='login' | groupby user | having count_col1 >=1
+
+stream=* where stream={'TargetResource'} and (logevent like '%104.223.91.28%' or logevent like '%198.54.135.99%' or logevent like '%184.147.100.29%' or logevent like '%146.70.117.210%' or logevent like '%198.54.130.153%' or logevent like '%169.150.203.22%' or logevent like '%185.156.46.163%' or logevent like '%146.70.171.99%' or logevent like '%206.217.206.108%' or logevent like '%45.86.221.146%' or logevent like '%193.32.126.233%' or logevent like '%87.249.134.11%' or logevent like '%66.115.189.247%' or logevent like '%104.129.24.124%' or logevent like '%146.70.171.112%' or logevent like '%198.54.135.67%' or logevent like '%146.70.124.216%' or logevent like '%45.134.142.200%' or logevent like '%206.217.205.49%' or logevent like '%146.70.117.56%' or logevent like '%169.150.201.25%' or logevent like '%66.63.167.147%' or logevent like '%194.230.144.126%' or logevent like '%146.70.165.227%' or logevent like '%154.47.30.137%' or logevent like '%154.47.30.150%' or logevent like '%96.44.191.140%' or logevent like '%146.70.166.176%' or logevent like '%198.44.136.56%' or logevent like '%176.123.6.193%' or logevent like '%192.252.212.60%' or logevent like '%173.44.63.112%' or logevent like '%37.19.210.34%' or logevent like '%37.19.210.21%' or logevent like '%185.213.155.241%' or logevent like '%198.44.136.82%' or logevent like '%93.115.0.49%' or logevent like '%204.152.216.105%' or logevent like '%198.44.129.82%' or logevent like '%185.248.85.59%' or logevent like '%198.54.131.152%' or logevent like '%102.165.16.161%' or logevent like '%185.156.46.144%' or logevent like '%45.134.140.144%' or logevent like '%198.54.135.35%' or logevent like '%176.123.3.132%' or logevent like '%185.248.85.14%' or logevent like '%169.150.223.208%' or logevent like '%162.33.177.32%' or logevent like '%194.230.145.67%' or logevent like '%5.47.87.202%' or logevent like '%194.230.160.5%' or logevent like '%194.230.147.127%' or logevent like '%176.220.186.152%' or logevent like '%194.230.160.237%' or logevent like '%194.230.158.178%' or logevent like '%194.230.145.76%' or logevent like '%45.155.91.99%' or logevent like '%194.230.158.107%' or logevent like '%194.230.148.99%' or logevent like '%194.230.144.50%' or logevent like '%185.204.1.178%' or logevent like '%79.127.217.44%' or logevent like '%104.129.24.115%' or logevent like '%146.70.119.24%' or logevent like '%138.199.34.144%' or logevent like '%185.248.85.14%') 
+
+stream=* where (logevent like '%104.223.91.28%' or logevent like '%198.54.135.99%' or logevent like '%184.147.100.29%' or logevent like '%146.70.117.210%' or logevent like '%198.54.130.153%' or logevent like '%169.150.203.22%' or logevent like '%185.156.46.163%' or logevent like '%146.70.171.99%' or logevent like '%206.217.206.108%' or logevent like '%45.86.221.146%' or logevent like '%193.32.126.233%' or logevent like '%87.249.134.11%' or logevent like '%66.115.189.247%' or logevent like '%104.129.24.124%' or logevent like '%146.70.171.112%' or logevent like '%198.54.135.67%' or logevent like '%146.70.124.216%' or logevent like '%45.134.142.200%' or logevent like '%206.217.205.49%' or logevent like '%146.70.117.56%' or logevent like '%169.150.201.25%' or logevent like '%66.63.167.147%' or logevent like '%194.230.144.126%' or logevent like '%146.70.165.227%' or logevent like '%154.47.30.137%' or logevent like '%154.47.30.150%' or logevent like '%96.44.191.140%' or logevent like '%146.70.166.176%' or logevent like '%198.44.136.56%' or logevent like '%176.123.6.193%' or logevent like '%192.252.212.60%' or logevent like '%173.44.63.112%' or logevent like '%37.19.210.34%' or logevent like '%37.19.210.21%' or logevent like '%185.213.155.241%' or logevent like '%198.44.136.82%' or logevent like '%93.115.0.49%' or logevent like '%204.152.216.105%' or logevent like '%198.44.129.82%' or logevent like '%185.248.85.59%' or logevent like '%198.54.131.152%' or logevent like '%102.165.16.161%' or logevent like '%185.156.46.144%' or logevent like '%45.134.140.144%' or logevent like '%198.54.135.35%' or logevent like '%176.123.3.132%' or logevent like '%185.248.85.14%' or logevent like '%169.150.223.208%' or logevent like '%162.33.177.32%' or logevent like '%194.230.145.67%' or logevent like '%5.47.87.202%' or logevent like '%194.230.160.5%' or logevent like '%194.230.147.127%' or logevent like '%176.220.186.152%' or logevent like '%194.230.160.237%' or logevent like '%194.230.158.178%' or logevent like '%194.230.145.76%' or logevent like '%45.155.91.99%' or logevent like '%194.230.158.107%' or logevent like '%194.230.148.99%' or logevent like '%194.230.144.50%' or logevent like '%185.204.1.178%' or logevent like '%79.127.217.44%' or logevent like '%104.129.24.115%' or logevent like '%146.70.119.24%' or logevent like '%138.199.34.144%' or logevent like '%185.248.85.14%') | groupby stream
+
+stream=crowdstrike 
+where rawaction='ProcessRollup2V19' 
+and (
+    (rlike(logevent, 'ImageFileName.*?WMIC.exe') 
+    and (
+        rlike(logevent, 'CommandLine.*?get') 
+        or rlike(logevent, 'CommandLine.*?list') 
+        or rlike(logevent, 'CommandLine.*?process call create') 
+        or rlike(logevent, 'CommandLine.*?cmd.exe') 
+        or rlike(logevent, 'CommandLine.*?powershell.exe') 
+        or rlike(logevent, 'CommandLine.*?command.exe')
+    )
+) 
+| groupby agentid, logevent
+
+stream=* where sourcename='SLACK' and rawaction in ('bulk_session_reset_by_admin', 'user_session_invalidated', 'user_session_reset_by_admin') AND NOT SrcIP='8.29.109.166' | groupby user, rawaction 
+
+stream=* where sourcename='SLACK' and rawaction in ('bulk_session_reset_by_admin', 'user_session_invalidated', 'user_session_reset_by_admin') AND NOT SrcIP='8.29.109.166' and rawaction='{TargetResource}' and user='{SuspectUser}' | duration 1h
+
+stream=github where rawaction='repo.create' and actortype='True' |  groupby user, resourcename, useragent
+
+stream=github where rawaction='repo.create' and actortype='True' and user='{SuspectUser}' and resourcename='{TargetResource}' and useragent='{SuspectObject}' | duration 6m
+
+stream=iam where sourcename='ZENDESK' and RawAction='USER_UPDATED' and SourceClassification='account' and logevent like '%Owner changed from%' | groupby srcip, targetuser
+
+stream=iam where sourcename='ZENDESK' and RawAction='USER_UPDATED' and SourceClassification='account' and logevent like '%Owner changed from%' and srcip='{SuspectHost}' and targetuser='{SuspectUser}'
+
+stream=api |  duration 24h |  timeslice 1h 
+
+stream=nativeapi where srcip in ('104.223.91.28','198.54.135.99','184.147.100.29','146.70.117.210','198.54.130.153','169.150.203.22','185.156.46.163','146.70.171.99','206.217.206.108','45.86.221.146','193.32.126.233','87.249.134.11','66.115.189.247','104.129.24.124','146.70.171.112','198.54.135.67','146.70.124.216','45.134.142.200','206.217.205.49','146.70.117.56','169.150.201.25','66.63.167.147','194.230.144.126','146.70.165.227','154.47.30.137','154.47.30.150','96.44.191.140','146.70.166.176','198.44.136.56','176.123.6.193','192.252.212.60','173.44.63.112','37.19.210.34','37.19.210.21','185.213.155.241','198.44.136.82','93.115.0.49','204.152.216.105','198.44.129.82','185.248.85.59','198.54.131.152','102.165.16.161','185.156.46.144','45.134.140.144','198.54.135.35','176.123.3.132','185.248.85.14','169.150.223.208','162.33.177.32','194.230.145.67','5.47.87.202','194.230.160.5','194.230.147.127','176.220.186.152','194.230.160.237','194.230.158.178','194.230.145.76','45.155.91.99','194.230.158.107','194.230.148.99','194.230.144.50','185.204.1.178','79.127.217.44','104.129.24.115','146.70.119.24','138.199.34.144','185.248.85.14') |  duration 24h
+
+stream=CDN-HTTP | where @ClientRequestPath='/plaidv2' |  groupby srcip | duration 24h
+
+stream=nativeapi where not AttributesAuthorizationHash is null and attributesuserid = '{TargetUser}' and AttributesAuthorizationHash = '{SuspectObject}' | duration 6m
+
+stream=nativeapi where not AttributesAuthorizationHash is null  | select attributesuserid, AttributesAuthorizationHash, distinct_count(DeviceStaticId)  |  groupby attributesuserid, AttributesAuthorizationHash |  having distinct_count_col2 > 1
+
+stream=aws-cloudtrail where eventsource='rds.amazonaws.com' and eventname='ModifyDBInstance' and ResponseElements like '%pendingModifiedValues%masterUserPassword%' and errorcode is null |  groupby User, UserAccountID, SrcIP, @requestParameters.dBInstanceIdentifier 
+
+stream=aws-cloudtrail where eventsource='rds.amazonaws.com' and eventname='ModifyDBInstance' and ResponseElements like '%pendingModifiedValues%masterUserPassword%' and errorcode is null AND User='{TargetUser}' AND UserAccountID='{TargetHost}' AND SrcIP='{SuspectHost}' AND @requestParameters.dBInstanceIdentifier='{SuspectUser}'  |  duration 6m
+
+stream=iam where sourcename='AWS-CLOUDTRAIL' and  eventname in ('ChangePassword','CreateAccessKey','CreateLoginProfile','CreateUser') and @errorCode is null and userarn='{SuspectObject}' and user='{SuspectUser}' and srcip='{SuspectHost}' and eventname='{TargetResource}'  | duration 6m 
+
+
+stream=iam where sourcename='AWS-CLOUDTRAIL' and eventname in ('ChangePassword','CreateAccessKey','CreateLoginProfile','CreateUser') and @errorCode is null |  groupby userarn, user, srcip, recipientaccountid, eventname 
+
+stream=acante | duration 6m
+
+stream=acante | groupby dataresourcename, description, eventtype, severitylevel
+
+stream=l7-edge-ingress where srcip in ('104.223.91.28','198.54.135.99','184.147.100.29','146.70.117.210','198.54.130.153','169.150.203.22','185.156.46.163','146.70.171.99','206.217.206.108','45.86.221.146','193.32.126.233','87.249.134.11','66.115.189.247','104.129.24.124','146.70.171.112','198.54.135.67','146.70.124.216','45.134.142.200','206.217.205.49','146.70.117.56','169.150.201.25','66.63.167.147','194.230.144.126','146.70.165.227','154.47.30.137','154.47.30.150','96.44.191.140','146.70.166.176','198.44.136.56','176.123.6.193','192.252.212.60','173.44.63.112','37.19.210.34','37.19.210.21','185.213.155.241','198.44.136.82','93.115.0.49','204.152.216.105','198.44.129.82','185.248.85.59','198.54.131.152','102.165.16.161','185.156.46.144','45.134.140.144','198.54.135.35','176.123.3.132','185.248.85.14','169.150.223.208','162.33.177.32','194.230.145.67','5.47.87.202','194.230.160.5','194.230.147.127','176.220.186.152','194.230.160.237','194.230.158.178','194.230.145.76','45.155.91.99','194.230.158.107','194.230.148.99','194.230.144.50','185.204.1.178','79.127.217.44','104.129.24.115','146.70.119.24','138.199.34.144','185.248.85.14') |  duration 24h |  groupby srcip, requestpath
+
+stream=aws-cloudtrail where errorcode is null and eventsource='elasticache.amazonaws.com' and eventname IN ( 'DeleteCacheSecurityGroup', 'AuthorizeCacheSecurityGroupIngress', 'RevokeCacheSecurityGroupIngress', 'AuthorizeCacheSecurityGroupEgress', 'RevokeCacheSecurityGroupEgress' ) |  groupby User, UserAccountID, SrcIP 
+
+stream=aws-cloudtrail where errorcode is null and eventsource='elasticache.amazonaws.com' and eventname IN ( 'DeleteCacheSecurityGroup', 'AuthorizeCacheSecurityGroupIngress', 'RevokeCacheSecurityGroupIngress', 'AuthorizeCacheSecurityGroupEgress', 'RevokeCacheSecurityGroupEgress' ) AND User='{TargetUser}' AND UserAccountID='{TargetHost}' AND SrcIP='{SuspectHost}' |  duration 6m
+
+stream=aws-rds where not databasename = '' | select array_join(array(devsrcip,databasename,user), ',') as EnvDBNameUserMapping | groupby EnvDBNameUserMapping |  duration 7d
+
+stream=github where rawaction='repo.create' and not (repovisibility in ('private','internal') or repotype = 'False') |  groupby user, resourcename, useragent  
+
+stream=github where rawaction='repo.create' and not (repovisibility in ('private','internal') or repotype = 'False') and user='{SuspectUser}' and resourcename='{TargetResource}' and useragent='{SuspectObject}' | duration 6m
+
+stream=GITHUB where rawaction='protected_branch.destroy' |  groupby user,rawaction,resourcename
+
+stream=GITHUB where rawaction='protected_branch.destroy' and resourcename='{TargetResource}' and rawaction='{SuspectAction}' and user='{SuspectUser}' | duration 6m
+
+stream=aws-cloudtrail  where errorcode is null and eventsource='ec2.amazonaws.com' and eventname='ModifySnapshotAttribute' AND User='{TargetUser}' AND UserAccountID='{TargetResource}' AND SrcIP='{SuspectHost}' |  duration 6m
+
+stream=aws-cloudtrail  where errorcode is null and eventsource='ec2.amazonaws.com' and eventname='ModifySnapshotAttribute' |  groupby User, UserAccountID, SrcIP 
+
+stream=fim where host LIKE '%pciprod-uw2-cat1-001%'
+
+stream=aws-rds where rawaction='FAILED_CONNECT' and user != '' and system='{TargetHost}' and user='{SuspectUser}' and srcip='{SuspectHost}' | duration 6m
+
+stream=aws-rds where rawaction='FAILED_CONNECT' and user != '' | select user, srcip, system, count_if(rawaction='FAILED_CONNECT') as FailCount|  groupby user, srcip, system | having FailCount >=10 |
+
+stream=l7-edge-gateway where rlike(url,"\.exe|\.vbs|\.bat|\.rar|\.ps1|\.doc|\.docm|\.xls|\.xlsm|\.pptm|\.rtf|\.hta|\.dll|\.ws|\.wsf|\.sct|\.zip") and not rlike(referer,"\.com|\.org|\.net|\.edu|\.gov|\.uk|\.ca|\.de|\.jp|\.fr|\.au|\.us|\.ch|\.it|\.nl|\.se|\.no|\.es") |  groupby User,URL,SrcIP 
+
+stream=l7-edge-gateway where rlike(url,"\.exe|\.vbs|\.bat|\.rar|\.ps1|\.doc|\.docm|\.xls|\.xlsm|\.pptm|\.rtf|\.hta|\.dll|\.ws|\.wsf|\.sct|\.zip") and not rlike(referer,"\.com|\.org|\.net|\.edu|\.gov|\.uk|\.ca|\.de|\.jp|\.fr|\.au|\.us|\.ch|\.it|\.nl|\.se|\.no|\.es") AND User='{TargetUser}' AND SrcIP='{TargetHost}' AND URL='{SuspectHost}' | duration 6m
+
+stream=authentication where sourcename='OKTA' and not (useragent like 'Jamf%' or useragent like 'openid%' or useragent like '%Radius%' or useragent ='LdapAsAService') and not srcisp in ('Fil Products Service Television Incorporated', 'Mega Speed ICT Solutions Inc.', 'Globe Telecoms', 'Philippine Long Distance Telephone Company', 'Amazon.com, Inc.', 'Telefonica del Peru S.A.A.', 'Tata Teleservices Maharashtra Ltd') |  groupby srcip |  duration 7d |  timeslice 1d
+
+stream=CASB where Sourcename='CLOUDFLARE' AND FindingtypeSeverity IN ('Critical','High') AND DisplayName='{TargetUser}' AND IntegrationDisplayName='{SuspectHost}' AND FindingtypeDisplayName='{SuspectUser}' | duration 1h 
+
+stream=CASB where Sourcename='CLOUDFLARE' AND FindingtypeSeverity IN ('Critical','High') |  groupby DisplayName,IntegrationDisplayName,FindingtypeDisplayName 
+
+stream=SLACK where RawAction='service_owner_transferred' and user='{SuspectUser}'
+
+stream=SLACK where RawAction='service_owner_transferred' | groupby user 
+
+stream=* | groupby srcip | having count_col1>=1
+
+stream=* and srcip='{SuspectHost}'
+
+stream=aws-cloudtrail where errorcode is null and eventsource='ec2.amazonaws.com' and eventname='DisableEbsEncryptionByDefault'  AND User='{TargetUser}' AND UserAccountID='{TargetHost}' AND SrcIP='{SuspectHost}' |  duration 6m
+
+stream=aws-cloudtrail where errorcode is null and eventsource='ec2.amazonaws.com' and eventname='DisableEbsEncryptionByDefault' |  groupby User, UserAccountID, SrcIP
+
+stream=retool-audittrail where rawaction = 'ADD_USERS_TO_GROUP' and groupname='{TargetResource}' and user='{SuspectUser}' and srcip='{SuspectHost}' | duration 6m
+
+stream=retool-audittrail where rawaction = 'ADD_USERS_TO_GROUP' and groupname like 'Risk%' |  groupby user, groupname, srcip
+
+stream=crowdstrike where rawaction="ProcessRollup2V19" and rlike(logevent, 'CommandLine.*?cloudflared.exe') | groupby agentid
+
+stream=crowdstrike where rawaction="ProcessRollup2LinV9" and rlike(logevent, 'CommandLine.*?/usr/bin/cloudflared --no-autoupdate tunnel run --token') | groupby agentid
+
+stream=* | duration 24h | select distinct(devsrcip) as UniqueDevSrcIP
+
+stream=authentication where action='LOGIN' | select srcip, system, count_if(status='FAILED') as FailCount, count_if(status='PASSED') as PassCount | groupby system, srcip | duration 1h | having FailCount>=50 | limit 100
+
+stream=authentication where action='LOGIN' and srcip='{SuspectUser}'
+
+stream=l7-edge-gateway where action = "URL_BLOCKED" and referer !='https://projecthub.arduino.cc/'| duration 1d | select @PolicyName, URL, referer, user, logevent
+
+stream=authentication where sourcename='OKTA' and @client.device = 'Computer' and eventtype='user.session.start' and user like '%earnin.com%' and not srccn in ('PH', 'PE') and not srcip in ('8.29.109.166', '8.29.228.146') |  groupby user |  select lower(user) as blah |  duration 1d 
+
+stream=l7-edge-gateway where (url like 'https://paste%ee%r%' or url like 'https://pastebin%com%raw/%' or url like 'https://hastebin%com%raw%' or url like 'https://ghostbin%co%paste%raw%') |  groupby user,srcip
+
+stream=l7-edge-gateway where (url like 'https://paste%ee%r%' or url like 'https://pastebin%com%raw/%' or url like 'https://hastebin%com%raw%' or url like 'https://ghostbin%co%paste%raw%') and srcip='{SuspectHost}' and user='{SuspectUser}' | duration 6m
+
+stream=slack where rawaction in ('native_dlp_violation_deleted', 'native_dlp_rule_deactivated') and rawaction='{TargetResouce}' and user='{SuspectUser}'
+
+stream=slack where rawaction in ('native_dlp_violation_deleted', 'native_dlp_rule_deactivated') | groupby user, rawaction
+
+stream=l7-edge-gateway  where (useragent like "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:53.0) Gecko/20100101 Chrome /53.0" or useragent like "Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 5.1)" or useragent like "Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1; Trident/4.0)" or useragent like "Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.0; .NET CLR 1.1.4322)" or useragent like "HttpBrowser/1.0" or useragent like "%<|>%" or useragent like "nsis\_inetc (mozilla)" or useragent like "Wget/1.9+cvs-stable (Red Hat modified)" or useragent like "Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 6.1; Trident/4.0; .NET CLR 1.1.4322)" or useragent like "%zeroup%" or useragent like "Mozilla/5.0 (Windows NT 5.1 ; v.%" or useragent like "% adlib/%" or useragent like "% tiny" or useragent like "% BGroom %" or useragent like "% changhuatong" or useragent like "% CholTBAgent" or useragent like "Mozilla/5.0 WinInet" or useragent like "RookIE/1.0" or useragent like "M" or useragent like "Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 5.1; Trident/4.0)" or useragent like "Mozilla/4.0 (compatible;MSIE 7.0;Windows NT 6.0)" or useragent like "backdoorbot" or useragent like "Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.9.2.3) Gecko/20100401 Firefox/3.6.1 (.NET CLR 3.5.30731)" or useragent like "Opera/8.81 (Windows NT 6.0; U; en)" or useragent like "Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.9.2.3) Gecko/20100401 Firefox/3.6.1 (.NET CLR 3.5.30729)" or useragent like "Opera" or useragent like "Mozilla/4.0 (compatible; MSIE 5.0; Windows 98)" or useragent like "Mozilla/4.0 (compatible; MSIE 5.01; Windows NT 5.0)" or useragent like "MSIE" or useragent like "%(Charon; Inferno)" or useragent like "Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 5.1; Trident/5.0)" or useragent like "Mozilla/4.0 (compatible; MSIE 6.1; Windows NT)" or useragent like "Mozilla/4.0(compatible; MSIE 6.0; Windows NT 5.1)" or useragent like "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" or useragent like "Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 10.0; Win64; x64)" or useragent like "Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 6.1; Win64; x64)" or useragent like "Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 6.2; WOW64; Trident/7.0; .NET4.0C; .NET4.0E; InfoPath.3)" or useragent like "% pxyscand%" or useragent like "% asd" or useragent like "% mdms" or useragent like "sample" or useragent like "nocase" or useragent like "Moxilla" or useragent like "Win32 %" or useragent like "%Microsoft Internet Explorer%" or useragent like "agent %" or useragent like "AutoIt" or useragent like "IczelionDownLoad") AND @DeviceName='{TargetHost}' AND User='{TargetUser}' AND useragent='{SuspectProcess}' | duration 6m
+
+stream=l7-edge-gateway  where (useragent like "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:53.0) Gecko/20100101 Chrome /53.0" or useragent like "Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 5.1)" or useragent like "Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1; Trident/4.0)" or useragent like "Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.0; .NET CLR 1.1.4322)" or useragent like "HttpBrowser/1.0" or useragent like "%<|>%" or useragent like "nsis\_inetc (mozilla)" or useragent like "Wget/1.9+cvs-stable (Red Hat modified)" or useragent like "Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 6.1; Trident/4.0; .NET CLR 1.1.4322)" or useragent like "%zeroup%" or useragent like "Mozilla/5.0 (Windows NT 5.1 ; v.%" or useragent like "% adlib/%" or useragent like "% tiny" or useragent like "% BGroom %" or useragent like "% changhuatong" or useragent like "% CholTBAgent" or useragent like "Mozilla/5.0 WinInet" or useragent like "RookIE/1.0" or useragent like "M" or useragent like "Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 5.1; Trident/4.0)" or useragent like "Mozilla/4.0 (compatible;MSIE 7.0;Windows NT 6.0)" or useragent like "backdoorbot" or useragent like "Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.9.2.3) Gecko/20100401 Firefox/3.6.1 (.NET CLR 3.5.30731)" or useragent like "Opera/8.81 (Windows NT 6.0; U; en)" or useragent like "Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.9.2.3) Gecko/20100401 Firefox/3.6.1 (.NET CLR 3.5.30729)" or useragent like "Opera" or useragent like "Mozilla/4.0 (compatible; MSIE 5.0; Windows 98)" or useragent like "Mozilla/4.0 (compatible; MSIE 5.01; Windows NT 5.0)" or useragent like "MSIE" or useragent like "%(Charon; Inferno)" or useragent like "Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 5.1; Trident/5.0)" or useragent like "Mozilla/4.0 (compatible; MSIE 6.1; Windows NT)" or useragent like "Mozilla/4.0(compatible; MSIE 6.0; Windows NT 5.1)" or useragent like "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" or useragent like "Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 10.0; Win64; x64)" or useragent like "Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 6.1; Win64; x64)" or useragent like "Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 6.2; WOW64; Trident/7.0; .NET4.0C; .NET4.0E; InfoPath.3)" or useragent like "% pxyscand%" or useragent like "% asd" or useragent like "% mdms" or useragent like "sample" or useragent like "nocase" or useragent like "Moxilla" or useragent like "Win32 %" or useragent like "%Microsoft Internet Explorer%" or useragent like "agent %" or useragent like "AutoIt" or useragent like "IczelionDownLoad") |  groupby User,@DeviceName,SrcIP, useragent
+
+stream=aws-cloudtrail where errorcode is null and eventsource='route53.amazonaws.com' and eventname='TransferDomainToAnotherAwsAccount'  AND User='{TargetUser}' AND UserAccountID='{TargetHost}' AND SrcIP='{SuspectHost}' | duration 6m
+
+stream=aws-cloudtrail where errorcode is null and eventsource='route53.amazonaws.com' and eventname='TransferDomainToAnotherAwsAccount'   | groupby User, UserAccountID, SrcIP
+
+stream=documents where action in ('CONTENT_ACCESSED', 'FILE_DOWNLOADED', 'DOCUMENT_DOWNLOADED') and srccn in ('CN', 'KR') and user='{SuspectUser}' | duration 6m
+
+stream=documents where action in ('CONTENT_ACCESSED', 'FILE_DOWNLOADED', 'DOCUMENT_DOWNLOADED') and srccn in ('CN', 'KR') | groupby user
+
+stream=l7-edge-gateway where (useragent like "%(hydra)%" or useragent like "% arachni/%" or useragent like "% BFAC %" or useragent like "% brutus %" or useragent like "% cgichk %" or useragent like "%core-project/1.0%" or useragent like "% crimscanner/%" or useragent like "%datacha0s%" or useragent like "%dirbuster%" or useragent like "%domino hunter%" or useragent like "%dotdotpwn%" or useragent like "FHScan Core" or useragent like "%floodgate%" or useragent like "%get-minimal%" or useragent like "%gootkit auto-rooter scanner%" or useragent like "%grendel-scan%" or useragent like "% inspath %" or useragent like "%internet ninja%" or useragent like "%jaascois%" or useragent like "% zmeu %" or useragent like "%masscan%" or useragent like "% metis %" or useragent like "%morfeus fucking scanner%" or useragent like "%n-stealth%" or useragent like "%nsauditor%" or useragent like "%pmafind%" or useragent like "%security scan%" or useragent like "%springenwerk%" or useragent like "%teh forest lobster%" or useragent like "%toata dragostea%" or useragent like "% vega/%" or useragent like "%voideye%" or useragent like "%webshag%" or useragent like "%webvulnscan%" or useragent like "% whcc/%" or useragent like "% Havij" or useragent like "%absinthe%" or useragent like "%bsqlbf%" or useragent like "%mysqloit%" or useragent like "%pangolin%" or useragent like "%sql power injector%" or useragent like "%sqlmap%" or useragent like "%sqlninja%" or useragent like "%uil2pn%" or useragent like "ruler" or useragent like "Mozilla/5.0 (Windows; U; Windows NT 5.1; pt-PT; rv:1.9.1.2) Gecko/20090729 Firefox/3.5.2 (.NET CLR 3.5.30729)")  AND User='{TargetUser}' AND SrcIP='{TargetHost}' AND URL='{SuspectHost}' | duration 10m
+
+stream=l7-edge-gateway where (useragent like "%(hydra)%" or useragent like "% arachni/%" or useragent like "% BFAC %" or useragent like "% brutus %" or useragent like "% cgichk %" or useragent like "%core-project/1.0%" or useragent like "% crimscanner/%" or useragent like "%datacha0s%" or useragent like "%dirbuster%" or useragent like "%domino hunter%" or useragent like "%dotdotpwn%" or useragent like "FHScan Core" or useragent like "%floodgate%" or useragent like "%get-minimal%" or useragent like "%gootkit auto-rooter scanner%" or useragent like "%grendel-scan%" or useragent like "% inspath %" or useragent like "%internet ninja%" or useragent like "%jaascois%" or useragent like "% zmeu %" or useragent like "%masscan%" or useragent like "% metis %" or useragent like "%morfeus fucking scanner%" or useragent like "%n-stealth%" or useragent like "%nsauditor%" or useragent like "%pmafind%" or useragent like "%security scan%" or useragent like "%springenwerk%" or useragent like "%teh forest lobster%" or useragent like "%toata dragostea%" or useragent like "% vega/%" or useragent like "%voideye%" or useragent like "%webshag%" or useragent like "%webvulnscan%" or useragent like "% whcc/%" or useragent like "% Havij" or useragent like "%absinthe%" or useragent like "%bsqlbf%" or useragent like "%mysqloit%" or useragent like "%pangolin%" or useragent like "%sql power injector%" or useragent like "%sqlmap%" or useragent like "%sqlninja%" or useragent like "%uil2pn%" or useragent like "ruler" or useragent like "Mozilla/5.0 (Windows; U; Windows NT 5.1; pt-PT; rv:1.9.1.2) Gecko/20090729 Firefox/3.5.2 (.NET CLR 3.5.30729)")  | groupby User,URL,SrcIP
+
+stream=* | duration 6h | select array_join(array(stream,sourcename), ',') as StreamSourcename | groupby StreamSourcename
+
+stream=l7-edge-gateway where ((useragent like "Microsoft BITS/%") and not (referer like "%.com" or referer like "%.net" or referer like "%.org")) AND User='{TargetUser}' AND SrcIP='{TargetHost}' AND URL='{SuspectHost}' | duration 10m
+
+stream=l7-edge-gateway where ((useragent like "Microsoft BITS/%") and not (referer like "%.com" or referer like "%.net" or referer like "%.org")) and not (url like 'https://ardownload3.adobe.com/%' or url like 'https://armmf.adobe.com/%' or url like 'https://fs.microsoft.com/%') |  groupby User,URL,SrcIP
+
+stream=aws-cloudtrail  where role='Root' and recipientaccountid='%{TargetResource}' and useraccountid='%{SuspectObject}' and useragent='%{SuspectProcess}' and srcip='%{SuspectHost}' | duration 6m
+
+stream=aws-cloudtrail  where role='Root' |  groupby recipientaccountid, useraccountid, srcip, useragent
+
+stream=SLACK where rawaction in ('legal_hold_policy_updated','legal_hold_policy_released','legal_hold_policy_exclusion_added','legal_hold_policy_entities_deleted') | groupby user, rawaction
+
+stream=SLACK where rawaction in ('legal_hold_policy_updated','legal_hold_policy_released','legal_hold_policy_exclusion_added','legal_hold_policy_entities_deleted') and user='{SuspectUser}' and rawaction='{TargetResource}' | duration 1h
+
+stream=l7-edge-gateway where (useragent like 'SJZJ (compatible; MSIE 6.0; Win32)' or useragent like 'Mozilla/5.0 (Windows NT 6.; WOW64; rv:20.0) Gecko/20100101 Firefox/20.0' or useragent like 'User-Agent% Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 6.1; Trident/4.0; SLCC' or useragent like 'Mozilla/4.0 (compatible; MSIE 7.4; Win32;32-bit)' or useragent like 'webclient' or useragent like 'Mozilla/5.0 (Windows; U; Windows NT 5.1; zh-EN; rv:1.7.12) Gecko/200' or useragent like 'Mozilla/4.0 (compatible; MSI 6.0;' or useragent like 'Mozilla/5.0 (Windows NT 6.3; WOW64; rv:28.0) Gecko/20100101 Firefox/28.0' or useragent like 'Mozilla/5.0 (Windows NT 6.2; WOW64; rv:20.0) Gecko/20100101 Firefox/' or useragent like 'Mozilla/5.0 (Windows NT 6.; WOW64; rv:20.0) Gecko/20100101 Firefox/2' or useragent like 'Mozilla/4.0' or useragent like 'Netscape' or useragent like 'Mozilla/5.0 (Windows; U; Windows NT 5.1; zh-EN; rv:1.7.12) Gecko/20100719 Firefox/1.0.7' or useragent like 'Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.9.2.13) Firefox/3.6.13 GTB7.1' or useragent like 'Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; WOW64; Trident/5.0)' or useragent like 'Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 6.1; WOW64; Trident/4.0; SLCC2; .NETCLR 2.0.50727)' or useragent like 'Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 6.0; SV1)' or useragent like 'Mozilla/4.0 (compatible; MSIE 11.0; Windows NT 6.1; SV1)' or useragent like 'Mozilla/4.0 (compatible; MSIE 8.0; Win32)' or useragent like 'Mozilla v5.1 (Windows NT 6.1; rv:6.0.1) Gecko/20100101 Firefox/6.0.1' or useragent like 'Mozilla/6.1 (compatible; MSIE 9.0; Windows NT 5.3; Trident/5.0)' or useragent like 'Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1; .NET CLR 1.1.4322; .NET CLR 2.0.50727; .NET CLR 3.0.04506.30; .NET CLR 3.0.04506.648; InfoPath.1)' or useragent like 'Mozilla/5.0 (Windows NT 6.1; WOW64) WinHttp/1.6.3.8 (WinHTTP/5.1) like Gecko' or useragent like 'Mozilla v5.1 %' or useragent like 'MSIE 8.0' or useragent like 'Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 6.1; SLCC2; .NET CLR 2.0.50727; .NET CLR 3.5.30729; .NET CLR 3.0.30729; Media Center PC 6.0; .NET4.0C; .NET4.0E; InfoPath.2)' or useragent like 'Mozilla/4.0 (compatible; RMS)' or useragent like 'Mozilla/4.0 (compatible; MSIE 6.0; DynGate)' or useragent like 'O/9.27 (W; U; Z)' or useragent like 'Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.0; Trident/5.0; Trident/5.0%' or useragent like 'Mozilla/5.0 (Windows NT 9; %' or useragent like 'hots scot' or useragent like 'Mozilla/5.0 (compatible; MSIE 10.0; Windows NT)' or useragent like 'Mozilla/5.0 (Windows NT 6.1; WOW64) Chrome/28.0.1500.95 Safari/537.36' or useragent like 'Mozilla/5.0 (Windows NT 6.2; Win32; rv:47.0)' or useragent like 'Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1;SV1;')  AND User='{TargetUser}' AND SrcIP='{TargetHost}' AND URL='{SuspectHost}' | duration 10m
+
+stream=l7-edge-gateway where (useragent like 'SJZJ (compatible; MSIE 6.0; Win32)' or useragent like 'Mozilla/5.0 (Windows NT 6.; WOW64; rv:20.0) Gecko/20100101 Firefox/20.0' or useragent like 'User-Agent% Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 6.1; Trident/4.0; SLCC' or useragent like 'Mozilla/4.0 (compatible; MSIE 7.4; Win32;32-bit)' or useragent like 'webclient' or useragent like 'Mozilla/5.0 (Windows; U; Windows NT 5.1; zh-EN; rv:1.7.12) Gecko/200' or useragent like 'Mozilla/4.0 (compatible; MSI 6.0;' or useragent like 'Mozilla/5.0 (Windows NT 6.3; WOW64; rv:28.0) Gecko/20100101 Firefox/28.0' or useragent like 'Mozilla/5.0 (Windows NT 6.2; WOW64; rv:20.0) Gecko/20100101 Firefox/' or useragent like 'Mozilla/5.0 (Windows NT 6.; WOW64; rv:20.0) Gecko/20100101 Firefox/2' or useragent like 'Mozilla/4.0' or useragent like 'Netscape' or useragent like 'Mozilla/5.0 (Windows; U; Windows NT 5.1; zh-EN; rv:1.7.12) Gecko/20100719 Firefox/1.0.7' or useragent like 'Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.9.2.13) Firefox/3.6.13 GTB7.1' or useragent like 'Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; WOW64; Trident/5.0)' or useragent like 'Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 6.1; WOW64; Trident/4.0; SLCC2; .NETCLR 2.0.50727)' or useragent like 'Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 6.0; SV1)' or useragent like 'Mozilla/4.0 (compatible; MSIE 11.0; Windows NT 6.1; SV1)' or useragent like 'Mozilla/4.0 (compatible; MSIE 8.0; Win32)' or useragent like 'Mozilla v5.1 (Windows NT 6.1; rv:6.0.1) Gecko/20100101 Firefox/6.0.1' or useragent like 'Mozilla/6.1 (compatible; MSIE 9.0; Windows NT 5.3; Trident/5.0)' or useragent like 'Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1; .NET CLR 1.1.4322; .NET CLR 2.0.50727; .NET CLR 3.0.04506.30; .NET CLR 3.0.04506.648; InfoPath.1)' or useragent like 'Mozilla/5.0 (Windows NT 6.1; WOW64) WinHttp/1.6.3.8 (WinHTTP/5.1) like Gecko' or useragent like 'Mozilla v5.1 %' or useragent like 'MSIE 8.0' or useragent like 'Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 6.1; SLCC2; .NET CLR 2.0.50727; .NET CLR 3.5.30729; .NET CLR 3.0.30729; Media Center PC 6.0; .NET4.0C; .NET4.0E; InfoPath.2)' or useragent like 'Mozilla/4.0 (compatible; RMS)' or useragent like 'Mozilla/4.0 (compatible; MSIE 6.0; DynGate)' or useragent like 'O/9.27 (W; U; Z)' or useragent like 'Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.0; Trident/5.0; Trident/5.0%' or useragent like 'Mozilla/5.0 (Windows NT 9; %' or useragent like 'hots scot' or useragent like 'Mozilla/5.0 (compatible; MSIE 10.0; Windows NT)' or useragent like 'Mozilla/5.0 (Windows NT 6.1; WOW64) Chrome/28.0.1500.95 Safari/537.36' or useragent like 'Mozilla/5.0 (Windows NT 6.2; Win32; rv:47.0)' or useragent like 'Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1;SV1;') |  groupby User,URL,SrcIP
+
+stream=AWS-CLOUDTRAIL where eventname in ('CreateCustomerGateway', 'DeleteCustomerGateway', 'AttachInternetGateway', 'CreateInternetGateway', 'DeleteInternetGateway', 'DetachInternetGateway') and errorcode is null and userarn='{SuspectUser}' and srcip='{SuspectHost}' and RecipientAccountID='{SuscpectObject}' and eventname='{TargetResource}'
+
+stream=AWS-CLOUDTRAIL where eventname in ('CreateCustomerGateway', 'DeleteCustomerGateway', 'AttachInternetGateway', 'CreateInternetGateway', 'DeleteInternetGateway', 'DetachInternetGateway') and errorcode is null | groupby EventName,RecipientAccountID,SrcIP,UserAgent,UserArn,User,@requestParameters.internetGatewayId, @responseElements.internetGateway.internetGatewayId
+
+stream=DNS where queryname in ("ifferfsodp9ifjaposdfjhgosurijfaewrwergwea.testing", "ifferfsodp9ifjaposdfjhgosurijfaewrwergwea.test", "ifferfsodp9ifjaposdfjhgosurijfaewrwergwea.com", "ayylmaotjhsstasdfasdfasdfasdfasdfasdfasdf.com", "iuqssfsodp9ifjaposdfjhgosurijfaewrwergwea.com", "iuqerfsodp9ifjaposdfjhgosurijfaewrwergwea.com", "iuqerfsodp9ifjaposdfjhgosurijfaewrwergweb.com") | groupby queryname,srcip,returncode,user 
+
+stream=DNS where queryname in ("ifferfsodp9ifjaposdfjhgosurijfaewrwergwea.testing", "ifferfsodp9ifjaposdfjhgosurijfaewrwergwea.test", "ifferfsodp9ifjaposdfjhgosurijfaewrwergwea.com", "ayylmaotjhsstasdfasdfasdfasdfasdfasdfasdf.com", "iuqssfsodp9ifjaposdfjhgosurijfaewrwergwea.com", "iuqerfsodp9ifjaposdfjhgosurijfaewrwergwea.com", "iuqerfsodp9ifjaposdfjhgosurijfaewrwergweb.com") and queryname='{TargetHost}' and srcip='{SuspectHost}' and user='{SuspectUser}' 
+
+stream=l7-edge-gateway where useragent like "Microsoft-WebDAV-MiniRedir%" and httpmethod='GET' |  groupby User,URL,SrcIP 
+
+stream=l7-edge-gateway where useragent like "Microsoft-WebDAV-MiniRedir%" and httpmethod='GET'  AND User='{TargetUser}' AND SrcIP='{TargetHost}' AND URL='{SuspectHost}' | duration 6m
+
+stream=l7-edge-gateway where useragent like "Mozilla/5.0%WindowsNT 6.1%WOW64%Trident/7.0%rv%11.0%like%Gecko%" and (url like "%admin%get.php" or url like "%news.php" or url like "%login%process.php") and httpmethod='POST' |  groupby User,URL,SrcIP 
+
+stream=l7-edge-gateway where useragent like "Mozilla/5.0%WindowsNT 6.1%WOW64%Trident/7.0%rv%11.0%like%Gecko%" and (url like "%admin%get.php" or url like "%news.php" or url like "%login%process.php") and httpmethod='POST' AND User='{TargetUser}' AND SrcIP='{TargetHost}' AND URL='{SuspectHost}' | duration 10m
+
+stream=Nextdlp where logtype="DETECTION" and policyid IN ('a4df7308-405b-4cb0-74f7-a30658b99ff8', '1b80acf8-abed-4a8c-733b-05339139e4da') | groupby @sensor.process_info[0].username, policyname, agenthostname 
+
+stream=Nextdlp where logtype="DETECTION" and policyid IN ('a4df7308-405b-4cb0-74f7-a30658b99ff8', '1b80acf8-abed-4a8c-733b-05339139e4da') AND agenthostname='{SuspectHost}' AND policyname='{TargetResource}' AND @sensor.process_info[0].username='{SuspectUser}' | duration 6m
+
+stream=AUTHENTICATION where sourcename='AWS-CLOUDTRAIL' and sourcetype='CLOUD' and eventname='ConsoleLogin' and @userIdentity.type='Root' and @responseElements.ConsoleLogin='Success' and userarn='{SuspectHost}' | duration 1h
+
+stream=AUTHENTICATION where sourcename='AWS-CLOUDTRAIL' and sourcetype='CLOUD' and eventname='ConsoleLogin' and @userIdentity.type='Root' and @responseElements.ConsoleLogin='Success' | groupby UserArn | having count_col1>=1
+
+stream=l7-edge-gateway where ((url like "%/install\_flash\_player.exe" or url like "%/flash\_install.php%") and not (referer LIKE "%.adobe.com/%")) AND User='{TargetUser}' AND SrcIP='{TargetHost}' AND URL='{SuspectHost}' | duration 10m
+
+stream=l7-edge-gateway where ((url like "%/install\_flash\_player.exe" or url like "%/flash\_install.php%") and not (referer LIKE "%.adobe.com/%"))  |  groupby User,URL,SrcIP 
+
+stream=l7-edge-gateway where url like '%/asp.asp_ui=%' AND User='{TargetUser}' AND SrcIP='{TargetHost}' AND URL='{SuspectHost}' | duration 6m
+
+stream=l7-edge-gateway where url like '%/asp.asp_ui=%' |  groupby User,URL,SrcIP 
+
+stream=* where sourcename='SLACK' and RawAction in ('owner_transferred','permissions_assigned','role_change_to_admin','role_change_to_owner') and user='{SuspectUser}' | duration 1h
+
+stream=* where sourcename='SLACK' and RawAction in ('owner_transferred','permissions_assigned','role_change_to_admin','role_change_to_owner') | groupby user 
+
+stream=l7-edge-gateway  where rlike(url,"\.exe|\.vbs|\.bat|\.rar|\.ps1|\.doc|\.docm|\.xls|\.xlsm|\.pptm|\.rtf|\.hta|\.dll|\.ws|\.wsf|\.sct|\.zip") and rlike(referer,"\.hopto\.org|\.noip\.com|\.ddns\.name|\.myftp\.org|\.myftp\.biz|\.serveblog\.net|\.servebeer\.com|\.servemp3\.com|\.serveftp\.com|\.servequake\.com|\.servehalflife\.com|\.servehttp\.com|\.servegame\.com|\.servepics\.com|\.myvnc\.com|\.ignorelist\.com|\.jkub\.com|\.dlinkddns\.com|\.jumpingcrab\.com|\.ddns\.info|\.mooo\.com|\.strangled\.net|\.adultdns\.net|\.craftx\.biz|\.ddns01\.com|\.dns53\.biz|\.dnsapi\.info|\.dnsd\.info|\.dnsdynamic\.com|\.dnsdynamic\.net|\.dnsget\.org|\.fe100\.net|\.flashserv\.net|\.ftp21\.net|\.http01\.com|\.http80\.info|\.https443\.com|\.imap01\.com|\.kadm5\.com|\.mysq1\.net|\.ns360\.info|\.ntdll\.net|\.ole32\.com|\.proxy8080\.com|\.sql01\.com|\.ssh01\.com|\.ssh22\.net|\.tempors\.com|\.tftpd\.net|\.ttl60\.com|\.ttl60\.org|\.user32\.com|\.voip01\.com|\.wow64\.net|\.x64\.me|\.xns01\.com|\.dyndns\.org|\.dyndns\.info|\.dyndns\.tv|\.dnsomatic\.com|\.zapto\.org|\.webhop\.net|\.25u\.com|\.slyip\.net") |  groupby User,URL,SrcIP |  duration 10m
+
+stream=l7-edge-gateway  where rlike(url,"\.exe|\.vbs|\.bat|\.rar|\.ps1|\.doc|\.docm|\.xls|\.xlsm|\.pptm|\.rtf|\.hta|\.dll|\.ws|\.wsf|\.sct|\.zip") and rlike(referer,"\.hopto\.org|\.noip\.com|\.ddns\.name|\.myftp\.org|\.myftp\.biz|\.serveblog\.net|\.servebeer\.com|\.servemp3\.com|\.serveftp\.com|\.servequake\.com|\.servehalflife\.com|\.servehttp\.com|\.servegame\.com|\.servepics\.com|\.myvnc\.com|\.ignorelist\.com|\.jkub\.com|\.dlinkddns\.com|\.jumpingcrab\.com|\.ddns\.info|\.mooo\.com|\.strangled\.net|\.adultdns\.net|\.craftx\.biz|\.ddns01\.com|\.dns53\.biz|\.dnsapi\.info|\.dnsd\.info|\.dnsdynamic\.com|\.dnsdynamic\.net|\.dnsget\.org|\.fe100\.net|\.flashserv\.net|\.ftp21\.net|\.http01\.com|\.http80\.info|\.https443\.com|\.imap01\.com|\.kadm5\.com|\.mysq1\.net|\.ns360\.info|\.ntdll\.net|\.ole32\.com|\.proxy8080\.com|\.sql01\.com|\.ssh01\.com|\.ssh22\.net|\.tempors\.com|\.tftpd\.net|\.ttl60\.com|\.ttl60\.org|\.user32\.com|\.voip01\.com|\.wow64\.net|\.x64\.me|\.xns01\.com|\.dyndns\.org|\.dyndns\.info|\.dyndns\.tv|\.dnsomatic\.com|\.zapto\.org|\.webhop\.net|\.25u\.com|\.slyip\.net") AND User='{TargetUser}' AND SrcIP='{TargetHost}' AND URL='{SuspectHost}' | duration 10m
+
+stream=l7-edge-gateway  where ((referer like "api.telegram.org") and not (useragent like "%Telegram%" or useragent like "%Bot%")) |  groupby User,URL,SrcIP 
+
+stream=l7-edge-gateway  where ((referer like "api.telegram.org") and not (useragent like "%Telegram%" or useragent like "%Bot%"))  AND User='{TargetUser}' AND SrcIP='{TargetHost}' AND URL='{SuspectHost}' | duration 10m
+
+stream=IAM where sourcename="OKTA" and eventtype='system.api_token.create' AND RawStatus='SUCCESS' | groupby user, eventtype
+
+stream=IAM where sourcename="OKTA" and eventtype='system.api_token.create' AND RawStatus='SUCCESS' and user='{SuspectUser}' and eventtype='{TargetResource}' | duration 6m
+
+stream=crowdstrike where (rawaction="ProcessRollup2LinV9" and rlike(logevent, 'CommandLine.*?/usr/bin/cloudflared --no-autoupdate tunnel run --token')) OR (rawaction="ProcessRollup2V19" and rlike (logevent, 'CommandLine.*?cloudflared.exe')) and agentid='{TargetHost}' | duration 1h
+
+stream=crowdstrike where (rawaction="ProcessRollup2LinV9" and rlike(logevent, 'CommandLine.*?/usr/bin/cloudflared --no-autoupdate tunnel run --token')) OR (rawaction="ProcessRollup2V19" and rlike (logevent, 'CommandLine.*?cloudflared.exe')) | groupby agentid
+
+stream=AWS-CLOUDTRAIL where eventname like "DeleteBucket%" and errorcode is null and eventname='{TargetResource}' and @requestParameters.bucketName = '{TargetUser}' and srcip='{SuspectHost}' and UserArn='{SuspectObject}' and user='{SuspectUser}' | duration 11m 
+
+stream=AWS-CLOUDTRAIL where eventname like "DeleteBucket%" AND errorcode is null | groupby @requestParameters.bucketName, UserArn, user, srcip, recipientaccountid, eventname
+
+stream=l7-edge-gateway where url like "%/oscp/%" and referer like "%ocsp.verisign.com%" AND User='{TargetUser}' AND SrcIP='{TargetHost}' AND URL='{SuspectHost}' | duration 10m
+
+stream=l7-edge-gateway where url like "%/oscp/%" and referer like "%ocsp.verisign.com%" |  groupby User,URL,SrcIP 
+
+stream=Nextdlp where httppath="/api/v1/login" and NOT httpremoteaddress IN ('8.29.109.166', '8.29.228.146') |  groupby TenantName,User
+
+stream=Nextdlp where httppath="/api/v1/login" and NOT httpremoteaddress IN ('8.29.109.166', '8.29.228.146') AND TenantName='{TargetResource}' AND User='{SuspectUser}' |  duration 6m
+
+stream=slack where rawaction='private_channel_converted_to_public' and user='{SuspectUser}' and eventname='{TargetResource}'
+
+stream=slack where rawaction='private_channel_converted_to_public' | groupby user, eventname
+
+stream=DNS where queryname like "%==.%" | groupby SrcIP,User,queryname 
+
+stream=DNS where queryname like "%==.%" AND SrcIP='{TargetHost}' AND User='{TargetUser}' AND queryname='{SuspectObject}' |  duration 6m
+
+stream=DNS where QueryName like "%api.telegram.org/bot%" | groupby SrcIP,User,System,QueryName
+
+stream=DNS where QueryName like "%api.telegram.org/bot%" AND user='{TargetUser}' AND System='{TargetHost}' AND SrcIP='{TargetResource}' AND QueryName='{SuspectObject}' |  duration 6m
+
+stream=l7-edge-gateway where url like '%/pwndrop/%' AND User='{TargetUser}' AND SrcIP='{TargetHost}' AND URL='{SuspectUrl}' | duration 6m
+
+stream=l7-edge-gateway where url like '%/pwndrop/%' |  groupby User,url,SrcIP 
+
+stream=AWS-CLOUDTRAIL where eventname in ('PutDeliveryChannel','PutConfigurationRecorder','PutConfigurationRecorder') and errorcode is null and srcip='{SuspectHost}' and userarn='{SuspectUser}' and eventname='{TargetResource}'
+
+stream=AWS-CLOUDTRAIL where eventname in ('PutDeliveryChannel','PutConfigurationRecorder','PutConfigurationRecorder') and errorcode is null | groupby EventName,RecipientAccountID,SrcIP,UserAgent,UserArn,User
+
+stream=AUTHENTICATION where sourcename='AWS-CLOUDTRAIL' and EventName='ConsoleLogin' and MFAUsed='No' and Status='PASSED' and Role != 'AssumedRole' and srcip='%{SuspectHost}' and userarn='%{SuspectUser}' and RecipientAccountID='%{TargetResource}' and useragent='%{SuspectProcess}' | duration 6m
+
+stream=AUTHENTICATION where sourcename='AWS-CLOUDTRAIL' and EventName='ConsoleLogin' and MFAUsed='No' and Status='PASSED' and Role != 'AssumedRole' |  groupby RecipientAccountID,SrcIP,UserAgent,UserArn 
+
+stream=DNS where (queryname LIKE "aaa.stage.%" OR queryname LIKE "post.1%") AND SrcIP='{TargetHost}' AND User='{TargetUser}' AND QueryName='{SuspectUrl}' |  duration 6m
+
+stream=DNS where (queryname LIKE "aaa.stage.%" OR queryname LIKE "post.1%") |  groupby SrcIP,User,queryname 
+
+stream=aws-cloudtrail where errorcode is null and eventsource='iam.amazonaws.com' and eventname='CreateAccessKey' and recipientaccountid='{TargetResource}' and user='{SuspectUser}' and srcip='{SuspectHost}' | duration 6m
+
+stream=aws-cloudtrail where errorcode is null and eventsource='iam.amazonaws.com' and eventname='CreateAccessKey'  |  groupby user, recipientaccountid, srcip
+
+stream=AWS-CLOUDTRAIL where sourcename="AWS-CLOUDTRAIL" and eventname in ('DisableKey', 'ScheduleKeyDeletion') and logevent like '%AWS::KMS::Key%' AND errorcode is null | groupby User, @requestParameters.keyId, UserArn,Srcisp
+
+stream=AWS-CLOUDTRAIL where sourcename="AWS-CLOUDTRAIL" and eventname in ('DisableKey', 'ScheduleKeyDeletion') and logevent like '%AWS::KMS::Key%' and errorcode is null and @requestParameters.keyId='{TargetHost}' AND User='{TargetUser}' AND UserArn='{SuspectHost}' AND Srcisp='{SuspectUser}' | duration 1h
+
+stream=AUTHENTICATION where sourcename='MS-O365' and action='2FA_TOKEN_MODIFIED' and status='PASSED' and @Operation='Update' and @ModifiedProperties.Name='StrongAuthenticationMethod'| groupby user | having count_col1 >=1
+
+stream=AUTHENTICATION where sourcename='MS-O365' and action='2FA_TOKEN_MODIFIED' and status='PASSED' and @Operation='Update' and @ModifiedProperties.Name='StrongAuthenticationMethod' and user='{SuspectUser}'
+
+stream=authentication where sourcename='OKTA' and not reason='None' and not srcip in ( '8.29.109.166', '8.29.228.146' ) | groupby user, srcip, reason, target1id
+
+stream=authentication where sourcename='OKTA' and not reason='None' and user='{TargetUser}' and target1id='{TargetResource}' and srcip='{SuspectHost}' and reason='{SuspectAction}' | duration 6m
+
+stream=authentication where sourcename='KASTLE-BADGE' and cardnumber='{TargetResource}' and systemtstamp='{SuspectAction}' and user='{TargetUser}' and location='{SuspectLocation}' | select cnamtime, user, location, cardnumber, systemtstamp
+
+stream=authentication where sourcename='KASTLE-BADGE' and cardnumber!='' and (systemtstamp like '% 12:%AM' or systemtstamp like '% 2:%AM' or systemtstamp like '% 3:%AM' or systemtstamp like '% 4:%AM') | select cnamtime, user, location, cardnumber, systemtstamp| duration 1d
+
+stream=crowdstrike 
+where rawaction='ProcessRollup2V19' 
+and (
+    (rlike(logevent, 'ImageFileName.*?wevtutil.exe') and (rlike(logevent, 'CommandLine.*?cl') or rlike(logevent, 'CommandLine.*?clear-log'))) 
+    or 
+    (rlike(logevent, 'ImageFileName.*?powershell.exe') and rlike(logevent, 'CommandLine.*?clear-eventlog'))
+) 
+| groupby agentid, logevent
+
+stream=l7-edge-gateway where ((HTTPMethod="GET" and URL like "%_manifest=wac" and Referer like "%onedrive.live.com%") and not (url like "http%://onedrive.live.com/%")) AND User='{TargetUser}' AND SrcIP='{TargetHost}' AND URL='{SuspectHost}' | duration 10m
+
+stream=l7-edge-gateway where ((HTTPMethod="GET" and URL like "%_manifest=wac" and Referer like "%onedrive.live.com%") and not (url like "http%://onedrive.live.com/%")) | groupby User,URL,SrcIP 
+
+stream=iam where sourcename="OKTA" and (eventtype in ( 'app.oauth2.client_id_rate_limit_warning', 'application.integration.rate_limit_exceeded', 'system.client.concurrency_rate_limit.notification') or logevent like 'system.operation.rate_limit%' or logevent like 'system.org.rate_limit%' ) | groupby user, eventtype
+
+stream=IAM where sourcename="OKTA" and (eventtype in ( 'app.oauth2.client_id_rate_limit_warning', 'application.integration.rate_limit_exceeded', 'system.client.concurrency_rate_limit.notification') or event like 'system.operation.rate_limit%' or event like 'system.org.rate_limit%' ) and user='{SuspectUser}' and eventtype='{TargetHost}'
+
+stream=authentication where sourcename='OKTA' and status='PASSED' and user in (_user_) |  duration 1d | groupby user, srcip
+
+stream=authentication where sourcename='OKTA' and status='PASSED' |  duration 1d | groupby user |  select user, distinct_count(srcip) as srcip_count |  having srcip_count > 1
+
+stream=CROWDSTRIKE where rawaction='FileRenameInfoV2' and get_json_object(logevent, '$.SourceFileName') like '%rundll32.exe' or '%cmd.exe' or '%mshta.exe' or '%certutil.exe'| duration 15m
+
+stream=CROWDSTRIKE where rawaction='FileRenameInfoV2' and get_json_object(logevent, '$.SourceFileName') like '%rundll32.exe' or '%cmd.exe' or '%mshta.exe' or '%certutil.exe'| duration 15
+
+stream=authentication where sourcename = 'OKTA' and action = 'LOGIN' and eventtype = 'user.session.start' and (srcip != '8.29.109.166' and srcip != '13.251.34.113' and srcip != '27.110.252.138' and srcip != '34.215.158.79' and srcip != '34.218.157.113' and srcip != '52.35.224.67' and srcip != '52.74.161.58' and srcip != '54.254.92.140' and srcip != '103.68.159.22' and srcip != '103.68.159.30' and srcip != '103.105.212.118' and srcip != '112.199.101.42' and srcip != '115.85.11.136' and srcip != '122.53.99.106' and srcip != '122.53.99.107' and srcip != '203.177.49.216' and srcip != '222.127.140.218' and srcip != '222.127.140.219' and srcip != '222.127.140.220' and srcip != '222.127.140.221' and srcip != '222.127.140.222' and srcip != '124.106.126.146' and srcip != '103.105.212.146' and srcip != '203.177.49.217' and srcip != '115.146.217.138' and srcip != '112.199.101.41' and srcip != '112.199.101.43' and srcip != '112.199.101.44' and srcip != '112.199.101.45' and srcip != '112.199.101.46' and srcip != '104.156.63.38' and srcip != '103.105.212.234' and srcip != '103.105.212.186' and srcip != '103.105.212.150' and srcip != '103.68.159.26' and srcip != '68.96.226.148' and srcip != '27.110.252.142' and srcip != '27.110.252.141' and srcip != '27.110.252.140' and srcip != '27.110.252.139') and logevent like '%result":"SUCCESS%' and not (user = 'svc-okta-ldap@earnin.com' or user = 'ccc-synthetic-tests@earnin.com' or user like '%securview%') and not systemtype = 'Mobile' | groupby user | duration 7d
+
+stream=authentication where sourcename = 'OKTA' and action = 'LOGIN' and eventtype = 'user.session.start' and logevent like '%result":"SUCCESS%' and not (user = 'svc-okta-ldap@earnin.com' or user = 'ccc-synthetic-tests@earnin.com' or user like '%securview%') and not systemtype = 'Mobile' | groupby user | duration 7d
+
+stream=authentication where sourcename='OKTA' and reason='None' and not srcip in ( '8.29.109.166', '8.29.228.146' ) | groupby user, srcip
+
+stream=authentication where sourcename='OKTA' and reason='None' and user='{TargetUser}' and srcip='{SuspectHost}'  | duration 6m
+
+stream=AWS-CLOUDTRAIL where eventsource="iam.amazonaws.com" and eventname="CreateAccessKey" | select userarn, @responseElements.accessKey.userName as responseUser, user, eventname, recipientaccountid,srcip | groupby userarn, @responseElements.accessKey.userName, user, eventname, recipientaccountid,srcip
+
+stream=AWS-CLOUDTRAIL where eventsource="iam.amazonaws.com" and eventname="CreateAccessKey" and recipientaccountid='%{TargetResource}' and user='%{SuspectUser}' and userarn='%{SuspectObject}' and srcip='%{SuspectHost}' | duration 6m
+
+stream=aws-cloudtrail where eventsource='sts.amazonaws.com' and eventname='GetSessionToken' and Role='IAMUser' and errorcode is null |  groupby User, UserAccountID, SrcIP
+
+stream=aws-cloudtrail where eventsource='sts.amazonaws.com' and eventname='GetSessionToken' and Role='IAMUser' and errorcode is null AND User='{TargetUser}' AND UserAccountID='{TargetHost}' AND SrcIP='{SuspectHost}' |  duration 6m
+
+stream=ztna-deviceposture where (posturecheckname='Mac OS Version' or posturecheckname='Windows OS Version') |  groupby user |  duration 7d
+
+stream=crowdstrike 
+where rawaction='ProcessRollup2V19' 
+and rlike(logevent, 'ImageFileName.*?(AppInstaller.exe|At.exe|Atbroker.exe|Bash.exe|Bitsadmin.exe|CertOC.exe|CertReq.exe|Certutil.exe|Cmd.exe|Cmdkey.exe|cmd132.exe|Cmstp.exe|ConfigSecurityPolicy.exe|Conhost.exe|Control.exe|Csc.exe|Cscript.exe|CustomShellHost.exe|DataSvcUtil.exe|Desktopimgdownldr.exe|DeviceCredentialDeployment.exe|Dfsvc.exe|Diantz.exe|Diskshadow.exe|Dnscmd.exe|Esentutl.exe|Eventvwr.exe|Expand.exe|Explorer.exe|Extexport.exe|Extrac32.exe|Findstr.exe|Finger.exe|fltMC.exe|Forfiles.exe|Ftp.exe|Gpscript.exe|Hh.exe|IMEWDBLD.exe|Ie4uinit.exe|Ieexec.exe|Ilasm.exe|Infdefaultinstall.exe|Installutil.exe|Jsc.exe|Ldifde.exe|Makecab.exe|Mavinject.exe|Mmc.exe|MpCmdRun.exe|Msbuild.exe|Msconfig.ex|Msdt.exe|Msedge.exe|Mshta.exe|Msiexec.exe|Netsh.exe|Odbcconf.exe|OfflineScannerShell.exe|OneDriveStandaloneUpdater.exe|Pcalua.exe|Pcwrun.exe|Pktmon.exe|Pnputil.exe|Presentationhost.exe|Print.exe|PrintBrm.exe|Psr.exe|Rasautou.exe|rdrleakdiag.exe|Reg.exe|Regasm.exe|Regedit.exe|Regini.exe|Regsvcs.exe|Regsvr32.exe|Replace.exe|Rpcping.exe|Rundll32.exe|Runexehelper.exe|Runonce.exe|Runscripthelper.exe|Sc.exe|Schtasks.exe|Scriptrunner.exe|Setres.exe|SettingSyncHost.exe|ssh.exe|Stordiag.exe|SyncAppvPublishingServer.exe|Ttdinject.exe|Tttracer.exe|Unregmp2.exe|vbc.exe|Verclsid.exe|Wab.exe|winget.exe|Wlrmdr.exe|Wmic.exe|WorkFolders.exe|Wscript.exe|Wsreset.exe|wuauclt.exe|Xwizard.exe|fsutil.exe|wt.exe)')
+| groupby agentid, logevent
+
+stream=crowdstrike 
+where rawaction='ProcessRollup2V19' 
+and rlike(logevent, 'ImageFileName.*?(mimikatz.exe|secretsdump.py|pwdump.exe|fgdump.exe|gsecdump.exe|samdump2.exe|quarks-pwdump.exe|cachedump.exe|lsadump.exe|procdump.exe|mimipenguin.sh|mimidogz.ps1|logonpasswords.exe|pypykatz.exe|dsusers.py|ntdsgrab.py|lazagne.exe|creddump7.exe|keethief.ps1|inveigh.exe|sharpkatz.exe|hivedump.exe|kerbrute.exe|sessiongopher.ps1)')
+| groupby agentid, logevent
+
+stream=aws-cloudtrail where errorcode is null and eventsource='s3.amazonaws.com' and eventname in ( 'PutBucketWebsite', 'PutReplicationConfiguration', 'ReplicateObject', 'RestoreObject' )  AND User='{TargetUser}' AND UserAccountID='{TargetHost}' AND SrcIP='{SuspectHost}' |  duration 6m
+
+stream=aws-cloudtrail  where eventsource='s3.amazonaws.com' and eventname in ( 'PutBucketWebsite', 'PutReplicationConfiguration', 'ReplicateObject', 'RestoreObject' ) |  groupby User, UserAccountID, SrcIP
+
+stream=crowdstrike 
+where rawaction='ProcessRollup2V19' 
+and (
+    (rlike(logevent,ParentBaseFileName.*?svchost.exe) and rlike(logevent,ImageFileName.*?cmd.exe))
+    or (rlike(logevent,ParentBaseFileName.*?explorer.exe) and rlike(logevent,ImageFileName.*?powershell.exe))
+    or (rlike(logevent,ParentBaseFileName.*?winword.exe) and (rlike(logevent,ImageFileName.*?cmd.exe) or rlike(logevent,ImageFileName.*?powershell.exe)))
+    or (rlike(logevent,ParentBaseFileName.*?excel.exe) and (rlike(logevent,ImageFileName.*?cmd.exe) or rlike(logevent,ImageFileName.*?powershell.exe)))
+    or (rlike(logevent,ParentBaseFileName.*?outlook.exe) and (rlike(logevent,ImageFileName.*?cmd.exe) or rlike(logevent,ImageFileName.*?powershell.exe)))
+)
+
+stream=crowdstrike where rawaction="ProcessRollup2LinV9" and logevent like "%CommandLine%/usr/bin/cloudflared --no-autoupdate tunnel run --token%" |  duration 2h
+
+stream=crowdstrike where rawaction like 'Agent%' and agentid="e974c4ec058946e3a76850f3939dd7e9"  | duration 24h
+
+stream=crowdstrike where logevent like '%CommandLine%' AND @CommandLine="/usr/bin/cloudflared --no-autoupdate tunnel run --token eyJhIjoiNmJlMjg0NGY4M2QyNTI4MGYzNjY5NDMxMWQ3M2U2ZDkiLCJ0IjoiYjZiODEyMGUtYmYxMi00ZDZhLWFiZGEtY2E1OGM4MWRhZmZmIiwicyI6IlpqZzNOVGMwTTJJdE9USTVNaTAwTXpZNExXSm1Nek10WVRCallURmxOREppWkRnNCJ9" | duration 2h
+
+stream=crowdstrike where rawaction="ProcessRollup2V19" and rlike(logevent, 'CommandLine.*?cloudflared.exe') | duration 30m
+
+stream=aws-cloudtrail | where eventname='RunInstances' and recipientaccountid="948821884325" and rlike(logevent, 'i-0cc0a01f686099b78')  | duration 12h
+
+stream=crowdstrike where rawaction="ProcessRollup2LinV9" and rlike(logevent, 'CommandLine.*?/usr/bin/cloudflared --no-autoupdate tunnel run --token') | groupby agentid |  duration 2h
+
+stream=DNS  |  limit 1 |  groupby srcip
+
+Stream=signals | groupby Uuid |  duration 10m |  limit 100
+
+stream=Nextdlp where logtype="DETECTION" and description like '%containing credit or debit card number%' and (policyname="Sensitive content pasted to website" or policyname="Sensitive file uploaded") | duration 8h
+
+stream=other where devsrcip='Earnin Nextdlp Connector' | select cnamtime, devsrcip, logevent | duration 1h | limit 100
+
+stream=Nextdlp | where LogType='AUDIT' AND RawAction="OperatorLogin" AND Role="['Limited Administrator']" | duration 14d
+
+stream=CROWDSTRIKE | where @DomainName='epicunitscan.info' |  duration 24h
+
+stream=CASB where Sourcename='CLOUDFLARE' AND FindingtypeSeverity IN ('Medium','Low') |   duration 1d |  groupby DisplayName,IntegrationDisplayName,FindingtypeDisplayName |  limit 1
+
+
+stream=aws-cloudtrail where errorcode is null and eventsource='iam.amazonaws.com' and eventname='UpdateLoginProfile' |  groupby user, useraccountid, srcip
+
+stream=aws-cloudtrail where errorcode is null and eventsource='iam.amazonaws.com' and eventname='UpdateLoginProfile' and user='{TargetUser}' and useraccountid='{TargetResource}' and srcip='{SuspectHost}' | duration 6m
+
+stream=authentication where sourcename='AWS-CLOUDTRAIL' and devsrcip='Earnin-Prod S3 X-Account' and userarn like 'arn:aws:sts::171679608487:assumed-role/Role-developer-on-call%' |  duration 30d |  groupby userarn
+
+stream=* | groupby stream | duration from 2024-01-27T00:00:00 to 2024-01-27T23:59:00
+
+stream=aws-cloudtrail where errorcode is null and eventname in ( 'AuthorizeDBSecurityGroupIngress', 'CreateDBSecurityGroup', 'DeleteDBSecurityGroup', 'RevokeDBSecurityGroupIngress' ) and user is not null and eventsource is not null and userarn is not null AND User='{TargetUser}' AND UserAccountID='{TargetHost}' AND SrcIP='{SuspectHost}' | duration 6m
+
+stream=aws-cloudtrail where errorcode is null and eventname in ( 'AuthorizeDBSecurityGroupIngress', 'CreateDBSecurityGroup', 'DeleteDBSecurityGroup', 'RevokeDBSecurityGroupIngress' ) and user is not null and eventsource is not null and userarn is not null |  groupby User, UserAccountID, SrcIP
+
+stream=* | groupby stream | duration from 2024-01-04T00:00:00 to 2024-01-04T23:59:00
+
+stream=* | groupby stream | duration from 2024-01-11T00:00:00 to 2024-01-11T23:59:00
+
+stream=zendesk where SourceClassification='account_setting' and RawAction in ('create', 'destroy') and SourceLabel='Credit Card Redaction' and user='{SuspectUser}'
+
+stream=zendesk where SourceClassification='account_setting' and RawAction in ('create', 'destroy') and SourceLabel='Credit Card Redaction'
+
+stream=DNS where sourcename='AWS' and srcip='{SuspectHost}' and queryname='{SuspectUrl}'
+
+stream=DNS where sourcename='AWS' |  groupby queryname, srcip
+
+stream=* | groupby stream | duration from 2024-01-18T00:00:00 to 2024-01-18T23:59:00
+
+stream=crowdstrike where logevent like '%event_simpleName%' and @event_simpleName='FirewallSetRule' | select @FirewallRule
+
+stream=crowdstrike where logevent like '%event_simpleName%' and @event_simpleName='FirewallSetRule' and @FirewallRule='{SuspectAction}'
+
+stream=slack where rawaction in ('app_installed','app_approved','org_app_workspace_added') | duration 1h | groupby user, rawaction
+
+stream=slack where rawaction in ('app_installed','app_approved','org_app_workspace_added') and rawaction='{TargetResource}' and user='{SuspectUser}' | duation 1h
+
+stream=DNS where action='DNS_QUERIED' and returncode='NXDOMAIN' |   groupby srcip, queryname |  select srcip, queryname, count(*) as count  | having count > 500 
+
+stream=DNS where action='DNS_QUERIED' and returncode='NXDOMAIN' and srcip='{SuspectHost}' AND queryname='{TargetHost}' | duration 6m
+
+stream=crowdstrike where logevent like '%event_simpleName%' and @event_simpleName != 'NetworkConnectIP4' and DstIP is not null and DstType='PUBLIC' and @ConnectionDirection is not null and @ConnectionDirection ='0' and @RemotePort is not null and @RemotePort in (5938, 8040, 8041, 5900, 5901, 5902, 5903, 5904, 5905, 5906, 5907, 5908, 5909, 5910, 3389, 3283, 137, 139, 445) | select @event_simpleName,DstIP,DstType,@RemotePort,SrcIP,@ConnectionDirection
+
+stream=crowdstrike where logevent like '%event_simpleName%' and @event_simpleName != 'NetworkConnectIP4' and DstIP is not null and DstType='PUBLIC' and @ConnectionDirection is not null and @ConnectionDirection ='0' and @RemotePort is not null and @RemotePort in (5938, 8040, 8041, 5900, 5901, 5902, 5903, 5904, 5905, 5906, 5907, 5908, 5909, 5910, 3389, 3283, 137, 139, 445) and DstIP='{TargetHost}' and @RemotePort='{TargetPort}' and SrcIP='{SuspectHost}'
+
+stream=* | duration 1h | select devsrcip as UniqueDevSrcIP, count(*) as count_unique | groupby devsrcip
+
+stream=iam where sourcename="OKTA" and eventtype='user.account.report_suspicious_activity_by_enduser' and user='{SuspectUser}' and eventtype='{TargetResource}'
+
+stream=iam where sourcename="OKTA" and eventtype='user.account.report_suspicious_activity_by_enduser' | duration 1h | groupby user, eventtype
+
+stream=iam where sourcename="OKTA" and eventtype='group.privilege.grant' and user='{SuspectUser}' and eventtype='{TargetResource}' | duration 1h
+
+stream=iam where sourcename="OKTA" and eventtype='group.privilege.grant' | duration 1h | groupby user, eventtype
+
+stream=authentication where sourcename = 'OKTA' and action = 'LOGIN' and eventtype = 'user.session.start' and user not like '%@earnin.com' and (reason != 'VERIFICATION_ERROR' and reason != 'INVALID_CREDENTIALS') |  duration 7d
+
+stream=AWS-CLOUDTRAIL where eventname in ('DeleteGroupPolicy', 'DeleteRolePolicy', 'DeleteUserPolicy', 'PutGroupPolicy', 'PutRolePolicy', 'PutUserPolicy', 'CreatePolicy', 'DeletePolicy', 'CreatePolicyVersion', 'DeletePolicyVersion', 'AttachRolePolicy', 'DetachRolePolicy', 'AttachUserPolicy', 'DetachUserPolicy', 'AttachGroupPolicy', 'DetachGroupPolicy') and eventname='{TargetUser}' and userarn='{SuspectOject}' and user='{SuspectUser}' and recipientaccountid='{SuspectProcess}' | duration 1h 
+
+stream=AWS-CLOUDTRAIL where eventname in ('DeleteGroupPolicy', 'DeleteRolePolicy', 'DeleteUserPolicy', 'PutGroupPolicy', 'PutRolePolicy', 'PutUserPolicy', 'CreatePolicy', 'DeletePolicy', 'CreatePolicyVersion', 'DeletePolicyVersion', 'AttachRolePolicy', 'DetachRolePolicy', 'AttachUserPolicy', 'DetachUserPolicy', 'AttachGroupPolicy', 'DetachGroupPolicy') | duration 1h | groupby recipientAccountId, userarn, user, eventname
+
+stream=flow where sourcename = "CLOUDFLARE" and SrcCN is not null and SrcCN !='-' and UserEmail='derek.chang@earnin.com' | groupby SrcCN
+
+stream=flow where sourcename = "CLOUDFLARE" and SrcCN is not null and SrcCN !='-' 
+
+stream=L7-EDGE-GATEWAY where sourcename='CLOUDFLARE' and srccn != '-' and srccn is not null and @Email='derek.chang@earnin.com' | groupby srcip, srcisp, srccn, srcasn | duration 1w
+
+stream=authentication where sourcename='OKTA' and not @outcome.result = 'FAILURE' and eventtype = 'user.session.start' and not (user like '%@ece%' or user like '%securview%') and not srccn = 'PH'  |  groupby user |  duration 7d
+
+stream=CDN-HTTP | where SrcISP='M247 Ltd' and UserAgent like 'okhttp%' | groupby @ClientRequestPath |  duration 24h
+
+stream=CDN-HTTP | where @RequestHeaders like '%Proxy-Authorization%' |  duration 24h
+
+stream=CDN-HTTP | where SrcISP='M247 Ltd' and UserAgent like 'okhttp%' | groupby @RequestHeaders.deviceid,@ClientRequestPath |  duration 24h
+
+stream=flow where sourcename = "CLOUDFLARE" and SrcCN is not null and SrcCN !='-' | groupby SrcCN
+
+stream=THREAT where sourcename='AWS-GUARDDUTY' and not @service.action.awsApiCallAction.remoteAccountDetails.accountId = '414351767826' and severity >= 7 | select @title, @id 
+
+stream=THREAT where sourcename='AWS-GUARDDUTY' and not @service.action.awsApiCallAction.remoteAccountDetails.accountId = '414351767826' and severity >= 7 and @title='{SuspectAction}' and @id='{SuspectProcess}' | duration 6m
+
+stream=CROWDSTRIKE where @ExternalApiType='Event_DetectionSummaryEvent' and @SeverityName='High' or @SeverityName='Critical' and user='{SuspectUser}'
+
+stream=CROWDSTRIKE where @ExternalApiType='Event_DetectionSummaryEvent' and @SeverityName='High' or @SeverityName='Critical' | select @Technique,@ComputerName,@SensorId,@SeverityName,user
+
+stream=github where rawaction='repo.access' | groupby user, rawaction
+
+stream=github where rawaction='repo.access' and rawaction='{TargetResource}' and user='{SuspectUser}' | duration 1h
+
+stream=configuration where action='CONFIGURATION_CHANGED' and config='Service Installed' and status='PASSED' and srcip='{SuspectHost}' | duration 6m
+
+stream=configuration where action='CONFIGURATION_CHANGED' and config='Service Installed' and status='PASSED' | groupby srcip
+
+stream=l7-edge-gateway where action='URL_BLOCKED' | groupby @Email, url  | duration 1d |select @Email, url, count(url) as url_count | having url_count > 40
+
+stream=ep-process where action='PROCESS_ADDED' and image like '%lsass%exe%' and (grantedaccess='0x1010' or grantedaccess='0x1410' or grantedaccess='0x143A') | groupby user, system
+
+stream=ep-process where action='PROCESS_ADDED' and image like '%lsass%exe%' and (grantedaccess='0x1010' or grantedaccess='0x1410' or grantedaccess='0x143A') and system='{TargetHost}' and user='{SuspectUser}' | duration 6m
+
+stream=authentication where sourcename='OKTA' and reason='None' and srccn in ('RU', 'UA', 'KP', 'TR', 'ID', 'IR', 'VN', 'BD', 'CN', 'IQ', 'LB', 'LY', 'MY', 'MM', 'NE', 'NG', 'SY') |  groupby user,srccn, srcisp
+
+stream=authentication where sourcename='OKTA' and reason='None' and srccn in ('RU', 'UA', 'KP', 'TR', 'ID', 'IR', 'VN', 'BD', 'CN', 'IQ', 'LB', 'LY', 'MY', 'MM', 'NE', 'NG', 'SY') AND user='{TargetHost}' and srccn='{SuspectHost}' 
+
+stream=authentication where sourcename='OKTA' and reason='None' and user='{TargetUser}' and srccn='{SuspectHost}' | duration 6m
+
+stream=authentication where sourcename='OKTA' and reason='None' |  groupby user,srccn
+
+stream=aws-cloudtrail where eventsource='cloudtrail.amazonaws.com' and errorcode is null and not @requestParameters.name is null and EventName IN ('UpdateTrail', 'DeleteTrail', 'StopLogging') and @requestParameters.name='{TargetResource}' and srcip='{SuspectHost}' and user='{SuspectUser}' and eventname='{SuspectAction}' |  duration 6m
+
+stream=aws-cloudtrail where eventsource='cloudtrail.amazonaws.com' and errorcode is null and not @requestParameters.name is null and EventName IN ('UpdateTrail', 'DeleteTrail', 'StopLogging') | groupby user, useraccountid, srcip, eventname
+
+Stream=SIGNALS | groupby Uuid |  duration 10m | limit 100
+
+stream=neosec WHERE endpointpath='{TargetHost}' AND servicename='{SuspectHost}'
+
+stream=neosec where s3prefix LIKE '%neosec/endpoints%' | groupby endpointpath,method,servicename 
+
+stream=signals where NOT Sourceid IN ('482f5fdb10924fc1bec4f176a229a4e1', '02c06725a1f24414be7a449edb71e0a6')| duration 2h | groupby cnamtime,Uuid,Scope,Detectionseverity,Sourcestream,Sourcetype,Sourceid,Workbook,Detectionname,Detectionscore,Detectiontactic,Detectiontechnique,Detectionconfidence,Targethost,Targetuser,Targetresource,Targetport,Suspecthost,Suspectuser,Suspectobject,Suspectprocess,Suspecthash,Suspecturl,Suspectaction,Suspectlocation,Firstseen,Lastseen,Cnamtime,Occurrences,Shash,Falsepositive | last 10
+
+stream=other |  select stream |  limit 1
+
+stream=l7-edge-ingress |  groupby srcip
+
+stream=iam where sourcename='OKTA' and rawstatus='SUCCESS' and eventtype='user.lifecycle.create' and substring_index(target0id, "@", -1) not in ('earnin.com','ececonsultinggroup.com','amazon.com','ececontactcenters.com','unitedlex.com','merkleyandpartners.com','paulhastings.com','cloudflare.com','utoronto.ca','mediastruction.com','roca.work','mossadams.com','ececonsultinggroup.net','dominiccx.com','ey.com','galepartners.com','forge.is','okta.com','galacticfed.com','earnin.co','tengleconsultinggroup.com','unaterra.io','graphitehq.com','securview.com','rntdigitalinc.com','teleperformance.com') and target0id='{TargetUser}'  | duration 6m
+
+stream=iam where sourcename='OKTA' and rawstatus='SUCCESS' and eventtype='user.lifecycle.create' and substring_index(target0id, "@", -1) not in ('earnin.com','ececonsultinggroup.com','amazon.com','ececontactcenters.com','unitedlex.com','merkleyandpartners.com','paulhastings.com','cloudflare.com','utoronto.ca','mediastruction.com','roca.work','mossadams.com','ececonsultinggroup.net','dominiccx.com','ey.com','galepartners.com','forge.is','okta.com','galacticfed.com','earnin.co','tengleconsultinggroup.com','unaterra.io','graphitehq.com','securview.com','rntdigitalinc.com','teleperformance.com') |  groupby user, target0id, srcip, srcisp, useragent 
+
+stream=FLOW where sourcetype='ZTNA-NETWORK-SESSION' and action='LOGIN' and not srccn IN ('US','CA','MX','TH','BR','HK') AND  system='{TargetHost}' AND useremail='{SuspectHost}' AND srccn='{SuspectUser}' |  duration 10m
+
+stream=FLOW where sourcetype='ZTNA-NETWORK-SESSION' and action='LOGIN' and not srccn IN ('US','CA','MX','TH','BR','HK') | groupby system, useremail, srccn 
+
+stream=slack where sourcename='SLACK' and actiontaken in ('app_restricted','app_uninstalled','org_app_workspace_removed') and user='{SuspectUser}'
+
+stream=slack where sourcename='SLACK' and actiontaken in ('app_restricted','app_uninstalled','org_app_workspace_removed') | duration 1h | groupby user | having count_col1 >=1
+
+stream=CASB where sourcetype='ZTNA-CASB' and findingtypename='File Shared Outside Company Read and Write' and (findingtypeseverity='Critical' or findingtypeseverity='High') | groupby assetlink, assetname
+
+stream=CLOUD-CONFIG where sourcename='CLOUDFLARE' and rawaction='cloudflare_login' | groupby user, srcip | duration 30d
+
+stream=CLOUD-CONFIG where sourcename='CLOUDFLARE' and rawaction='account_member_set_roles' | groupby user
+
+stream=l7-edge-gateway where action='URL_BLOCKED' | groupby @Email, url | duration 24h | limit 100 |select @Email, url, count(url) as total_count |having total_count > 20
+
+stream=FLOW where sourcetype='ZTNA-NETWORK-SESSION' and action='LOGIN' and (srccn!='US' and srccn!='CA' and srccn!='MX' and srccn!='TH' and srccn!='BR' and srccn!='HK') | groupby system, useremail, srccn | duration 30d
+
+stream=CASB where sourcetype='ZTNA-CASB' and findingtypeseverity='Critical' | groupby assetlink, assetname
+
+stream=CLOUD-CONFIG where sourcename='CLOUDFLARE' and resourceType='notification.webhook' and (actionType='create' or actionType='delete')
+
+stream=CLOUD-CONFIG where sourcename='CLOUDFLARE' and rawaction='job_delete' and resourceType='logpush job' | groupby user, resourceid
+
+stream=* | duration 1h | select devsrcip as UniqueDevSrcIP, count(*) as count_unique | groupby devsrcip
+
+stream=* where sourcename='G-SUITE' and @id.applicationName='user_accounts' and @name='email_forwarding_out_of_domain' and not logevent like '%example.com%' | groupby user 
+
+stream=* where sourcename='G-SUITE' and @id.applicationName='user_accounts' and @name='email_forwarding_out_of_domain' and not logevent like '%example.com%' and user='{SuspectUser}'
+
+stream=IAM where sourcename='OKTA' and eventtype like '%unsuspend%' AND user='{TargetHost}' AND target1id='{SuspectHost}' 
+
+stream=IAM where sourcename='OKTA' and eventtype like '%unsuspend%' | groupby user, target1id
+
+stream=AWS-CLOUDTRAIL where eventname in ('CreateVpc', 'DeleteVpc', 'ModifyVpcAttribute', 'AcceptVpcPeeringConnection', 'CreateVpcPeeringConnection', 'DeleteVpcPeeringConnection', 'RejectVpcPeeringConnection', 'AttachClassicLinkVpc', 'DetachClassicLinkVpc', 'DisableVpcClassicLink', 'EnableVpcClassicLink') |  groupby user, eventname, srcip, recipientaccountid
+
+stream=AWS-CLOUDTRAIL where eventname in ('CreateVpc', 'DeleteVpc', 'ModifyVpcAttribute', 'AcceptVpcPeeringConnection', 'CreateVpcPeeringConnection', 'DeleteVpcPeeringConnection', 'RejectVpcPeeringConnection', 'AttachClassicLinkVpc', 'DetachClassicLinkVpc', 'DisableVpcClassicLink', 'EnableVpcClassicLink') and eventname='{TargetResource}' and user='{SuspectUser}' and recipientaccountid='{SuspectProcess}' and srcip='{SuspectHost}' | duration 1h
+
+stream=crowdstrike where logevent like '%event_simpleName%' and @event_simpleName != 'NetworkListenIP4' and DstIP is not null and DstType='PUBLIC' and @LocalPort is not null and @LocalPort IN ('21','22','23','69','445','989','3389') and DstIP='{TargetHost}' and @LocalPort='{TargetPort}' and SrcIP='{SuspectHost}'
+
+stream=crowdstrike where logevent like '%event_simpleName%' and @event_simpleName != 'NetworkListenIP4' and DstIP is not null and DstType='PUBLIC' and @LocalPort is not null and @LocalPort IN ('21','22','23','69','445','989','3389') | select DstIP, SrcIP, @LocalPort
+
+stream=SLACK where RawAction='intune_disabled' | groupby user
+
+stream=SLACK where RawAction='intune_disabled' and user='{SuspectUser}'
+
+stream=IAM where Privilege='ADMIN' AND Action IN ('ROLE_ADDED', 'ROLE_UPDATED') | groupby user
+
+stream=IAM where Privilege='ADMIN' AND Action IN ('ROLE_ADDED', 'ROLE_UPDATED') and user='{SuspectUser}' | duration 16m
+
+stream=CLOUD-CONFIG where sourcename='CLOUDFLARE' and rawaction='job_delete' and resourceType='logpush job' AND user='{TargetHost}' AND resourceid='{SuspectHost}' 
+
+stream=CLOUD-CONFIG where sourcename='CLOUDFLARE' and rawaction='job_delete' and resourceType='logpush job' | groupby user, resourceid 
+
+stream=iam where sourcename='GITHUB' and RawAction='org.update_member' and user='{SuspectUser}' | duration 1h
+
+stream=iam where sourcename='GITHUB' and RawAction='org.update_member'| groupby user 
+
+stream=SLACK where RawAction='ekm_slackbot_unenroll_notification_sent' | groupby user
+
+stream=SLACK where RawAction='ekm_slackbot_unenroll_notification_sent' and user='{SuspectUser}'
+
+stream=CLOUD-CONFIG where sourcename='CLOUDFLARE' and resourceType='notification.webhook' and (rawaction='create' or rawaction='delete') | groupby user 
+
+stream=CLOUD-CONFIG where sourcename='CLOUDFLARE' and resourceType='notification.webhook' and (rawaction='create' or rawaction='delete') AND user='{TargetHost}' 
+
+stream=SLACK where RawAction='ekm_logging_config_set' and user='{SuspectUser}' 
+
+stream=SLACK where RawAction='ekm_logging_config_set' | groupby user | groupby user 
+
+stream=crowdstrike where logevent like '%ImageFileName%' AND @ImageFileName="/usr/bin/cloudflared" | duration 5h
+
+
+stream=slack where rawaction='file_malicious_content_detected' | duration 1h | groupby user, rawaction
+
+stream=slack where rawaction='file_malicious_content_detected' and user='{SuspectUser}' and rawaction='{TragetResource}'
+
+stream=iam where sourcename="OKTA" and eventtype='user.account.privilege.grant' and status='SUCCESS' and rlike (PrivilegeGranted, '.*[aA]dministrator.*') and user='{SuspectUser}' and privilegegranted='{SuspectObject}' and eventtype='{TargetResource}'
+
+stream=iam where sourcename="OKTA" and eventtype='user.account.privilege.grant' and status='SUCCESS' and rlike (PrivilegeGranted, '.*[aA]dministrator.*') | groupby user, eventtype, PrivilegeGranted
+
+stream=github where rawaction='public_key.create' and user not in ('robbfoster-earnin','earnin-ci') and user='{SuspectUser}' | duration 6m
+
+stream=github where rawaction='public_key.create' and user not in ('robbfoster-earnin','earnin-ci') |  groupby rawaction, user
+
+stream=AUTHENTICATION where sourcename='AWS-CLOUDTRAIL' and eventname='ConsoleLogin' and role='Root' and status='FAIL' | groupby userarn | having count_col1>=5
+
+stream=AUTHENTICATION where sourcename='AWS-CLOUDTRAIL' and eventname='ConsoleLogin' and role='Root' and status='FAIL' and UserArn='{SuspectHost}' | duration 15m
+
+stream=CLOUD-CONFIG where sourcename='CLOUDFLARE' and rawaction='cloudflare_login' AND user='{TargetHost}' AND srcip='{SuspectHost}' |  duration 10m
+
+stream=CLOUD-CONFIG where sourcename='CLOUDFLARE' and rawaction='cloudflare_login' | groupby user, srcip 
+
+stream=CLOUD-CONFIG where sourcename='CLOUDFLARE' and rawaction='account_member_set_roles' | groupby user 
+
+stream=CLOUD-CONFIG where sourcename='CLOUDFLARE' and rawaction='account_member_set_roles' AND user='{TargetHost}' | duration 6m
+
+stream=AUTHENTICATION where sourcename='OKTA' and status='PASSED' | select user, distinct_count(srcip) as CntSrcIP | groupby user |  having CntSrcIP > 1 |  duration 1h
+
+stream=AUTHENTICATION where action='LOGIN' and status='PASSED' and system='{TargetHost}' and user='{TargetUser}' | duration 6m
+
+stream=AWS-CLOUDTRAIL where sourcename='AWS-CLOUDTRAIL' and eventname='DisassociateWebACL' AND UserArn='{SuspectObject}' and User='{SuspectUser}' and srcip='{SuspectHost}' and eventname='{TargetResource}' | duration 1h
+
+stream=AWS-CLOUDTRAIL where sourcename='AWS-CLOUDTRAIL' and eventname='DisassociateWebACL' |  groupby UserArn, user, srcip, recipientaccountid, eventname
+
+stream=AWS-CLOUDTRAIL where Role="root" and not eventtype="AwsServiceEvent" and not eventname="CreateServiceLinkedRole" | groupby UserArn, user, srcip, recipientaccountid, eventname
+
+stream=AWS-CLOUDTRAIL where Role="root" and not eventtype="AwsServiceEvent" and not eventname="CreateServiceLinkedRole" AND userarn='{SuspectObject}' and user='{SuspectUser}' and srcip='{SuspectHost}' and eventname='{TargetResource}' | duration 1h 
+
+stream=slack where actiontaken='pref.two_factor_auth_changed' and user='{SuspectUser}' and rawaction='{TargetResource}' | duration 1h
+
+stream=SLACK where rawaction='pref.two_factor_auth_changed' | groupby user, eventname
+
+stream=SLACK where RawAction='pref.sso_setting_changed' and user='{SuspectUser}'
+
+stream=SLACK where RawAction='pref.sso_setting_changed' | groupby user
+
+stream=SLACK where RawAction='ekm_unenrolled' and user='{SuspectUser}'
+
+stream=SLACK where RawAction='ekm_unenrolled' | groupby user
+
+stream=AWS-CLOUDTRAIL where sourcename='AWS-CLOUDTRAIL' and  eventname in ('PutBucketAcl','PutBucketPolicy','PutBucketCors','DeleteBucketPolicy','DeleteBucketCors') AND errorcode is null and userarn='{SuspectObject}' and user='{SuspectUser}' and srcip='{SuspectHost}' and eventname='{TargetResource}' and @requestParameters.bucketName='{SuspectProcess}' | duration 1h 
+
+stream=AWS-CLOUDTRAIL where sourcename='AWS-CLOUDTRAIL' and  eventname in ('PutBucketAcl','PutBucketPolicy','PutBucketCors','DeleteBucketPolicy','DeleteBucketCors') AND errorcode is null | groupby Srcisp,UserArn, @requestParameters.bucketName, user, recipientaccountid, eventname
+
+stream=slack where rawaction='anomaly' and user='{SuspectUser}' and rawaction='{TargetResource}' | duration 6m
+
+stream=slack where rawaction='anomaly' | groupby user, rawaction
+
+stream=authentication where action='LOGIN' and status='PASSED' | groupby user | select user, distinct_count(srccn) as uniqcncount |  having uniqcncount > 0
+
+stream=zendesk where SourceClassification='user_setting' and RawAction in ('create', 'update') and logevent like '%Suspended%' and user='{SuspectUser}'
+
+stream=zendesk where SourceClassification='user_setting' and RawAction in ('create', 'update') and logevent like '%Suspended%'
+
+stream=SLACK where RawAction in ('idp_configuration_added','idp_configuration_deleted','idp_prod_configuration_updated') | groupby user
+
+stream=SLACK where RawAction in ('idp_configuration_added','idp_configuration_deleted','idp_prod_configuration_updated') and user='{SuspectUser}'
+
+stream=AWS-CLOUDTRAIL where eventname IN ('CreateRoute', 'CreateRouteTable', 'ReplaceRoute', 'ReplaceRouteTableAssociation', 'DeleteRouteTable', 'DeleteRoute', 'DisassociateRouteTable') and errorcode is null | duration 1h |  groupby EventName,RecipientAccountID,SrcIP,UserAgent,User,UserArn,@requestParameters.meshName
+
+stream=AWS-CLOUDTRAIL where eventname IN ('CreateRoute', 'CreateRouteTable', 'ReplaceRoute', 'ReplaceRouteTableAssociation', 'DeleteRouteTable', 'DeleteRoute', 'DisassociateRouteTable') and errorcode is null and @requestParameters.meshName='{SuspectObject}' AND UserArn='{SuspectUser}' and srcip='{SuspectHost}' and eventname='{TargetResource}'
+
+stream=AWS-CLOUDTRAIL where eventname in ('AuthorizeSecurityGroupIngress','AuthorizeSecurityGroupEgress','RevokeSecurityGroupIngress','RevokeSecurityGroupEgress','CreateSecurityGroup','DeleteSecurityGroup') and errorcode is null | groupby user, eventname, userarn, recipientaccountid, @requestParameters.groupId, @responseElements.groupId
+
+stream=AWS-CLOUDTRAIL where eventname in ('AuthorizeSecurityGroupIngress','AuthorizeSecurityGroupEgress','RevokeSecurityGroupIngress','RevokeSecurityGroupEgress','CreateSecurityGroup','DeleteSecurityGroup') and errorcode is null and userarn='{SuspectHost}' and (@requestParameters.groupId='{SuspectObject}' or @responseElements.groupId='{SuspectObject}') and user='{SuspectUser}' and recipientaccountid='{SuspectProcess}' and eventname='{TargetResource}' | duration 6m
+
+stream=cloudtrail where eventsource="cloudtrail.amazonaws.com" and eventname IN ("StopLogging", "UpdateTrail", "DeleteTrail") and user='{SuspectUser}'
+
+stream=cloudtrail  where eventsource="cloudtrail.amazonaws.com" and eventname IN ("CreateTrail", "UpdateTrail", "StartLogging") | duration 1h | groupby user | having count_col1 >=1
+

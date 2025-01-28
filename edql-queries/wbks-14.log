@@ -1,0 +1,146 @@
+stream=IAM where sourcename='WINDOWS' and action='USER_LOCKOUT' | duration 1w | select SystemtStamp as DateTime ,System , Action , User , Devsrcip , Domain,TargetUser
+
+stream=documents where action in ('ACCESSED', 'DOWNLOADED') and srccn in ('CN', 'KP') | groupby user
+
+stream=documents where action in ('ACCESSED', 'DOWNLOADED') and srccn in ('CN', 'KP') and user='{SuspectUser}' | duration 6m
+
+stream=other where extractorid='843' and @metadata.eventType = "DetectionSummaryEvent" | duration 1w | select logevent, @event.ComputerName, @event.UserName, @event.DetectName, @event.DetectDescription
+
+stream=* where devsrcip="192.0.0.113" and (action="PROCESS_CREATED" or action="OBJECT_CHANGED" or action="AUDIT_PRIVILEGED" or action="LOGIN" or action="CONFIGURATION_CHANGED" or action="GROUP_ENUMERATED")
+
+
+stream=* where sourcename='ORACLE' |  duration 1d
+
+
+stream=* |  groupby devsrcip | select devsrcip,sum(evtlen)/1000/1000/1000 | duration 1d 
+
+stream=webfilter where action='URL_BLOCKED' | duration 30m | select srcip, count(*) as count | groupby srcip | having count > 200
+
+stream=webfilter where action='URL_BLOCKED' and srcip='{SuspectHost}' | duration 31m
+
+stream=firewall where devsrcip='192.169.0.10' |  select cnamtime , system, sourcename, sourcetype , action , srcip , srcport , dstip , dstport, proto,app ,devsrcip , logevent , @sentbyte, @rcvdbyte
+
+stream=authentication where sourcename='MSSQL' | duration 1w |  select SystemTStamp as DateTime, system, action, user , category, devsrcip
+
+stream=* where devsrcip='192.0.0.172' | duration 1d | select cnamtime, action, logevent ,devsrcip , @user , @Role , @hostname , severity , sourcename , system , stream ,status, user
+
+stream=email-gateway where action='EMAIL_ACCEPTED' and rlike(file, "\\.(apk|app|bat|bin|cgi|com|dll|dmg|exe|jar|js|jse|msi|py|scr|sh|vbs|wsf|wsh|xap|x86|xex)") and not file like "%json%" and sender='{SuspectUser}' | duration 6m
+
+stream=email-gateway where action='EMAIL_ACCEPTED' and rlike(file, "\\.(apk|app|bat|bin|cgi|com|dll|dmg|exe|jar|js|jse|msi|py|scr|sh|vbs|wsf|wsh|xap|x86|xex)") and not file like "%json%" | groupby sender
+
+stream=email-gateway where action='EMAIL_ACCEPTED' and rlike(file, "\\.(apk|app|bat|bin|cgi|com|dll|dmg|exe|jar|js|jse|msi|py|scr|sh|vbs|wsf|wsh|xap|x86|xex)\\.") and sender='{SuspectUser}' | duration 6m
+
+stream=email-gateway where action='EMAIL_ACCEPTED' and rlike(file, "\\.(apk|app|bat|bin|cgi|com|dll|dmg|exe|jar|js|jse|msi|py|scr|sh|vbs|wsf|wsh|xap|x86|xex)\\.") | groupby sender
+
+stream=authentication where sourcetype='OS' AND sourcename='WINDOWS' AND devsrcip = '192.0.0.239' | duration 1w | select systemtstamp as DateTime, action, user, system, devsrcip, domain, logevent, sourcetype, sourcename, status, @Channel
+
+stream=* | groupby devsrcip | select devsrcip, sum(evtlen)/1024/1024/1024 AS LogVolume | duration 1w
+
+stream=IAM where action in ('USER_ACCOUNT_CREATED','USER_ACCOUNT_DELETED') | duration 30m | select user, targetuser, distinct_count(action) as CountAction | groupby user, targetuser | having CountAction==2
+
+stream=IAM where action in ('USER_ACCOUNT_CREATED','USER_ACCOUNT_DELETED') and targetuser='{TargetUser}' and user='{SuspectUser}' | duration 6m
+
+stream=WEBFILTER where status='PASSED' and not returncode='302' and proxy='httpreferer' and (domain like "%ipecho.net%" or domain like "%ipinfo.io%" or domain like "%ifconfig.co%" or domain like "%ifconfig.me%" or domain like "%icanhazip.com%" or domain like "%myexternalip.com%" or domain like "%api.ipify.org%" or domain like "%bot.whatismyipaddress.com%" or domain like "%ip.anysrc.net%" or domain like "%wtfismyip.com%") and srcip='{SuspectHost}' | duration 6m
+
+stream=WEBFILTER where status='PASSED' and (domain like "%ipecho.net%" or domain like "%ipinfo.io%" or domain like "%ifconfig.co%" or domain like "%ifconfig.me%" or domain like "%icanhazip.com%" or domain like "%myexternalip.com%" or domain like "%api.ipify.org%" or domain like "%bot.whatismyipaddress.com%" or domain like "%ip.anysrc.net%" or domain like "%wtfismyip.com%") | groupby srcip
+
+stream=threat where sourcename='CROWDSTRIKE-FALCON' and technique='Disable or Modify Tools' | select user, srcip, computername, file, patterndispositiondescription, sha1, tactic, technique, threat | duration 1d
+
+stream=firewall where intel="True" and action="PACKET_ALLOWED" and violatedfield="DstIP" and srctype="PRIVATE" and txlen>0 and srcip='{SuspectHost}' | duration 16m
+
+stream=firewall where intel="True" and action="PACKET_ALLOWED" and violatedfield="DstIP" and srctype="PRIVATE" and txlen>0 | duration 15m | groupby srcip | select srcip, count(dstip) as dstcount|  having dstcount > 3
+
+stream=* | duration 7d | select distinct(devsrcip) as DevIP
+
+stream=threat where sourcename='CROWDSTRIKE-FALCON' and threat="DLL Side-Loading" | select user, srcip, computername, file, patterndispositiondescription, sha1, tactic, technique, threat | duration 1d
+
+stream=* | duration 1d | select distinct(devsrcip) as DevIP
+
+stream=webfilter where rlike(url,"\.exe|\.vbs|\.bat|\.rar|\.ps1|\.doc|\.docm|\.xls|\.xlsm|\.pptm|\.rtf|\.hta|\.dll|\.ws|\.wsf|\.sct|\.zip") and not rlike(domain,"\.com|\.org|\.net|\.edu|\.gov|\.uk|\.ca|\.de|\.jp|\.fr|\.au|\.us|\.ch|\.it|\.nl|\.se|\.no|\.es") and srcip='{SuspectHost}' | duration 6m
+
+stream=webfilter where rlike(url,"\\.exe|\\.vbs|\\.bat|\\.rar|\\.ps1|\\.doc|\\.docm|\\.xls|\\.xlsm|\\.pptm|\\.rtf|\\.hta|\\.dll|\\.ws|\\.wsf|\\.sct|\\.zip") and not rlike(url,"\\.com|\\.org|\\.net|\\.edu|\\.gov|\\.uk|\\.ca|\\.de|\\.jp|\\.fr|\\.in|\\.au|\\.us|\\.ch|\\.it|\\.nl|\\.se|\\.no|\\.es|\\.ws") | groupby srcip
+
+stream=threat where sourcename='FORTIGATE' and @subtype='"virus"' and @eventtype='"infected"' and @direction='"incoming"' and threat="JS/ScrInject.B!tr" | select srcip, @srcintf, dstip, @dstintf, @direction, user, vector, threat, @url, @action, logevent| duration 1d
+
+stream=webfilter where rlike(url,"\\.exe|\\.vbs|\\.bat|\\.rar|\\.ps1|\\.doc|\\.docm|\\.xls|\\.xlsm|\\.pptm|\\.rtf|\\.hta|\\.dll|\\.ws|\\.wsf|\\.sct|\\.zip") and rlike(url,"\\.hopto\\.org|\\.noip\\.com|\\.ddns\\.name|\\.myftp\\.org|\\.myftp\\.biz|\\.serveblog\\.net|\\.servebeer\\.com|\\.servemp3\\.com|\\.serveftp\\.com|\\.servequake\\.com|\\.servehalflife\\.com|\\.servehttp\\.com|\\.servegame\\.com|\\.servepics\\.com|\\.myvnc\\.com|\\.ignorelist\\.com|\\.jkub\\.com|\\.dlinkddns\\.com|\\.jumpingcrab\\.com|\\.ddns\\.info|\\.mooo\\.com|\\.strangled\\.net|\\.adultdns\\.net|\\.craftx\\.biz|\\.ddns01\\.com|\\.dns53\\.biz|\\.dnsapi\\.info|\\.dnsd\\.info|\\.dnsdynamic\\.com|\\.dnsdynamic\\.net|\\.dnsget\\.org|\\.fe100\\.net|\\.flashserv\\.net|\\.ftp21\\.net|\\.http01\\.com|\\.http80\\.info|\\.https443\\.com|\\.imap01\\.com|\\.kadm5\\.com|\\.mysq1\\.net|\\.ns360\\.info|\\.ntdll\\.net|\\.ole32\\.com|\\.proxy8080\\.com|\\.sql01\\.com|\\.ssh01\\.com|\\.ssh22\\.net|\\.tempors\\.com|\\.tftpd\\.net|\\.ttl60\\.com|\\.ttl60\\.org|\\.user32\\.com|\\.voip01\\.com|\\.wow64\\.net|\\.x64\\.me|\\.xns01\\.com|\\.dyndns\\.org|\\.dyndns\\.info|\\.dyndns\\.tv|\\.dnsomatic\\.com|\\.zapto\\.org|\\.webhop\\.net|\\.25u\\.com|\\.slyip\\.net") and srcip='{SuspectHost}' | duration 6m
+
+stream=webfilter where rlike(url,"\\.exe|\\.vbs|\\.bat|\\.rar|\\.ps1|\\.doc|\\.docm|\\.xls|\\.xlsm|\\.pptm|\\.rtf|\\.hta|\\.dll|\\.ws|\\.wsf|\\.sct|\\.zip") and rlike(url,"\\.hopto\\.org|\\.noip\\.com|\\.ddns\\.name|\\.myftp\\.org|\\.myftp\\.biz|\\.serveblog\\.net|\\.servebeer\\.com|\\.servemp3\\.com|\\.serveftp\\.com|\\.servequake\\.com|\\.servehalflife\\.com|\\.servehttp\\.com|\\.servegame\\.com|\\.servepics\\.com|\\.myvnc\\.com|\\.ignorelist\\.com|\\.jkub\\.com|\\.dlinkddns\\.com|\\.jumpingcrab\\.com|\\.ddns\\.info|\\.mooo\\.com|\\.strangled\\.net|\\.adultdns\\.net|\\.craftx\\.biz|\\.ddns01\\.com|\\.dns53\\.biz|\\.dnsapi\\.info|\\.dnsd\\.info|\\.dnsdynamic\\.com|\\.dnsdynamic\\.net|\\.dnsget\\.org|\\.fe100\\.net|\\.flashserv\\.net|\\.ftp21\\.net|\\.http01\\.com|\\.http80\\.info|\\.https443\\.com|\\.imap01\\.com|\\.kadm5\\.com|\\.mysq1\\.net|\\.ns360\\.info|\\.ntdll\\.net|\\.ole32\\.com|\\.proxy8080\\.com|\\.sql01\\.com|\\.ssh01\\.com|\\.ssh22\\.net|\\.tempors\\.com|\\.tftpd\\.net|\\.ttl60\\.com|\\.ttl60\\.org|\\.user32\\.com|\\.voip01\\.com|\\.wow64\\.net|\\.x64\\.me|\\.xns01\\.com|\\.dyndns\\.org|\\.dyndns\\.info|\\.dyndns\\.tv|\\.dnsomatic\\.com|\\.zapto\\.org|\\.webhop\\.net|\\.25u\\.com|\\.slyip\\.net") | groupby url 
+
+stream=webfilter where ((url like "%/install\_flash\_player.exe" or url like "%/flash\_install.php%") and not (url LIKE "%.adobe.com/%")) | groupby srcip
+
+stream=webfilter where ((url like "%/install\_flash\_player.exe" or url like "%/flash\_install.php%") and not (url LIKE "%.adobe.com/%"))  and srcip='{SuspectHost}' | duration 6m
+
+stream=THREAT where sourcename='FORTIGATE' and @subtype='"virus"' and @eventtype='"infected"' and @direction='"incoming"' and srcip='{SuspectHost}' and user='{SuspectUser}' and @url='{SuspectUrl}' and @virus='{SuspectOject}'| duration 1d
+
+stream=THREAT where sourcename='FORTIGATE' and @subtype='"virus"' and @eventtype='"infected"' and @direction='"incoming"' | select srcip, @srcintf, dstip, @dstintf, @direction, user, vector, @virus as virus, @url, logevent | duration 1d
+
+stream=DNS where action="DNS_QUERIED" and status="PASSED" | groupby srcip | select srcip, count(action) as totalcount | having totalcount > 3000
+
+stream=DNS where action="REQUEST_ALLOWED" and status="PASSED" and srcip='{SuspectHost}' | duration 6m
+
+stream=iam where action in ('MAILBOX_PERMISSION_ADDED','MAILBOX_PERMISSION_REMOVED') and user='{SuspectUser}' | duration 31m
+
+stream=iam where action in ('MAILBOX_PERMISSION_ADDED','MAILBOX_PERMISSION_REMOVED') | duration 30m | select user, distinct_count(action) as cnt_action | groupby user | having cnt_action==2
+
+stream=win-audit where eid='5145' and user not like "%$%" and srctype = "PUBLIC" | duration 1d | select user, system, distinct_count(srcip) as CntSrcIP |   groupby user , system | having CntSrcIP >=3
+
+stream=Fortiweb where sourcename='FORTIWEB' and @cat='Signature Detection' | duration 1d | select srcip, dstip, @dhost, @cs6 as Signature ID, threat, @requestMethod, @request, logevent | select srcip as attacker, @dhost as TargetHost, dstip as TargetIP, threat, count(logevent) as AttackCount | groupby srcip, @dhost, dstip, threat
+
+stream=threat where sourcename='CROWDSTRIKE-FALCON' and technique="Inhibit System Recovery" | select user, srcip, computername, file, patterndispositiondescription, sha1, tactic, technique, threat | duration 1d
+
+stream=IAM where (action='USER_DISABLED' or action='USER_ENABLED') | select user, targetuser, distinct_count(action) as countaction | groupby user, targetuser | having countaction==2
+
+stream=IAM where (action='USER_DISABLED' or action='USER_ENABLED') and targetuser='{TargetUser}' and user='{SuspectUser}'
+
+stream=WEBFILTER where proto='TCP' and rlike(url,'(?i).*[a-zA-Z]{4,5}\.(pw|us|club|info|site|top).*') and not url like '%zoom%us%' and dstip='{TargetHost}' and srcip='{SuspectHost}' | duration 6m
+
+stream=WEBFILTER where proto='TCP' and rlike(url,'(?i).*[a-zA-Z]{4,5}\.(pw|us|club|info|site|top).*') and not url like '%zoom%us%' | groupby srcip, dstip
+
+stream=threat where sourcename='CROWDSTRIKE-FALCON' and threat="Indirect Command Execution" | select user, srcip, computername, file, patterndispositiondescription, sha1, tactic, technique, threat | duration 1d
+
+stream=threat where sourcename='CROWDSTRIKE-FALCON' and technique='Data Encrypted for Impact' | select user, srcip, computername, file, patterndispositiondescription, sha1, tactic, technique, threat | duration 7d
+
+stream=firewall where action='PACKET_ALLOWED' and proto='ICMP' and dsttype='PUBLIC' and srcip='{TargetHost}' and dstip='{SuspectHost}' | duration 6m
+
+stream=firewall where action='PACKET_ALLOWED' and proto='ICMP' and dsttype='PUBLIC' | select srcip, dstip, avg(txlen) as avgtxlen, count(srcip, dstip) as cntcount | groupby srcip, dstip | having avgtxlen > 1000 and cntcount > 10
+
+stream=AUTHENTICATION where action='LOGIN' and status='PASSED' and not srccn in ("-", "", "null") and user='{SuspectUser}' | duration 31m
+
+stream=AUTHENTICATION where action='LOGIN' and status='PASSED' and not srccn in ("-", "", "null") | duration 30m | select user, distinct_count(srccn) as CountSrcCN | groupby user | having CountSrcCN > 1
+
+stream=authentication where action='LOGIN' and status='FAILED' and (reason like 'sslvpn_login_permission_denied' or reason like 'sslvpn_login_unknown_user') | groupby system, srcip | having count_col0 > 2
+
+stream=authentication where action='LOGIN' and status='FAILED' and system='{TargetHost}' and (reason like 'sslvpn_login_permission_denied' or reason like 'sslvpn_login_unknown_user') and srcip='{SuspectHost}' and system='{TargetHost}' | duration 6m
+
+stream=FIREWALL where (((app='HTTP' or app='http') and not dstport in ('80','8080','8000')) or ((app='smtp' or app='SMTP') and not dstport in ('25', '587'))) and srcip='{SuspectHost}' | duration 6m
+
+stream=FIREWALL where (((app='HTTP' or app='http') and not dstport in ('80','8080','8000')) or ((app='smtp' or app='SMTP') and not dstport in ('25', '587'))) | groupby srcip
+
+stream=authentication where sourcename='FORTIGATE' and action='LOGIN' and status='FAILED' and reason like 'sslvpn_login%' | select system, srcip, user, count(logevent) as FailureCount | groupby system, srcip,user | duration 1w
+
+stream=threat where sourcename='FORTIGATE' and @subtype='"virus"' and @eventtype='"infected"' and @direction = '"incoming"' | duration 1d |  groupby user, srcip, @url
+
+stream=firewall where action='PACKET_BLOCKED' and status='PASSED' and srctype='PRIVATE' | select srcip, count(action) as totalcount | groupby srcip | having totalcount > 5000
+
+stream=firewall where action=PACKET_BLOCKED' and status='PASSED' and srctype='PRIVATE' and srcip='{SuspectHost}' | duration 6m
+
+stream=FIREWALL where proto='TCP' and dstport in ('1080','3128') and srctype='PRIVATE' and not dsttype='PRIVATE' | groupby srcip, dstip, dstport 
+
+stream=FIREWALL where proto='TCP' and dstport in ('1080','3128') and srctype='PRIVATE' and not dsttype='PRIVATE' and dstip='{TargetHost}' and srcip='{SuspectHost}' | duration 6m
+
+stream=configuration where Sourcename="WINDOWS" and @Channel= "System" |  duration 1w | select Object as Service_Name, @Hostname as Host, Config as Service_details, DevSrcIP as Source_IP, @SourceName as Application, @EventTime as Date&Time
+
+stream=IAM where sourcename='WINDOWS' and action in ('USER_CREATED', 'USER_ENABLED', 'USER_DISABLED')| duration 1w | select systemtstamp as DateTime, system, sourcename, sourcetype, user, TargetUser, action
+
+stream=THREAT where sourcename='FORTIGATE' and @subtype='"ips"' and @crlevel = '"critical"' and @direction = '"outgoing"' and srcip = '{SuspectHost}' and dstip = '{TargetHost}' | duration 6m
+
+stream=THREAT where sourcename='FORTIGATE' and @subtype='"ips"' and @crlevel = '"critical"' and @direction = '"outgoing"' | select count(logevent), srcip as attacker, dstip as victim | groupby srcip, dstip
+
+stream=* where devsrcip='192.169.0.227' | duration 7d |  select cnamtime, devsrcip, logevent, @Message , @CmdName , @user| select cnamtime, @Message as Events, @CmdName as status, @user
+
+stream=threat where sourcename='FORTIGATE' and @subtype='"virus"' and @eventtype='"infected"' and @direction='"incoming"' | groupby user, srcip, @virus | duration 1d
+
+stream=THREAT where sourcename='FORTIGATE' and @subtype='"ips"' and @crlevel = '"critical"' and @direction = '"incoming"' | select count(logevent), srcip as victim, dstip as attacker | groupby srcip, dstip
+
+stream=THREAT where sourcename='FORTIGATE' and @subtype='"ips"' and @crlevel = '"critical"' and @direction = '"incoming"' and srcip = '{TargetHost}' and dstip = '{SuspectHost}' | duration 6m
+

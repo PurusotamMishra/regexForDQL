@@ -1,0 +1,336 @@
+stream=win-audit where action='PROCESS_CREATED' and (newprocess like '%vnc.exe' or newprocess like '%putty%.exe' or newprocess like '%psexec%.exe') | groupby system,newprocess,user 
+
+stream=IAM where action='USER_LOCKOUT' and not (targetuser like '%posA%' or targetuser like '%POSA%' or targetuser like '%posa%') | groupby targetuser, targetdomain | duration 24h 
+
+stream=firewall where sourcetype="FIREWALL" and srctype="PUBLIC" and not srccn="-" and action="PACKET_ALLOWED" and threattype="Malicious" | groupby cnamtime, srcip, srctype, dstip, dstport, srccn, proto, action, threattype, sourcelist | duration 6h | limit 50
+
+stream=FIREWALL where sourcetype="FIREWALL" and threattype="Malicious" and srctype="PUBLIC" | groupby srcip | duration 24h | last 10
+
+stream=win-audit where sourcename="WINDOWS" and action="OBJECT_ACCESSED" and status="PASSED" and eid="4698" and logevent like "%at.exe%"
+
+stream=WEBFILTER where sourcename="ZSCALER" and action="URL_BLOCKED" | groupby useragent | duration 24h | last 10
+
+stream=authentication where sourcename='WINDOWS' and action='LOGIN' and status='FAILED' and not srcip='-' and not workstationname="-" and not (user like "%$" or user="-") | duration 1d | groupby user, workstationname, srcip
+
+stream=firewall where sourcetype="FIREWALL" and srctype="PRIVATE" and action="PACKET_BLOCKED" |  groupby srcip, dstip, action | duration 1d
+
+stream=firewall where sourcetype="FIREWALL" and srctype="PRIVATE" and action="PACKET_BLOCKED" |  groupby srcip, dstip, action | duration 7d
+
+stream=WEBFILTER where sourcename="ZSCALER" and action="URL_BLOCKED" and not threat="None" | groupby user, dsthost | duration 24h | last 5
+
+stream=WEBFILTER where sourcename="ZSCALER" | groupby user, dsthost | duration 24h | last 10
+
+stream=threat where sourcetype="FIREWALL" and subtype="ips" and not act="dropped" | duration 6h |  groupby cnamtime, srcip, dstip, srcport, dstport, threat | limit 250
+
+stream=iam where sourcename="WINDOWS" and action="PASSWORD_CHANGED" and not user like "%$" |  groupby user, targetuser | duration 24h
+
+stream=WEBFILTER where sourcename="ZSCALER" | groupby user, dsthost | duration 7d | last 5
+
+stream=firewall where sourcetype="FIREWALL" and srctype="PUBLIC" and action="PACKET_BLOCKED" |  groupby srcip, dstip, action | duration 1d
+
+stream=firewall where sourcetype="FIREWALL" and srctype="PUBLIC" and action="PACKET_BLOCKED" |  groupby srcip, dstip, action | duration 7d
+
+stream=firewall | duration 24h | limit 10 
+
+stream=authentication where sourcename='WINDOWS' and action='LOGIN' and status='FAILED' and not srcip='-' and not workstationname="-" and not (targetuser like "%$" or targetuser="-") | duration 7d | groupby targetuser, workstationname, srcip
+
+stream=authentication | limit 1
+
+stream=configuration where sourcetype="FIREWALL" and action="CONFIGURATION_CHANGED" and status="PASSED" | duration 6h |  groupby cnamtime, srcip, user, config, devsrcip | limit 250
+
+stream=signals |  duration 1d | limit 1
+
+stream=* | groupby stream | duration from 2024-04-13T00:00:00 to 2024-04-13T23:59:59
+
+stream=firewall where sourcetype="FIREWALL" and srctype="PRIVATE" and not dstcn="-" and action="PACKET_ALLOWED" and threattype="Malicious" | groupby cnamtime, srcip, srctype, dstip, dstport, dstcn, proto, action, threattype, sourcelist | duration 6h | limit 50
+
+stream=IAM where action='USER_LOCKOUT' and not (targetuser like '%posA%' or targetuser like '%POSA%' or targetuser like '%posa%') | groupby targetuser, targetdomain | duration 7d
+
+stream=firewall where sourcetype="FIREWALL" and srctype="PUBLIC" and dsttype="PRIVATE" and not act in ("allow") | groupby srcip, dstip, dstport |  select srcip, dstip, dstport, count(*) as EVT_CNT | having EVT_CNT > 1999
+
+stream=auditd where sourcetype="OS" and action="USER_COMMAND_EXECUTED" and commandline like "%63726F6E746162202D65%" | select commandline, devsrcip
+
+stream=authentication where action="LOGIN" and status="PASSED" and not (srccn="-" or srccn="None" or user="-" or user="None" or user="Not Available" or user="ANONYMOUS LOGON") |  groupby user |  select user, distinct_count(srccn) | duration 6h | having distinct_count_col1 > 1
+
+stream=iam where sourcename="MS-O365" |  groupby config | duration 1h
+
+stream=win-audit where sourcename="WINDOWS" and action="PROCESS_CREATED" and (newprocess like "%\cmd.exe" or newprocess like "%\powershell.exe") and (parentprocess like "%\word.exe" or parentprocess like "%\excel.exe" or parentprocess like "%\notepad.exe") |  groupby user, system, newprocess, parentprocess
+
+stream=firewall where sourcetype="FIREWALL" and srctype="PRIVATE" and dsttype="PUBLIC" and proto="icmp" and act="allow" and not dstip in ("8.8.8.8", "8.8.4.4") | groupby srcip, dstip | select srcip, dstip, sum(TXLen) as BYTES_OUT | duration 15m | having BYTES_OUT > 15728640
+
+stream=threat where sourcename="IRONSCALES" and sourcetype="ENDPOINT-SECURITY" |  groupby sender |  select sender, distinct_count(recipient) as recipient_cnt |  duration 1h | having recipient_cnt > 15
+
+stream=win-audit where sourcename="WINDOWS" and action="OBJECT_ACCESSED" and status="PASSED" and eid="5140" and not user like "%$" |  groupby user, srcip |  select user, srcip, distinct_count(object) as ObjCnt | having ObjCnt > 10
+
+stream=webfilter where not url in ('-','') |  groupby URL |  duration 1h | last 10
+
+stream=authentication where action="LOGIN" |  groupby sourcename | duration 1h
+
+stream=configuration where sourcename="MS-O365" and workload="Exchange" |  groupby config | duration 1h
+
+stream=firewall where sourcetype="FIREWALL" and dstport="22" and act in ("accept", "start", "ip-conn") | groupby srcip | duration 1h | last 10
+
+stream=webfilter where action='URL_ALLOWED' | groupby user |  select user, sum(txlen), sum(rxlen) |  duration 1h | last 10
+
+stream=WEBFILTER where sourcename="ZSCALER" and action="URL_BLOCKED" | groupby user | duration 24h | last 10
+
+stream=signals | groupby detectionname | duration from 2024-04-01T00:00:00 to 2024-07-31T23:59:59
+
+stream=firewall where sourcetype="FIREWALL" and dstport="3389" and act in ("accept", "start", "ip-conn") | groupby srcip | duration 1h
+
+stream=firewall where sourcetype="FIREWALL" and threattype="Malicious" and not act="deny" and sourcelist like "%,%,%" and not dstport="443" | groupby srcip, dstip, dstport | having count_col1 > 5 | duration 10m
+
+stream=threat where sourcename="MS-O365" AND config="TIMailData" AND (subject like "%password%" OR subject like "%payroll%" OR subject like "%Password%" OR subject like "%Payroll%" OR subject like "%PASSWORD%" OR subject like "%PAYROLL%") and not deliveryaction="Blocked" | select sender, recipient, subject | duration 1d
+
+stream=firewall where not app like '%onedrive%' and rulename='online-storage-and-backup' and status='PASSED'  | duration 30m | select srcip, app, sum(txlen)/1000000 as upload_in_MB, dstip| groupby srcip, app, dstip| having upload_in_MB>1000 | limit 100
+
+stream=signals | duration 7d
+
+stream=win-audit where action="POLICY_CHANGED" and status="PASSED" and not (user like "%$" or user="-") |  groupby user | duration 1h | last 10
+
+stream=WEBFILTER where sourcename="ZSCALER" and action="URL_BLOCKED" | groupby url | duration 24h | last 10
+
+stream=firewall where dstport='3389' and srctype='PUBLIC'and action='PACKET_ALLOWED'| select cnamtime, srcip, srcport, dstip, dstport, proto | duration 6h | limit 250
+
+stream=win-audit where sourcename="WINDOWS" and action="DIRECTORY_SERVICE_ACCESSED" and (eid="1074" or eid="6008") and status="PASSED" and not user="VEL\croma_winadmin"
+
+stream=firewall where sourcetype="FIREWALL" and dstport in ("20", "21") and act in ("accept", "start", "ip-conn") | groupby dstip | duration 1h | last 10
+
+stream=configuration where sourcetype="FIREWALL" and action="CONFIGURATION_CHANGED" |  groupby system, msg | duration 1h | last 10
+
+stream=firewall where sourcetype="FIREWALL" and dstport="22" and act in ("accept", "start", "ip-conn") | groupby dstip | duration 1h | last 10
+
+stream=firewall where sourcetype="FIREWALL" and srctype="PUBLIC" and not (dstport in ("-", "None")) | groupby dstport | duration 1h | last 10
+
+stream=firewall where sourcetype="FIREWALL" and dstport in ("20", "21") and act in ("accept", "start", "ip-conn") | groupby srcip | duration 1h | last 10
+
+stream=firewall where sourcetype="FIREWALL" and srctype="PUBLIC" and not srccn="-" |  groupby srccn
+
+stream=webfilter where not user in ('-','') | groupby user | duration 1h | last 10
+
+stream=signals | duration 5m
+
+stream=iam where action="USER_LOCKOUT" |  groupby targetuser | duration 1h | last 5
+
+stream=win-audit where sourcename="WINDOWS" and action="OBJECT_ACCESSED" and eid="4657" and status="PASSED" and not user like "%$" | select user, system
+
+stream=threat where sourcename="MS-O365" and (config="TIMailData" or config="FileMalwareDetected") | groupby sender | duration 15m
+
+stream=* |  duration 3h | groupby stream
+
+stream=auditd where sourcetype="OS" and action="USER_COMMAND_EXECUTED" and rlike(commandline, "useradd|groupadd|chfn|75736572616464|67726F7570616464|6368666E") | select devsrcip, commandline
+
+stream=authentication where action="LOGIN" and status in ("PASSED", "FAILED") |  groupby status | duration 1h
+
+stream=authentication where sourcename="WINDOWS" and action="LOGIN" and not (user="-" or user="None" or user like "%$" or user like 'SN_Discovery' or user like "Not Available") and not (srcip="None" or srcip="-") | groupby srcip, user | select srcip, user, count_if(status=="FAILED") as FailCnt, count_if(status=="PASSED") as PassCnt | having FailCnt > 50 and PassCnt > 0 | duration 15m
+
+stream=webfilter where not dstcn in ('-','') | groupby dstcn |  duration 1h
+
+stream=* | groupby devsrcip | duration 1d
+
+stream=win-audit where sourcename="WINDOWS" and action="PROCESS_CREATED" and newprocess like "%dllhost.exe" and rlike(commandline, "3E5FC7F9-9A51-4367-9063-A120244FBEC7|3E000D72-A845-4CD9-BD83-80C07C3B881F|BD54C901-076B-434E-B6C7-17C531F4AB41|D2E7041B-2927-42FB-8E9F-7CE93B6DC937|E9495B87-D950-4AB5-87A5-FF6D70BF3E90") |  groupby newprocess, parentprocess, system
+
+stream=win-audit where sourcename="WINDOWS" and action="OBJECT_ACCESSED" and status="PASSED" and eid="4698" and not (taskname like "%Nutanix%" or taskname like "%User_Feed_Synchronization%") and not user like "%$" and not user='croma_winadmin' |  groupby user, system, taskname
+
+stream=webfilter where action='URL_BLOCKED' |  groupby url | duration 1h | last 10
+
+stream=firewall where sourcetype="FIREWALL" and not (dstcn in ("-", "")) |  groupby dstcn
+
+stream=authentication where action="LOGIN" and status="FAILED" and not srccn in ("None", "-") |  groupby srccn | duration 1h
+
+stream=firewall where sourcetype="FIREWALL" and dstport="3389" and act in ("accept", "start", "ip-conn") | groupby dstip | duration 1h
+
+stream=firewall where sourcetype="FIREWALL" and srctype="PRIVATE" and dsttype="PUBLIC" and dstport in ("9001","9030", "9040", "9050", "9051", "9150") and threattype="Malicious" | select srcip, dstip, dstport, action, proto
+
+stream=firewall where sourcetype="FIREWALL" and dstport="53" and (action="PACKET_BLOCKED" or action="CONNECTION_TERMINATED" or action="DROPPED") and srctype="PRIVATE" and dsttype="PUBLIC" and dstip!='8.8.8.8' | groupby srcip, dstip, system | having count_col1 > 4999
+
+stream=authentication where sourcename="WINDOWS" and action="LOGIN" and status="PASSED" and user like "Sa_%" and logontype="2"
+
+stream=authentication where action="LOGIN" and not user like "%$" and not (user in ("None", "-", "Not Available", "unknown")) |  groupby user | duration 1h | last 5
+
+stream=firewall where threattype="Malicious" AND srccn!="-" |  duration 1h |  groupby srccn
+
+stream=firewall where sourcetype="FIREWALL" and not (act in ("accept", "start", "ip-conn", "pass", "server-rst")) and dsttype="PUBLIC" and srctype="PRIVATE" | select dstip, count(srcip) as EVT_CNT, distinct_count(srcip) as SRC_CNT |  groupby dstip | having EVT_CNT > 2999 and SRC_CNT > 3
+
+stream=win-audit where sourcename="WINDOWS" and action="PROCESS_CREATED" and rlike(newprocess, "powershell\.exe|pwoershell_ise\.exe") and commandline like "%Get-NetTCPConnection%" |  groupby system, newprocess, parentprocess
+
+stream=configuration where action="CONFIGURATION_DELETED" and not user="None" |  groupby user | duration 1h | last 10
+
+stream=win-audit where sourcename="WINDOWS" and action="PROCESS_CREATED" and not parentprocess like '%Defender%' and (rlike(parentprocess, "winword|access|excel|mspub|powerpnt|visio|outlook|wordpad|notepad|AcroRd32|acrobat|Defender") and rlike(newprocess, "mshta\.exe|wscript\.exe|mftrace\.exe|powershell\.exe|powershell _ ise\.exe|scriptrunner\.exe|cmd\.exe|forfiles\.exe|msiexec\.exe|wmic\.exe|hh\.exe|regsvr32\.exe|schtasks\.exe|scrcons\.exe|bash\.exe|sh\.exe|cscript\.exe")) |  groupby parentprocess, newprocess, system
+
+stream=authentication where action="LOGIN" and status="PASSED" and not srccn in ("None", "-") |  groupby srccn | duration 1h
+
+stream=webfilter where action='URL_BLOCKED' and not user='None'|  groupby user |  duration 1h |  last 10
+
+stream=threat where sourcename="MS-O365" and workload="ThreatIntelligence" |  groupby sender | duration 1h | last 5
+
+stream=firewall where sourcetype="FIREWALL" and sourcename="PALOALTO" | groupby app | select app, sum(txlen)/1048576 as Data_OUT_MBs | duration 1h | last 10
+
+stream=firewall where sourcetype="FIREWALL" and srctype="PUBLIC" and not (dstport="80" or dstport="443" or dstport="8080" or act="deny") |  select srcip, dstip, distinct_count(dstport) as cntdstport, count_if(action=="PACKET_ALLOWED" or action=="ACCEPT" or action=="ALLOW") as actioncnt |  groupby srcip, dstip |  having cntdstport>500 and actioncnt > 0
+
+stream=threat where sourcename="MS-O365" and workload="ThreatIntelligence" and not threat="None" |  groupby threat | duration 1h
+
+stream=iam where where sourcename="WINDOWS" and eid="4740" | duration 1h | select targetdomain, system, distinct_count(targetuser) as cntuser, count(*) as cntevent | groupby targetdomain, system | having cntevent>15
+
+stream=documents where sourcename="MS-O365" |  groupby config | duration 1h |  last 15
+
+stream=threat where sourcename="IRONSCALES" and sourcetype="ENDPOINT-SECURITY" and not sender like "%cromaretail.com" | groupby sender, recipient, subject, threat
+
+stream=threat where sourcetype="FIREWALL" and srctype="PUBLIC" and subtype="ips" and not act="dropped" | select srcip, dstip, threat, url
+
+stream=iam where sourcename="WINDOWS" and eid in ("4731", "4727", "4754") | select user, group
+
+stream=authentication where sourcename='WINDOWS' and action="LOGIN" and status="FAILED" | select srcip, distinct_count(user) as usercnt | groupby srcip | having usercnt>50 | duration 1h
+
+stream=configuration where sourcename="MS-O365" and workload="AzureActiveDirectory" | groupby config | duration 1h
+
+stream=webfilter | groupby dsthost |  duration 1h |  last 10
+
+stream=threat where sourcename="MS-O365" and workload="ThreatIntelligence" |  groupby recipient | duration 1h | last 5
+
+stream=webfilter where category="Phishing" | groupby user | duration 1h
+
+stream=firewall where sourcetype="FIREWALL" and sourcename="FORTIGATE" and proto="P2P" | groupby devsrcip, dstip, dstport, srcip
+
+stream=win-audit where sourcename="WINDOWS" and action="PROCESS_CREATED" and not (rlike(newprocess, "System32|SysWOW64|WinSxS")) |  groupby parentprocess, newprocess, system
+
+stream=win-audit where sourcename="WINDOWS" and action="PROCESS_CREATED" and newprocess like "%schtasks.exe%" and rlike(commandline, "\\ProgramData\\|\\Users\\|\\Public\\|\\AppData\\|\\Desktop\\|\\Downloads\\|\\Temp\\|\\Tasks\\|\\\$Recycle") |  groupby parentprocess, newprocess, system
+
+stream=firewall where sourcetype="FIREWALL" and srcport="53" and dsttype="PUBLIC" and srctype="PRIVATE" and not action="PACKET_BLOCKED" | select srcip, srcport, dstip, dstport
+
+stream=WEBFILTER where category='Compromised Websites' and action='URL_ALLOWED' | groupby user, srcip, domain
+
+stream=threat where sourcename in ("crowdstrike_connector") |  groupby category | duration 1h
+
+stream=firewall where srctype='PRIVATE' and dsttype='PUBLIC' and act in ("accept", "start", "ip-conn") | duration 20m | select srcip, dstip, sum(txlen)/1073741824 as bytes_out_in_MB | groupby srcip,dstip | having bytes_out_in_MB>512
+
+stream=threat where sourcetype="FIREWALL" and srctype="PUBLIC" and subtype="ips" | duration 30m | select srcip, dstip, distinct_count(threat) as threatcnt | groupby srcip, dstip |  having threatcnt>10
+
+stream=authentication where sourcename="WINDOWS" and action="KERBEROS_SERVICE_TICKET_REQUESTED" and status="PASSED" and (ticketoptions="0x40810000" or ticketoptions="0x40800000" or ticketoptions="0x40810010") and ticketencryptiontype="0x17" |  groupby user, system, ticketencryptiontype
+
+stream=win-audit where sourcename="WINDOWS" and action="PROCESS_CREATED" and rlike(newprocess, "bloodhound|mimikatz|gsecdump|secretdump|impacket|sharphound|winpeas|njrat|nmap|10phtcrack|sqlmap|nikto") | groupby user, parentprocess, newprocess, system
+
+stream=authentication where sourcename="WINDOWS" and action="LOGIN" and status="FAILED" and not user like "%$" and user like "Sa_%" | groupby user | having count_col1 > 5
+
+stream=firewall where sourcetype="FIREWALL" and act in ("accept", "start", "ip-conn", "pass") and app in ("FTP","ftp","SSH","ssh","SFTP","TFTP","HTTP","HTTPS","Proxy.HTTP","Proxy.HTTP","SMB","SMTP","DNS","NTP","SNMP","SNMP","RDP","SIP") |  groupby srcip, dstip, dstport, app
+
+stream=win-audit where sourcename="WINDOWS" and action="PROCESS_CREATED" and (newprocess like "%netstat.exe" or (newprocess like "%net%.exe" and commandline like "%session%")) |  groupby system, newprocess, parentprocess
+
+stream=firewall where sourcetype='FIREWALL' and dstport='53' and dsttype='PUBLIC' and srctype='PRIVATE' and not dstip in ('8.8.8.8', '4.4.2.2', '8.8.4.4') and not srcip in ('10.11.53.250', '10.11.66.40', '192.168.128.11', '10.12.40.68', '10.12.40.69', '10.13.41.68', '10.13.41.69') | select srcip, count(dstip) as evtcnt | groupby srcip | having evtcnt>999
+
+stream=win-audit where sourcename="WINDOWS" and action="PROCESS_CREATED" and newprocess like "%procdump.exe" and logevent like "%lsass%"
+
+stream=authentication where sourcename='WINDOWS' and eid='4624' and ((logontype='3' and logonprocessname='NtLmSsp') or (logontype='9' and logonprocessname='seclogo')) and not user='ANONYMOUS LOGON' | select user, system
+
+stream=sysmon-process where action="PROCESS_ADDED" and image like "%procdump.exe" and commandline like "%lsass%"
+
+stream=webfilter where sourcename="CISCO-MERAKI" and rlike(useragent, "hydra|arachni|BFAC|brutus|cgichk|core-project|crimscanner|datacha0s|dirbuster|domino\shunter|dotdotpwn|FHScan\sCore|floodgate|get-minimal|gootkit\sauto-rooter\sscanner|grendel-scan|inspath|internet\sninja|jaascois|zmeu|masscan|metis|morfeus\sfucking\sscanner|n-stealth|nsauditor|pmafind|security\sscan|springenwerk|teh\sforest\slobster|toata\sdragostea|vega|voideye|webshag|webvulnscan|whcc|Havij|absinthe|bsqlbf|mysqloit|pangolin|sql\spower\sinjector|sqlmap|sqlninja|uil2pn|ruler|pt-PT") |  groupby srcip, url, useragent
+
+stream=win-audit where sourcename="WINDOWS" and action="OBJECT_ACCESSED" and status="PASSED" and eid="4699" and not (taskname like "%Nutanix%" or taskname like "%User_Feed_Synchronization%") and not user like "%$" and not user="croma_winadmin" | groupby user, system, taskname
+
+stream=win-audit where action='PROCESS_CREATED' and parentprocess like '%lsass.exe' and rlike(newprocess, "procdump|mimikatz|procmon|gsecdump") | select user, system, parentprocess, newprocess
+
+stream=authentication where sourcename="WINDOWS" and action="LOGIN" and status="PASSED" and not user='-' and not (workstationname="-" or workstationname="None") and not user="ANONYMOUS LOGON" and not user="croma_winadmin" |  groupby user | select user, distinct_count(workstationname) | having distinct_count_col1 > 5
+
+stream=webfilter where sourcename="CISCO-MERAKI" |  groupby srcip, url | duration 2m
+
+stream=authentication where sourcename="WINDOWS" and action="LOGIN" and status="PASSED" and logontype="8" |  groupby user,system
+
+stream=firewall where sourcetype="FIREWALL" and srctype="PUBLIC" and dsttype="PRIVATE" and not action="PACKET_ALLOWED" | groupby srcip, dstip, dstport |  select srcip, dstip, dstport, count(*) as EVT_CNT | having EVT_CNT > 1999
+
+stream=authentication where sourcename="WINDOWS" and action="LOGIN" and status="PASSED" and not (user like "%$") and not targetdomain in ("VEL.CO.IN","VEL", "NT AUTHORITY", "NT SERVICE", "Window Manager", "VIRTUAL USERS") |  select user, targetdomain, system
+
+stream=firewall where sourcetype="FIREWALL" and act="deny" and srctype="PRIVATE" and dsttype="PUBLIC" | select srcip, count(*) as EVT_CNT | groupby srcip | having EVT_CNT > 999
+
+stream=iam where sourcename="WINDOWS" and action="PASSWORD_CHANGED" and not user like "%$" |  groupby user, targetuser, system | duration 30m | having count_col1>4
+
+stream=iam where sourcename="WINDOWS" and (action="USER_DISABLED" or action="USER_ENABLED") and not targetuser like "%$" |  groupby user, targetuser |  select user, targetuser, distinct_count(action) | duration 15m | having distinct_count_col2 > 1
+
+stream=threat where sourcename="MS-O365" AND config="TIMailData" AND (subject like "%password%" OR subject like "%payroll%" OR subject like "%Password%" OR subject like "%Payroll%" OR subject like "%PASSWORD%" OR subject like "%PAYROLL%") and not deliveryaction="Blocked" | select sender, recipient, subject, threat
+
+stream=threat where sourcetype="FIREWALL" AND (threaturl like "%exe%" OR threaturl like "%vbs%" OR threaturl like "%bat%" OR threaturl like "%rar%" OR threaturl like "%ps1%" OR threaturl like "%doc%" OR threaturl like "%xls%" OR threaturl like "%ppt%" OR threaturl like "%rtf%" OR threaturl like "%hta%" OR threaturl like "%dll%" OR threaturl like "%zip%") | groupby srcip, threaturl
+
+stream=win-audit where sourcename="WINDOWS" and action="PROCESS_CREATED" and (newprocess like "%bcdedit.exe" or parentprocess like "%bcdedit.exe") |  groupby system, newprocess, parentprocess
+
+stream=iam where sourcename="WINDOWS" and action in ("USER_CREATED","USER_DELETED") and not targetuser like "%$" | groupby targetuser | select targetuser, distinct_count(action) as ActionCount | duration 1h |  having ActionCount > 1
+
+stream=iam where action='USER_CREATED' |  groupby user | duration 30m | select user, distinct_count(targetuser) as ctargetuser | having ctargetuser>15
+
+stream=authentication where action="LOGIN" and status="PASSED" and (user="root" or user="Admin" or user="admin" or user="Administrator" or user="administrator" or user="Guest") and not (srcip="-" or srcip="None") |  groupby user, srcip, system
+
+stream=auditd where sourcetype="OS" and action="USER_COMMAND_EXECUTED" and commandline like "%63726F6E746162202D65%" |  select commandline, devsrcip
+
+stream=win-audit where sourcename="WINDOWS" and eid="4662" and not user like "%$" and objectserver="DS" and object="DomainDNS" and rlike(properties, "19195a5b-6da0-11d0-afd3-00c04fd930c91131f6ad-9c07-11d1-f79f-00c04fc2dcd2|1131f6aa-9c07-11d1-f79f-00c04fc2dcd2|9923a32a-3607-11d2-b9be-0000f87a36b2|89e95b76-444d-4c62-991a-0facbeda640c") |  select user, devsrcip
+
+stream=iam where sourcename="WINDOWS" and action="USER_ADDED" and status="PASSED" and not (user like "%-%" or user like "%$" or user="routeadd" or user="croma_azdomainadmin" or user="croma_winadmin" or user='croma_azwinadmin') and not (user="IntranetAdmin" and group="IIS_IUSRS") and not user in ("871390", "797665_tcs", "1042409", "918439", "480002", "1212236", "1020368", "880777", "1024819", "1314050", "1712634_tcs", "1314032_tcs", "1065867_tcs", "1041872", "766459_tcs", "1624749_tcs", "2082321_tcs", "1584921_tcs", "1553367_tcs", "1446287_tcs", "1309374_tcs", "tcs_windows", "TCS_Windows")
+
+stream=threat where sourcetype="FIREWALL" and threat like "%Log4j%" and not (act in ("dropped", "deny")) | select srcip, dstip, act, threat
+
+stream=firewall where sourcetype="FIREWALL" and srctype="PRIVATE" and dsttype="PUBLIC" and proto="ICMP" and act in ("accept", "start", "ip-conn") and not dstip in ("8.8.8.8", "8.8.4.4") | groupby srcip, dstip | select srcip, dstip, sum(txlen) as BYTES_OUT | duration 15m | having BYTES_OUT > 15728640
+
+stream=win-audit where sourcename="WINDOWS" and action="OBJECT_ACCESSED" and eid="4663" and Type="Key" and object in ("\sam\sam\domains\account\users", "\control\lsa\JD", "\control\lsa\GBG", "\control\lsa\Skew1", "\control\lsa\Data", "\security\cache", "\security\policy\secrets") and not (rlike(processname, "services\.exe|lsass\.exe")) |  groupby system
+
+stream=win-audit where sourcename="WINDOWS" and action="PROCESS_CREATED" and newprocess like "%schtasks.exe%" and rlike(parentprocess, "powershell_ise\.exe|cmstp\.exe|appvlp\.exe|mftrace\.exe|scriptrunner\.exe|forfiles\.exe|msiexec\.exe|rundll32\.exe|mshta\.exe|hh\.exe|wmic\.exe|regsvr32\.exe|scrcons\.exe|bash\.exe|sh\.exe|cscript\.exe|wscript\.exe") |  groupby parentprocess, newprocess, system
+
+stream=authentication where sourcetype="FIREWALL" and act="login" and subtype="system" | groupby srcip, user | select srcip, user, count_if(status=="FAILED") as FailCnt, count_if(status=="PASSED") as PassCnt | having FailCnt > 5 and PassCnt > 0 | duration 15m
+
+stream=win-audit where sourcename="WINDOWS" and action="PROCESS_CREATED" and rlike(newprocess, "vssadmin\.exe|wmic\.exe|wbadmin\.exe|diskshadow\.exe|pwsh\.exe|powershell\.exe") and rlike(commandline, "delete|shadows|resize|Win32_Shadowcopy") |  groupby system, newprocess, parentprocess
+
+stream=win-audit where sourcename="WINDOWS" and action="PROCESS_CREATED" and not parentprocess="Not Available" and not parentprocess like '%Defender%' and rlike(newprocess, "csrss\.exe|explorer\.exe|lsass\.exe|lsm\.exe|LsaIso\.exe|services\.exe|smss\.exe|svchost\.exe|taskhost\.exe|taskhostw\.exe|wininit\.exe|winlogon\.exe|RuntimeBroker\.exe") and NOT user LIKE "%$" |  groupby newprocess, parentprocess, system
+
+stream=win-audit where sourcename="WINDOWS" and action="OBJECT_ACCESSED" and status="PASSED" and (eid in ("4698", "4699")) and not user like "%$" |  duration 30m |  groupby system, taskname | select system, taskname, distinct_count(eid) as CntAct | having CntAct > 1
+
+stream=authentication where sourcename="NIX" and action="LOGIN" and status="PASSED" and not user="null" |  select user, srcip, system, count(*) |  groupby user, srcip, system | duration 1d
+
+stream=win-audit where action='PROCESS_CREATED' and eid='4688' and (newprocess like '%WMIC.exe%' or newprocess like '%BITS.exe%') and not user like '%$' | groupby user, system, newprocess
+
+stream=authentication where sourcename="WINDOWS" and action="LOGIN" and status="FAILED" and reason="USER_DISABLED" and not user like "%$" | groupby user |  having count_col1 > 5
+
+stream=win-audit where sourcename="WINDOWS" and action="PROCESS_CREATED" and NewProcess like "%\lsass.exe" and   rlike(LogEvent, "(?i)0x\w*[1235679abdef]\w(\s|$)") and ( not (parentprocess like "%\wbem\wmiprvse.exe" or parentprocess like "%\csrss.exe" or parentprocess like "%\wininit.exe" or parentprocess like "%\lsm.exe" or parentprocess like "%\logonui.exe" or parentprocess like "%\msiexec.exe" or parentprocess like "%\siworktm_host64.exe" or parentprocess like "%\tphkload.exe" or parentprocess like "%\scenarioengine.exe" or parentprocess like "%\officeclicktorun.exe" or parentprocess like "%\filesinusehelper.exe" or parentprocess like "%\bct.exe" or parentprocess like "%\apphelpercap.exe" or parentprocess like "%\filesinusehelper.exe" or parentprocess like "%\msert.exe" or parentprocess like "%\sisidsservice.exe" or parentprocess like "%\vmtoolsd.exe" or parentprocess like "%\vmware-updatemgr.exe" or parentprocess like "%\ccsvchst.exe" or parentprocess like "%\appdynamics.coordinator.exe" or parentprocess like "%\symerr.exe" or parentprocess like "%\google\update\googleupdate.exe" or parentprocess like "%\microsoft\edgeupdate\microsoftedgeupdate.exe" or parentprocess like "%\dropbox\update\dropboxupdate.exe" or parentprocess like "%\websense\websense endpoint\wepsvc.exe" or parentprocess like "%\zscaler\zsatunnel\zsatunnel.exe" or parentprocess like "%\adobe\adobegcclient\agmservice.exe" or parentprocess like "%\installflashplayer.exe" or parentprocess like "%\flashplayerinstaller.exe" or parentprocess like "%\adobearmhelper.exe" or parentprocess like "%\adobearm.exe" or parentprocess like "%\armsvc.exe" or parentprocess like "%\kavfswp.exe" or parentprocess like "%\kaspersky lab\networkagent\vapm.exe" or parentprocess like "%\kaspersky lab\kaspersky security center\vapm.exe" or parentprocess like "%\kaspersky lab\networkagent\kldumper.exe" or parentprocess like "%\kaspersky lab\networkagent\klnagent.exe" or parentprocess like "%\avp.exe" or parentprocess like "%\kaspersky lab\kaspersky endpoint security for windows\kldw.exe" or parentprocess like "%\kaspersky lab\kaspersky endpoint security for windows\avpsus.exe" or parentprocess like "%\cisco\cisco anyconnect secure mobility client\vpnagent.exe" or parentprocess like "%\cisco\cisco anyconnect secure mobility client\acwebsecagent.exe" or parentprocess like "%\lenovo\imcontroller\service\lenovo.modern.imcontroller.exe" or parentprocess like "%\tensor company ltd\sbis3plugin\sbis3plugin.exe" or parentprocess like "%\bitdefender\endpoint security\epupdateservice.exe" or parentprocess like "%\bitdefender\endpoint security\epsecurityservice.exe" or parentprocess like "%\teamviewer\update\update.exe" or parentprocess like "%\tkauduservice64.exe" or parentprocess like "%\ccm\ccmexec.exe" or parentprocess like "%\ccm\sensorlogontask.exe" or parentprocess like "%\collectguestlogs.exe"))
+
+stream=authentication where action="LOGIN" and status="PASSED" and srctype="PUBLIC" and threattype="Malicious" and not user="Not Available" and NOT srcip IN ("103.238.230.54") |  groupby user, srcip
+
+stream=iam where sourcename="WINDOWS" and action="USER_LOCKOUT" and not targetuser like "%$" | groupby targetuser, targetdomain, system | select targetuser, targetdomain, system, count(*) as LCKOUT_CNT | duration 4h | having LCKOUT_CNT > 15
+
+stream=webfilter where sourcename="CISCO-MERAKI" and action="URL_ACCESSED" and rlike(url, "exe$|vbs$|bat$|rar$|ps1$|doc$|docm$|xls$|xlsm$|pptm$|rtf$|hta$|dll$|wsf$|sct$|zip$") and not (httpmethod in ("OPTIONS", "PATCH", "CONNECT", "HEAD", "-", "DELETE", "LIST")) and not (URL LIKE "%au.download.windowsupdate.com%" OR URL LIKE "%updates-http.cdn-apple.com%") | select srcip, url
+
+stream=threat where sourcename="IRONSCALES" and sourcetype="ENDPOINT-SECURITY" and action in ("Phishing Email Attack Link", "Phishing Email Report Link") |  groupby sender, recipient, subject, url
+
+stream=win-audit where sourcename="WINDOWS" and action="AUDIT_LOG_CLEARED" |  select user, system
+
+stream=win-audit where sourcename="WINDOWS" and action="PROCESS_CREATED" and (rlike(parentprocess, "php-cgi\.exe|nginx\.exe|w3wp\.exe\httpd\.exe|tomcat|apache") and rlike(newprocess, "mshta\.exe|wscript\.exe|mftrace\.exe|powershell\.exe|powershell _ ise\.exe|scriptrunner\.exe|cmd\.exe|forfiles\.exe|msiexec\.exe|rundll32\.exe|wmic\.exe|hh\.exe|regsvr32\.exe|schtasks\.exe|scrcons\.exe|bash\.exe|sh\.exe|cscript\.exe")) |  groupby parentprocess, newprocess, system
+
+stream=win-audit where sourcename="WINDOWS" and action="PROCESS_CREATED" and newprocess like "%netsh.exe" and (commandline like "%remote desktop%" and commandline like "%allow%" and commandline like "%yes%" and commandline like "%3389%") |  groupby system, parentprocess, newprocess
+
+stream=authentication where sourcename="WINDOWS" and action="KERBEROS_AUTHENTICATION_TICKET_REQUESTED" and status="PASSED" and ticketoptions="0x40810010"  and (ticketencryptiontype in ("0x1", "0x11", "0x3")) and not user like "%$" | select user, system
+
+stream=webfilter where sourcename="ZSCALER" and action="URL_ALLOWED" and rlike(url, "exe$|vbs$|bat$|rar$|ps1$|doc$|docm$|xls$|xlsm$|pptm$|rtf$|hta$|dll$|wsf$|sct$|zip$") and not (httpmethod in ("OPTIONS", "PATCH", "CONNECT", "HEAD", "-", "DELETE", "LIST")) | select srcip, url
+
+stream=firewall where sourcetype="FIREWALL" and srctype="PUBLIC" and dsttype="PRIVATE" and act in ("alert", "allow") and dstport in ("21", "22", "23", "25", "135", "137", "139", "445", "3389") and threattype="Malicious" | select srcip, dstip, dstport
+
+stream=other where @EventID="6416" |  groupby devsrcip, @SubjectUserName, @DeviceId, @DeviceDescription
+
+stream=firewall where sourcetype="FIREWALL" and srctype="PUBLIC" and not (dstport="80" or dstport="8080" or dstport="443") |  select srcip, dstport, distinct_count(dstip) as dstipcnt, count_if(action=="PACKET_ALLOWED") as actioncnt |  groupby srcip, dstport | having dstipcnt>99 and actioncnt > 1 
+
+stream=authentication where sourcename="WINDOWS" and action="LOGIN" and status="PASSED" and eid="4648" and not srcip="-" and NOT (process LIKE "%lsass.exe%" OR targetuser LIKE '%SVC_SSO%' OR targetuser='umbrella_connector' OR targetuser='IRL-UMB-POC$') and not (targetuser="Fesupport_domain" OR targetuser LIKE '%MSOL%' or targetuser like '%svc_sso%' or targetuser like 'pamtcs') | groupby targetuser, srcip, system | having count_col1 > 10
+
+stream=authentication where sourcename='WINDOWS' and action='LOGIN' and status='FAILED' and not srcip='-' and not workstationname="-" and not (targetuser like "%$" or targetuser="-") | duration 1d | groupby targetuser, workstationname, srcip
+
+stream=authentication where sourcename="NIX" and action="LOGIN" and status="FAILED" and authproto="SSH" and not (user="None" OR srcip="None" OR system="None") |  groupby user, system, srcip | having count_col1 > 9
+
+stream=other | limit 1
+
+stream=authentication where sourcename="WINDOWS" and status="FAILED" and action="LOGIN" and not (reason="PASSWORD_EXPIRED" OR reason="-" OR user like "%$" OR user like "%-%" OR srcip like "%-%" OR srcip="127.0.0.1") and not eid="4771" and user="Administrator" | groupby user, workstationname |having count_col1>90
+
+stream=iam where sourcename="WINDOWS" and action="USER_LOCKOUT" and not targetuser like "%$" | groupby targetuser, targetdomain, system | select targetuser, targetdomain, system, count(*) as LCKOUT_CNT | duration 4h | having LCKOUT_CNT > 15
+
+stream=authentication where sourcename="WINDOWS" and action="LOGIN" and status="FAILED" and not user like "%$" and user like "Sa_%" | groupby user | having count_col1 > 5
+
+stream=auditd where sourcetype="OS" and action="USER_COMMAND_EXECUTED" and rlike(commandline, "useradd|groupadd|chfn|75736572616464|67726F7570616464|6368666E") | select devsrcip, commandline 
+
+stream=other | limit 1
+
+stream=other | limit 1
+
+stream=AUTHENTICATION where sourcename="MS-O365" and threattype="Malicious" and action="LOGIN" and status="FAILED" and not user like "Not Available" | groupby user, srcip | select user, srcip, distinct_count(srcip) | having distinct_count_col2 > 5
+

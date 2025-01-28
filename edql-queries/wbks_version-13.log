@@ -1,0 +1,64 @@
+stream=AUTHENTICATION where action='LOGIN' and status='PASSED' and user='{SuspectUser}' | duration 1h
+
+stream=AUTHENTICATION where action='LOGIN' and status='PASSED' | duration 1h | select user, distinct_count(system) as CountSystem | groupby user | having CountSystem > 3
+
+stream=AUTHENTICATION where action='LOGIN' and status='PASSED' | duration 1h | select system, distinct_count(srcip) as CountSrcIP | groupby system | having CountSrcIP>5
+
+stream=AUTHENTICATION where action='LOGIN' and status='PASSED' and system='{TargetHost}' | duration 1h
+
+stream=AUTHENTICATION where action='LOGIN' and status='PASSED' and user='{SuspectUser}' | duration 1h
+
+stream=AUTHENTICATION where action='LOGIN' and status='PASSED' | duration 1h | select user, distinct_count(system) as CountSystem | groupby user | having CountSystem > 3
+
+stream=AUTHENTICATION where action='LOGIN' and system='{TargetHost}' and srcip='{SuspectHost}' | duration 16m
+
+stream=AUTHENTICATION where action='LOGIN' | duration 5d | select srcip, system, count_if(status='FAILED') as failcount, count_if(status='PASSED') as passcount | groupby srcip, system | timeslice 15m | having failcount >=300 and failcount >= passcount * 5
+
+stream=AUTHENTICATION where action='LOGIN' and status='PASSED' | duration 1h | select system, distinct_count(srcip) as CountSrcIP | groupby system | having CountSrcIP>5
+
+stream=AUTHENTICATION where action='LOGIN' and status='PASSED' and system='{TargetHost}' | duration 1h
+
+stream=FIREWALL where proto='TCP' and dstport='26' | groupby srcip, dstip | duration 7d | having count_col1 >= 2
+
+stream=FIREWALL where proto='TCP' and dstport='26' and dstip='{TargetHost}' and srcip='{SuspectHost}' | duration 6m
+
+stream=FIREWALL where proto='TCP' and dstport='26' and dstip='{TargetHost}' and srcip='{SuspectHost}' | duration 6m
+
+stream=FIREWALL where proto='TCP' and dstport='26' | groupby srcip, dstip | having count_col1 >= 2
+
+stream=firewall where action=PACKET_BLOCKED' and status='PASSED' and srctype='PRIVATE' and srcip='{SuspectHost}' | duration 6m
+
+stream=firewall where action='PACKET_BLOCKED' and status='PASSED' and srctype='PRIVATE' | select srcip, count(action) as totalcount | groupby srcip | having totalcount > 500
+
+stream=firewall where srctype='PUBLIC' | duration 7d | select dstip, count(action) as totalcount, distinct_count(srcip) as distinctsrcip | groupby dstip | timeslice 15m | having distinctsrcip > 100 and totalcount > 20000
+
+stream=firewall where srctype='PUBLIC' and dstip='{TargetHost}' | duration 16m
+
+stream=firewall where srctype='PUBLIC' | duration 5d | select dstip, count(action) as totalcount, distinct_count(srcip) as distinctsrcip | groupby dstip | timeslice 15m | having distinctsrcip > 100 and totalcount > 20000
+
+stream=firewall where srctype='PUBLIC' and dstip='{TargetHost}' | duration 5d
+
+stream=FIREWALL where proto='TCP' and dstport='26' and dstip='{TargetHost}' and srcip='{SuspectHost}' | duration 6m
+
+stream=FIREWALL where proto='TCP' and dstport='26' | groupby srcip, dstip | duration 7d | having count_col1 >= 2
+
+stream=firewall where action='PACKET_BLOCKED' and status='PASSED' and srctype='PRIVATE' | select srcip, count(action) as totalcount | groupby srcip | having totalcount > 500
+
+stream=firewall where action=PACKET_BLOCKED' and status='PASSED' and srctype='PRIVATE' and srcip='{SuspectHost}' | duration 6m
+
+stream=FIREWALL where dstport='23' and srctype='PUBLIC' and proto='TCP' and dstip='{TargetHost}' and srcip='{SuspectHost}'
+
+stream=FIREWALL where dstport='23' and srctype='PUBLIC' and proto='TCP' | groupby srcip, dstip | having count_col1 >= 2
+
+stream=AUTHENTICATION where action='LOGIN' | duration 5d | select srcip, system, count_if(status='FAILED') as failcount, count_if(status='PASSED') as passcount | groupby srcip, system | timeslice 15m | having failcount >=300 and failcount >= passcount * 5
+
+stream=AUTHENTICATION where action='LOGIN' and system='{TargetHost}' and srcip='{SuspectHost}' | duration 5d
+
+stream=firewall where srctype='PUBLIC' | duration 7d | select dstip, count(action) as totalcount, distinct_count(srcip) as distinctsrcip | groupby dstip | timeslice 15m | having distinctsrcip > 100 and totalcount > 20000
+
+stream=firewall where srctype='PUBLIC' and dstip='{TargetHost}' | duration 16m
+
+stream=firewall where action='PACKET_ALLOWED' and proto='ICMP' and dsttype='PUBLIC' | select srcip, dstip, avg(txlen) as avgtxlen, count(srcip, dstip) as cntcount | groupby srcip, dstip | having avgtxlen > 500 and cntcount > 10
+
+stream=firewall where action='PACKET_ALLOWED' and proto='ICMP' and dsttype='PUBLIC' and srcip='{TargetHost}' and dstip='{SuspectHost}' | duration 6m
+
