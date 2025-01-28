@@ -19,7 +19,6 @@ const extractfieldsFromOperators = (pipe, value) => {
   let fields = []
   let functions = []
   let matches = splitingQuery(value.trim(), '', false, false, 'ops').splittedArray
-  // console.log(matches)
   matches.forEach(item => {
     if (
       (/^\w+$/gm.test(item.trim()) && !/^\d+$/.test(item.trim())) ||
@@ -36,7 +35,6 @@ const extractfieldsFromOperators = (pipe, value) => {
 const functionsExtract = (value, str, pipe, fun, aggre) => {
   let fields = []
   let tmp = /^(\w+|[|~!=%&*+-\/<>^]+)\(\s*(.+)\s*\)$/.exec(value.trim())
-  // console.log(tmp)
   if (pipe === 'groupby') {
     if (allFunctions.includes(tmp[1].toLowerCase())) {
       if (aggregateFunctions.includes(tmp[1].toLowerCase())) {
@@ -44,7 +42,6 @@ const functionsExtract = (value, str, pipe, fun, aggre) => {
       } else {
         fun.push(tmp[1].toLowerCase())
         let tmpRes = columnExtract(tmp[2].trim(), pipe, fun, aggre)
-        // console.log(tmpRes)
         if (tmpRes.length === 0) return []
         else if (typeof tmpRes === 'string') return tmpRes
         fields = fields.concat(tmpRes)
@@ -62,7 +59,6 @@ const functionsExtract = (value, str, pipe, fun, aggre) => {
       if (tmp[1].toLowerCase() === 'count' && tmpRes.length === 0 && tmp[2].trim().includes('*')) {
         tmpRes.push('*')
       }
-      // console.log(tmpRes)
       if (tmpRes.length === 0) return []
       else if (tmpRes === 'error') return 'error'
       fields = fields.concat(tmpRes)
@@ -73,7 +69,6 @@ const functionsExtract = (value, str, pipe, fun, aggre) => {
     if (booleanFunctions.includes(tmp[1].toLowerCase())) {
       fun.push(tmp[1].toLowerCase())
       let tmpRes = columnExtract(tmp[2].trim(), pipe, fun, aggre)
-      // console.log(tmpRes)
       if (tmpRes.length === 0) return []
       fields = fields.concat(tmpRes)
     } else {
@@ -83,7 +78,6 @@ const functionsExtract = (value, str, pipe, fun, aggre) => {
     if (allFunctions.includes(tmp[1].toLowerCase())) {
       fun.push(tmp[1].toLowerCase())
       let tmpRes = columnExtract(tmp[2].trim(), pipe, fun, aggre)
-      // console.log(tmpRes)
       if (tmpRes.length === 0) return []
       else if (typeof tmpRes === 'string') return tmpRes
       fields = fields.concat(tmpRes)
@@ -103,10 +97,22 @@ const validateBrackets = model => {
     '"': false,
   }
   for (let i = 0; i < value.length; i++) {
-    if (value[i] === "'") {
-      quotes["'"] = !quotes["'"]
-    } else if (value[i] === '"') {
-      quotes['"'] = !quotes['"']
+    if (value[i] === "'" && !quotes['"']) {
+      if (i > 1 && /^\\\\'$/gm.test(value[i - 2] + value[i - 1] + value[i])) {
+        quotes["'"] = !quotes["'"]
+      } else if (i > 0 && !/^\\'$/gm.test(value[i - 1] + value[i])) {
+        quotes["'"] = !quotes["'"]
+      } else if (i === 0) {
+        quotes["'"] = !quotes["'"]
+      }
+    } else if (value[i] === '"' && !quotes["'"]) {
+      if (i > 1 && /^\\\\"$/gm.test(value[i - 2] + value[i - 1] + value[i])) {
+        quotes['"'] = !quotes['"']
+      } else if (i > 0 && !/^\\"$/gm.test(value[i - 1] + value[i])) {
+        quotes['"'] = !quotes['"']
+      } else if (i === 0) {
+        quotes['"'] = !quotes['"']
+      }
     }
 
     if (!quotes["'"] && !quotes['"']) {
@@ -118,7 +124,7 @@ const validateBrackets = model => {
             // startLineNumber: model.getPositionAt(i).lineNumber,
             startColumn: i,
             // endLineNumber: model.getPositionAt(i).lineNumber,
-            endColumn: _.isArrayLike + 1,
+            endColumn: i + 1,
             message: 'Unmatched closing bracket',
             severity: monaco.MarkerSeverity.Error,
           })
@@ -298,17 +304,14 @@ const sourcenameValidation = (
 }
 
 const columnExtract = (str, pipe, fun, aggre) => {
-  // console.log(str)
   let fields = []
   let arr = splitingQuery(str, ',', false, true).splittedArray
   for (let i = 0; i < arr.length; i++) {
-    // console.log(arr[i])
     if (
-      /^(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:(?:"[^\n"]*")|(?:'[^\n']*'))|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*(?:([+\-*\/%^&])\s*(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:(?:"[^\n"]*")|(?:'[^\n']*'))|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*?)+$/gm.test(
+      /^(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:("|')(?:\\[\s\S]|(?!\2)[^\\]|\2\2)*\2)|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*(?:([+\-*\/%^&])\s*(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:("|')(?:\\[\s\S]|(?!\5)[^\\]|\5\5)*\5)|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*?)+$/gm.test(
         arr[i].trim(),
       )
     ) {
-      // console.log('expressions*******', arr[i])
       let returnVal = extractfieldsFromOperators(pipe, arr[i])
 
       let tempFunFields = []
@@ -330,7 +333,6 @@ const columnExtract = (str, pipe, fun, aggre) => {
       fields.push(arr[i])
     } else if (/^(\w+|[|~!=%&*+-\/<>^]+)\([^\n]+\)$/gm.test(arr[i].trim())) {
       let tmp = /^(\w+|[|~!=%&*+-\/<>^]+)\(\s*(.+)\s*\)$/.exec(arr[i].trim())
-      // console.log(tmp)
       if (pipe === 'groupby') {
         if (allFunctions.includes(tmp[1].toLowerCase())) {
           if (aggregateFunctions.includes(tmp[1].toLowerCase())) {
@@ -338,7 +340,6 @@ const columnExtract = (str, pipe, fun, aggre) => {
           } else {
             fun.push(tmp[1].toLowerCase())
             let tmpRes = columnExtract(tmp[2].trim(), pipe, fun, aggre)
-            // console.log(tmpRes)
             if (tmpRes.length === 0) return []
             else if (typeof tmpRes === 'string') return tmpRes
             fields = fields.concat(tmpRes)
@@ -360,7 +361,6 @@ const columnExtract = (str, pipe, fun, aggre) => {
           ) {
             tmpRes.push('*')
           }
-          // console.log(tmpRes)
           if (tmpRes.length === 0) return []
           else if (tmpRes === 'error') return 'error'
           fields = fields.concat(tmpRes)
@@ -371,7 +371,6 @@ const columnExtract = (str, pipe, fun, aggre) => {
         if (booleanFunctions.includes(tmp[1].toLowerCase())) {
           fun.push(tmp[1].toLowerCase())
           let tmpRes = columnExtract(tmp[2].trim(), pipe, fun, aggre)
-          // console.log(tmpRes)
           if (tmpRes.length === 0) return []
           else if (typeof tmpRes === 'string') return tmpRes
           fields = fields.concat(tmpRes)
@@ -382,7 +381,6 @@ const columnExtract = (str, pipe, fun, aggre) => {
         if (allFunctions.includes(tmp[1].toLowerCase())) {
           fun.push(tmp[1].toLowerCase())
           let tmpRes = columnExtract(tmp[2].trim(), pipe, fun, aggre)
-          // console.log(tmpRes)
           if (tmpRes.length === 0) return []
           else if (typeof tmpRes === 'string') return tmpRes
           fields = fields.concat(tmpRes)
@@ -393,28 +391,25 @@ const columnExtract = (str, pipe, fun, aggre) => {
     } else if (/^(\d+|'([^']+)'|\"([^\"]+)\")$/gm.test(arr[i].trim())) {
       continue
     } else if (/^\((.+)\)$/gm.test(arr[i].trim())) {
-      // console.log(arr[i])
       let tmpRes = columnExtract(/^\((.+)\)$/.exec(arr[i].trim())[1].trim(), pipe, fun, aggre)
-      // console.log(tmpRes)
       if (tmpRes.length === 0) return []
       fields = fields.concat(tmpRes)
     }
     // like
     else if (
-      /^(?:\(?\s*not\s+)?\(*\s*(?:(("[^\n"]*")|('[^\n']*'))|(@\w+(((\.\w+)|(\[\s*\d+\s*\]))+)?)|((\w+|[|~!=%&*+-\/<>^]+)\([^\n]+\))|(([a-zA-Z0-9_-]+))|(\d+))\s*\)?\s+(not\s*like|like)\s*\(?\s*(?:(("[^\n"]*")|('[^\n']*'))|(@\w+(((\.\w+)|(\[\s*\d+\s*\]))+)?)|((\w+|[|~!=%&*+-\/<>^]+)\([^\n]+\))|(([a-zA-Z0-9_-]+))|(\d+))\s*\)?\s*\)?$/gim.test(
+      /^(?:\(?\s*not\s+)?\(*\s*(?:(?:("|')(?:\\[\s\S]|(?!\1)[^\\]|\1\1)*\1)|(@\w+(((\.\w+)|(\[\s*\d+\s*\]))+)?)|((\w+|[|~!=%&*+-\/<>^]+)\([^\n]+\))|(([a-zA-Z0-9_-]+))|(\d+))\s*\)?\s+(not\s*like|like)\s*\(?\s*(?:(?:("|')(?:\\[\s\S]|(?!\13)[^\\]|\13\13)*\13)|(@\w+(((\.\w+)|(\[\s*\d+\s*\]))+)?)|((\w+|[|~!=%&*+-\/<>^]+)\([^\n]+\))|(([a-zA-Z0-9_-]+))|(\d+))\s*\)?\s*\)?$/gim.test(
         arr[i].trim(),
       )
     ) {
-      let temp = /^(?:\(?\s*not\s+)?\(*\s*(?:(?:(?:"[^\n"]*")|(?:'[^\n']*'))|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|((?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\))|((?:[a-zA-Z0-9_-]+))|(?:\d+))\s*\)?\s+(not\s*like|like)\s*\(?\s*(?:(?:(?:"[^\n"]*")|(?:'[^\n']*'))|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|((?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\))|((?:[a-zA-Z0-9_-]+))|(?:\d+))\s*\)?\s*\)?$/gim.exec(
+      let temp = /^(?:\(?\s*not\s+)?\(*\s*(?:(?:("|')(?:\\[\s\S]|(?!\1)[^\\]|\1\1)*\1)|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|((?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\))|((?:[a-zA-Z0-9_-]+))|(?:\d+))\s*\)?\s+(not\s*like|like)\s*\(?\s*(?:(?:("|')(?:\\[\s\S]|(?!\5)[^\\]|\5\5)*\5)|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|((?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\))|((?:[a-zA-Z0-9_-]+))|(?:\d+))\s*\)?\s*\)?$/gim.exec(
         arr[i].trim(),
       )
-      if (temp && temp[2] && !/^\d+$/.test(temp[2].trim())) {
-        fields.push(temp[2].trim())
-      } else if (temp && temp[5] && !/^\d+$/.test(temp[5].trim())) {
-        fields.push(temp[5].trim())
-      } else if (temp && temp[1]) {
-        let tmp = /^(\w+|[|~!=%&*+-\/<>^]+)\(\s*(.+)\s*\)$/.exec(temp[1].trim())
-        // console.log(tmp)
+      if (temp && temp[3] && !/^\d+$/.test(temp[3].trim())) {
+        fields.push(temp[3].trim())
+      } else if (temp && temp[7] && !/^\d+$/.test(temp[7].trim())) {
+        fields.push(temp[7].trim())
+      } else if (temp && temp[2]) {
+        let tmp = /^(\w+|[|~!=%&*+-\/<>^]+)\(\s*(.+)\s*\)$/.exec(temp[2].trim())
         if (pipe === 'groupby') {
           if (allFunctions.includes(tmp[1].toLowerCase())) {
             if (aggregateFunctions.includes(tmp[1].toLowerCase())) {
@@ -422,7 +417,6 @@ const columnExtract = (str, pipe, fun, aggre) => {
             } else {
               fun.push(tmp[1].toLowerCase())
               let tmpRes = columnExtract(tmp[2].trim(), pipe, fun, aggre)
-              // console.log(tmpRes)
               if (tmpRes.length === 0) return []
               fields = fields.concat(tmpRes)
             }
@@ -443,7 +437,6 @@ const columnExtract = (str, pipe, fun, aggre) => {
             ) {
               tmpRes.push('*')
             }
-            // console.log(tmpRes)
             if (tmpRes.length === 0) return []
             fields = fields.concat(tmpRes)
           } else {
@@ -453,7 +446,6 @@ const columnExtract = (str, pipe, fun, aggre) => {
           if (booleanFunctions.includes(tmp[1].toLowerCase())) {
             fun.push(tmp[1].toLowerCase())
             let tmpRes = columnExtract(tmp[2].trim(), pipe, fun, aggre)
-            // console.log(tmpRes)
             if (tmpRes.length === 0) return []
             fields = fields.concat(tmpRes)
           } else {
@@ -463,16 +455,14 @@ const columnExtract = (str, pipe, fun, aggre) => {
           if (allFunctions.includes(tmp[1].toLowerCase())) {
             fun.push(tmp[1].toLowerCase())
             let tmpRes = columnExtract(tmp[2].trim(), pipe, fun, aggre)
-            // console.log(tmpRes)
             if (tmpRes.length === 0) return []
             fields = fields.concat(tmpRes)
           } else {
             return []
           }
         }
-      } else if (temp && temp[4]) {
-        let tmp = /^(\w+|[|~!=%&*+-\/<>^]+)\(\s*(.+)\s*\)$/.exec(temp[4].trim())
-        // console.log(tmp)
+      } else if (temp && temp[6]) {
+        let tmp = /^(\w+|[|~!=%&*+-\/<>^]+)\(\s*(.+)\s*\)$/.exec(temp[6].trim())
         if (pipe === 'groupby') {
           if (allFunctions.includes(tmp[1].toLowerCase())) {
             if (aggregateFunctions.includes(tmp[1].toLowerCase())) {
@@ -480,7 +470,6 @@ const columnExtract = (str, pipe, fun, aggre) => {
             } else {
               fun.push(tmp[1].toLowerCase())
               let tmpRes = columnExtract(tmp[2].trim(), pipe, fun, aggre)
-              // console.log(tmpRes)
               if (tmpRes.length === 0) return []
               fields = fields.concat(tmpRes)
             }
@@ -501,7 +490,6 @@ const columnExtract = (str, pipe, fun, aggre) => {
             ) {
               tmpRes.push('*')
             }
-            // console.log(tmpRes)
             if (tmpRes.length === 0) return []
             fields = fields.concat(tmpRes)
           } else {
@@ -511,7 +499,6 @@ const columnExtract = (str, pipe, fun, aggre) => {
           if (booleanFunctions.includes(tmp[1].toLowerCase())) {
             fun.push(tmp[1].toLowerCase())
             let tmpRes = columnExtract(tmp[2].trim(), pipe, fun, aggre)
-            // console.log(tmpRes)
             if (tmpRes.length === 0) return []
             fields = fields.concat(tmpRes)
           } else {
@@ -521,7 +508,6 @@ const columnExtract = (str, pipe, fun, aggre) => {
           if (allFunctions.includes(tmp[1].toLowerCase())) {
             fun.push(tmp[1].toLowerCase())
             let tmpRes = columnExtract(tmp[2].trim(), pipe, fun, aggre)
-            // console.log(tmpRes)
             if (tmpRes.length === 0) return []
             fields = fields.concat(tmpRes)
           } else {
@@ -532,16 +518,15 @@ const columnExtract = (str, pipe, fun, aggre) => {
     }
     // in
     else if (
-      /^(?:\(?\s*not\s+)?\(??\s*(?:(?:(?:"[^\n"]*")|(?:'[^\n']*'))|(@\w+(((\.\w+)|(\[\s*\d+\s*\]))+)?)|((\w+|[|~!=%&*+-\/<>^]+)\([^\n]+\))|(([a-zA-Z0-9_-]+))|(\d+))\s*(not\s+in|in)\s*(?:\(*(?:(?:"[^\n"]*")|(?:'[^\n']*'))(?:\s*,\s*(?:(?:"[^\n"]*")|(?:'[^\n']*')))*\s*\)*)\s*?$/gim.test(
+      /^(?:\(?\s*not\s+)?\(??\s*(?:(?:("|')(?:\\[\s\S]|(?!\1)[^\\]|\1\1)*\1)|(@\w+(((\.\w+)|(\[\s*\d+\s*\]))+)?)|((\w+|[|~!=%&*+-\/<>^]+)\([^\n]+\))|(([a-zA-Z0-9_-]+))|(\d+))\s*(not\s+in|in)\s*(?:\(*(?:(?:("|')(?:\\[\s\S]|(?!\13)[^\\]|\13\13)*\13))(?:\s*,\s*(?:(?:("|')(?:\\[\s\S]|(?!\14)[^\\]|\14\14)*\14)))*\s*\)*)\s*?$/gim.test(
         arr[i].trim(),
       )
     ) {
-      let temp = /^(?:\(?\s*not\s+)?\(??\s*(?:(?:(?:"[^\n"]*")|(?:'[^\n']*'))|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|((?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\))|(?:([a-zA-Z0-9_-]+))|(?:\d+))\s*(not\s+in|in)\s*(?:\(*(?:(?:"[^\n"]*")|(?:'[^\n']*'))(?:\s*,\s*(?:(?:"[^\n"]*")|(?:'[^\n']*')))*\s*\)*)\s*?$/gim.exec(
+      let temp = /^(?:\(?\s*not\s+)?\(??\s*(?:(?:("|')(?:\\[\s\S]|(?!\1)[^\\]|\1\1)*\1)|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|((?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\))|(?:([a-zA-Z0-9_-]+))|(?:\d+))\s*(not\s+in|in)\s*(?:\(*(?:("|')(?:\\[\s\S]|(?!\5)[^\\]|\5\5)*\5)(?:\s*,\s*(?:("|')(?:\\[\s\S]|(?!\6)[^\\]|\6\6)*\6))*\s*\)*)\s*?$/gim.exec(
         arr[i].trim(),
       )
-      if (temp && temp[1]) {
-        let tmp = /^(\w+|[|~!=%&*+-\/<>^]+)\(\s*(.+)\s*\)$/.exec(temp[1].trim())
-        // console.log(tmp)
+      if (temp && temp[2]) {
+        let tmp = /^(\w+|[|~!=%&*+-\/<>^]+)\(\s*(.+)\s*\)$/.exec(temp[2].trim())
         if (pipe === 'groupby') {
           if (allFunctions.includes(tmp[1].toLowerCase())) {
             if (aggregateFunctions.includes(tmp[1].toLowerCase())) {
@@ -549,7 +534,6 @@ const columnExtract = (str, pipe, fun, aggre) => {
             } else {
               fun.push(tmp[1].toLowerCase())
               let tmpRes = columnExtract(tmp[2].trim(), pipe, fun, aggre)
-              // console.log(tmpRes)
               if (tmpRes.length === 0) return []
               fields = fields.concat(tmpRes)
             }
@@ -570,7 +554,6 @@ const columnExtract = (str, pipe, fun, aggre) => {
             ) {
               tmpRes.push('*')
             }
-            // console.log(tmpRes)
             if (tmpRes.length === 0) return []
             fields = fields.concat(tmpRes)
           } else {
@@ -580,7 +563,6 @@ const columnExtract = (str, pipe, fun, aggre) => {
           if (booleanFunctions.includes(tmp[1].toLowerCase())) {
             fun.push(tmp[1].toLowerCase())
             let tmpRes = columnExtract(tmp[2].trim(), pipe, fun, aggre)
-            // console.log(tmpRes)
             if (tmpRes.length === 0) return []
             fields = fields.concat(tmpRes)
           } else {
@@ -590,29 +572,27 @@ const columnExtract = (str, pipe, fun, aggre) => {
           if (allFunctions.includes(tmp[1].toLowerCase())) {
             fun.push(tmp[1].toLowerCase())
             let tmpRes = columnExtract(tmp[2].trim(), pipe, fun, aggre)
-            // console.log(tmpRes)
             if (tmpRes.length === 0) return []
             fields = fields.concat(tmpRes)
           } else {
             return []
           }
         }
-      } else if (temp && temp[2] && !/^\d+$/.test(temp[2].trim())) {
-        fields.push(temp[2].trim())
+      } else if (temp && temp[3] && !/^\d+$/.test(temp[3].trim())) {
+        fields.push(temp[3].trim())
       }
     }
     // . is null | . is not null
     else if (
-      /^(?:\(?\s*not\s+)?\(?\s*(?:(("[^\n"]*")|('[^\n']*'))|(@\w+(((\.\w+)|(\[\s*\d+\s*\]))+)?)|((\w+|[|~!=%&*+-\/<>^]+)\([^\n]+\))|(([a-zA-Z0-9_-]+))|(\d+))\s*(?:is|is\s+not)\s+null\s*\)?$/gim.test(
+      /^(?:\(?\s*not\s+)?\(?\s*(?:(?:("|')(?:\\[\s\S]|(?!\1)[^\\]|\1\1)*\1)|(@\w+(((\.\w+)|(\[\s*\d+\s*\]))+)?)|((\w+|[|~!=%&*+-\/<>^]+)\([^\n]+\))|(([a-zA-Z0-9_-]+))|(\d+))\s*(?:is|is\s+not)\s+null\s*\)?$/gim.test(
         arr[i].trim(),
       )
     ) {
-      let temp = /^(?:\(?\s*not\s+)?\(?\s*(?:(?:(?:"[^\n"]*")|(?:'[^\n']*'))|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|((?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\))|((?:[a-zA-Z0-9_-]+))|(?:\d+))\s*(?:is|is\s+not)\s+null\s*\)?$/gim.exec(
+      let temp = /^(?:\(?\s*not\s+)?\(?\s*(?:(?:("|')(?:\\[\s\S]|(?!\1)[^\\]|\1\1)*\1)|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|((?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\))|((?:[a-zA-Z0-9_-]+))|(?:\d+))\s*(?:is|is\s+not)\s+null\s*\)?$/gim.exec(
         arr[i].trim(),
       )
-      if (temp && temp[1]) {
-        let tmp = /^(\w+|[|~!=%&*+-\/<>^]+)\(\s*(.+)\s*\)$/.exec(temp[1].trim())
-        // console.log(tmp)
+      if (temp && temp[2]) {
+        let tmp = /^(\w+|[|~!=%&*+-\/<>^]+)\(\s*(.+)\s*\)$/.exec(temp[2].trim())
         if (pipe === 'groupby') {
           if (allFunctions.includes(tmp[1].toLowerCase())) {
             if (aggregateFunctions.includes(tmp[1].toLowerCase())) {
@@ -620,7 +600,6 @@ const columnExtract = (str, pipe, fun, aggre) => {
             } else {
               fun.push(tmp[1].toLowerCase())
               let tmpRes = columnExtract(tmp[2].trim(), pipe, fun, aggre)
-              // console.log(tmpRes)
               if (tmpRes.length === 0) return []
               fields = fields.concat(tmpRes)
             }
@@ -641,7 +620,6 @@ const columnExtract = (str, pipe, fun, aggre) => {
             ) {
               tmpRes.push('*')
             }
-            // console.log(tmpRes)
             if (tmpRes.length === 0) return []
             fields = fields.concat(tmpRes)
           } else {
@@ -651,7 +629,6 @@ const columnExtract = (str, pipe, fun, aggre) => {
           if (booleanFunctions.includes(tmp[1].toLowerCase())) {
             fun.push(tmp[1].toLowerCase())
             let tmpRes = columnExtract(tmp[2].trim(), pipe, fun, aggre)
-            // console.log(tmpRes)
             if (tmpRes.length === 0) return []
             fields = fields.concat(tmpRes)
           } else {
@@ -661,15 +638,14 @@ const columnExtract = (str, pipe, fun, aggre) => {
           if (allFunctions.includes(tmp[1].toLowerCase())) {
             fun.push(tmp[1].toLowerCase())
             let tmpRes = columnExtract(tmp[2].trim(), pipe, fun, aggre)
-            // console.log(tmpRes)
             if (tmpRes.length === 0) return []
             fields = fields.concat(tmpRes)
           } else {
             return []
           }
         }
-      } else if (temp && temp[2] && !/^\d+$/.test(temp[2].trim())) {
-        fields.push(temp[2].trim())
+      } else if (temp && temp[3] && !/^\d+$/.test(temp[3].trim())) {
+        fields.push(temp[3].trim())
       }
     } else return []
   }
@@ -688,11 +664,9 @@ const checkForGroupbyFunctions = (
   correctStr,
   remStr,
 ) => {
-  // console.log(value)
   let fun = /^(\w+|[|~!=%&*+-\/<>^]+)\s*\(\s*(.+)\s*\)$/.exec(value.trim())
   let func = []
   let arr = columnExtract(fun[0], 'groupby', func)
-  // console.log(arr)
   if (func.length === 0 && arr === 'aggregate') {
     return [
       {
@@ -775,7 +749,6 @@ const checkForGroupbyFunctions = (
         arr,
       ],
     })
-    // console.log(groupbyFields)
   }
 }
 
@@ -798,11 +771,9 @@ const checkForSelectFunctions = (
   let fun = /^((\w+|[|~!=%&*+-\/<>^]+)\(\s*(.+)\s*\))(?:\s+[aA][sS]\s+([a-zA-Z0-9_&-]+))?$/.exec(
     value.trim(),
   )
-  // console.log(fun)
   let aggre = []
   let func = []
   let arr = columnExtract(fun[1], 'select', func, aggre)
-  // console.log(arr, aggre, func)
   if (fun[2].toLowerCase() === 'distinct') {
     if (i !== 0) {
       return [
@@ -950,7 +921,6 @@ const checkForSelectFunctions = (
           correctField,
         ],
       })
-      // console.log(value, splittedArray, correctStr, fun)
       selectFullField.push([
         value,
         'nonAggregate',
@@ -1008,7 +978,6 @@ const checkSelectAndGroupby = (
   selectFunction,
   selectFullField,
 ) => {
-  // console.log(selectAggregate, selectFullField, selectFunction)
   let selAl = selectAliases.map(obj => Object.keys(obj)[0])
   for (let i = 0; i < groupbyFields.length; i++) {
     let tempKey = Object.keys(groupbyFields[i])[0]
@@ -1090,7 +1059,6 @@ const checkSelectAndGroupby = (
     let funs = groupbyFields
       .filter(obj => Object.values(obj)[0].length > 3)
       .map(obj => Object.values(obj)[0][3])
-    // console.log(selectFullField, selectFields)
     for (let i = 0; i < selectFullField.length; i++) {
       if (selectFullField[i][1] === 'aggregate') {
         if (gbyAlias.includes(selectFullField[i][0]) || gbyField.includes(selectFullField[i][0])) {
@@ -1362,24 +1330,19 @@ const checkSelect = (
       }
       // gbyCol.push(splittedArray[i].trim())
     } else if (
-      /^\s*(?:(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:(?:"[^\n"]*")|(?:'[^\n']*'))|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*(?:([+\-*\/%^&])\s*(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:(?:"[^\n"]*")|(?:'[^\n']*'))|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*?)+)(?:\s+[aA][sS]\s+[a-zA-Z0-9_&-]+){0,1}$/gm.test(
+      /^\s*(?:(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:("|')(?:\\[\s\S]|(?!\2)[^\\]|\2\2)*\2)|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*(?:([+\-*\/%^&])\s*(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:("|')(?:\\[\s\S]|(?!\5)[^\\]|\5\5)*\5)|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*?)+)(?:\s+[aA][sS]\s+[a-zA-Z0-9_&-]+){0,1}$/gm.test(
         splittedArray[i].trim(),
       )
     ) {
-      let selOps = /^\s*(?:(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:(?:"[^\n"]*")|(?:'[^\n']*'))|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*(?:([+\-*\/%^&])\s*(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:(?:"[^\n"]*")|(?:'[^\n']*'))|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*?)+)(\s+[aA][sS]\s+[a-zA-Z0-9_&-]+){0,1}$/gm.exec(
+      let selOps = /^\s*(?:(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:("|')(?:\\[\s\S]|(?!\2)[^\\]|\2\2)*\2)|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*(?:([+\-*\/%^&])\s*(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:("|')(?:\\[\s\S]|(?!\5)[^\\]|\5\5)*\5)|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*?)+)(\s+[aA][sS]\s+[a-zA-Z0-9_&-]+){0,1}$/gm.exec(
         splittedArray[i].trim(),
-      )[4]
+      )[6]
       let returnVal = {}
       if (selOps) {
         returnVal = extractfieldsFromOperators(
           'select',
           splittedArray[i].trim().slice(0, splittedArray[i].trim().length - selOps.length),
         )
-        // console.log(
-        //   selOps,
-        //   splittedArray[i].trim(),
-        //   splittedArray[i].trim().slice(0, splittedArray[i].trim().length - selOps.length),
-        // )
       } else {
         returnVal = extractfieldsFromOperators('select', splittedArray[i].trim())
       }
@@ -1509,7 +1472,9 @@ const checkSelect = (
           },
         ]
       }
-    } else if (/^(?:(?:"[^\n"]*")|(?:'[^\n']*'))$|^(?:\d+)$/gm.test(splittedArray[i].trim())) {
+    } else if (
+      /^(?:("|')(?:\\[\s\S]|(?!\1)[^\\]|\1\1)*\1)$|^(?:\d+)$/gm.test(splittedArray[i].trim())
+    ) {
       correctStr += i > 0 ? ',' + splittedArray[i] : '' + splittedArray[i]
       remStr = query.slice(correctStr.length)
       continue
@@ -1659,7 +1624,7 @@ const checkGroupby = (query, pos, fieldsList, groupbyFields, groupbyOps, lastPip
         ]
       }
     } else if (
-      /^(?:(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:(?:"[^\n"]*")|(?:'[^\n']*'))|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*(?:([+\-*\/%^&])\s*(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:(?:"[^\n"]*")|(?:'[^\n']*'))|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*?)*)$/gim.test(
+      /^(?:(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:("|')(?:\\[\s\S]|(?!\2)[^\\]|\2\2)*\2)|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*(?:([+\-*\/%^&])\s*(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:("|')(?:\\[\s\S]|(?!\5)[^\\]|\5\5)*\5)|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*?)*)$/gim.test(
         splittedArray[i].trim(),
       )
     ) {
@@ -1683,7 +1648,6 @@ const checkGroupby = (query, pos, fieldsList, groupbyFields, groupbyOps, lastPip
           }
         }
       }
-      // console.log(returnVal, correctField)
       for (let k = 0; k < returnVal.functions.length; k++) {
         let func = checkForGroupbyFunctions(
           returnVal.functions[k],
@@ -2729,7 +2693,6 @@ function splitingQuery(value, ch, addCh, addBrackets, word) {
 
     return { splittedArray, charPos }
   } else if (word === 'checkForWhereCond') {
-    // console.log(value)
     let splittedArray = []
     let charPos = []
     let currentSegment = ''
@@ -2915,10 +2878,22 @@ function separatingFromBrackets(value, flag) {
 
     str += value[i]
 
-    if (value[i] === "'") {
-      quotes["'"] = !quotes["'"]
-    } else if (value[i] === '"') {
-      quotes['"'] = !quotes['"']
+    if (value[i] === "'" && !quotes['"']) {
+      if (i > 1 && /^\\\\'$/gm.test(value[i - 2] + value[i - 1] + value[i])) {
+        quotes["'"] = !quotes["'"]
+      } else if (i > 0 && !/^\\'$/gm.test(value[i - 1] + value[i])) {
+        quotes["'"] = !quotes["'"]
+      } else if (i === 0) {
+        quotes["'"] = !quotes["'"]
+      }
+    } else if (value[i] === '"' && !quotes["'"]) {
+      if (i > 1 && /^\\\\"$/gm.test(value[i - 2] + value[i - 1] + value[i])) {
+        quotes['"'] = !quotes['"']
+      } else if (i > 0 && !/^\\"$/gm.test(value[i - 1] + value[i])) {
+        quotes['"'] = !quotes['"']
+      } else if (i === 0) {
+        quotes['"'] = !quotes['"']
+      }
     }
 
     if (!quotes["'"] && !quotes['"']) {
@@ -3086,14 +3061,12 @@ function validatingWhereConditions(value, separator, query, strObj, fieldsList, 
         ]
       }
     } else if (operatorsSplit.operators === 'ops') {
-      // console.log('ops-----------> ', operatorsSplit)
       if (operatorsSplit.splittedArray.length === 2) {
         if (
-          /^\s*(?:\(?\s*not\s+)?(?:(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:(?:"[^\n"]*")|(?:'[^\n']*'))|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*(?:([+\-*\/%^&])\s*(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:(?:"[^\n"]*")|(?:'[^\n']*'))|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*?)*)$/gim.test(
+          /^\s*(?:\(?\s*not\s+)?(?:(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:("|')(?:\\[\s\S]|(?!\2)[^\\]|\2\2)*\2)|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*(?:([+\-*\/%^&])\s*(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:("|')(?:\\[\s\S]|(?!\5)[^\\]|\5\5)*\5)|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*?)*)$/gim.test(
             operatorsSplit.splittedArray[0].trim(),
           )
         ) {
-          // console.log(value, operatorsSplit.splittedArray)
           let notCheck = /^(\s*not\s+)/.exec(operatorsSplit.splittedArray[0])
           let returnVal = {}
           if (notCheck && notCheck[1]) {
@@ -3128,7 +3101,6 @@ function validatingWhereConditions(value, separator, query, strObj, fieldsList, 
             let arr = []
             let func = []
             arr = columnExtract(returnVal.functions[i].trim(), 'where-all', func)
-            // console.log('where-all', arr, returnVal.functions[i].trim(), fun)
             if (func.length === 0) {
               return [
                 {
@@ -3208,11 +3180,10 @@ function validatingWhereConditions(value, separator, query, strObj, fieldsList, 
         }
 
         if (
-          /^\s*(?:\(?\s*not\s+)?(?:(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:(?:"[^\n"]*")|(?:'[^\n']*'))|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*(?:([+\-*\/%^&])\s*(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:(?:"[^\n"]*")|(?:'[^\n']*'))|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*?)*)$/gim.test(
+          /^\s*(?:\(?\s*not\s+)?(?:(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:("|')(?:\\[\s\S]|(?!\2)[^\\]|\2\2)*\2)|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*(?:([+\-*\/%^&])\s*(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:("|')(?:\\[\s\S]|(?!\5)[^\\]|\5\5)*\5)|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*?)*)$/gim.test(
             operatorsSplit.splittedArray[1].trim(),
           )
         ) {
-          // console.log(value, operatorsSplit.splittedArray)
           let notCheck = /^(\s*not\s+)/.exec(operatorsSplit.splittedArray[1])
           let returnVal = {}
           if (notCheck && notCheck[1]) {
@@ -3247,7 +3218,6 @@ function validatingWhereConditions(value, separator, query, strObj, fieldsList, 
             let arr = []
             let func = []
             arr = columnExtract(returnVal.functions[i].trim(), 'where-all', func)
-            // console.log('where-all', arr, returnVal.functions[i].trim(), fun)
             if (func.length === 0) {
               return [
                 {
@@ -3339,14 +3309,12 @@ function validatingWhereConditions(value, separator, query, strObj, fieldsList, 
         ]
       }
     } else if (operatorsSplit.operators === 'between-and') {
-      // console.log('between-and-----------> ', operatorsSplit)
       if (operatorsSplit.splittedArray.length === 3) {
         if (
-          /^\s*(?:\(?\s*not\s+)?(?:(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:(?:"[^\n"]*")|(?:'[^\n']*'))|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*(?:([+\-*\/%^&])\s*(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:(?:"[^\n"]*")|(?:'[^\n']*'))|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*?)*)$/gim.test(
+          /^\s*(?:\(?\s*not\s+)?(?:(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:("|')(?:\\[\s\S]|(?!\2)[^\\]|\2\2)*\2)|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*(?:([+\-*\/%^&])\s*(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:("|')(?:\\[\s\S]|(?!\5)[^\\]|\5\5)*\5)|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*?)*)$/gim.test(
             operatorsSplit.splittedArray[0].trim(),
           )
         ) {
-          // console.log(value, operatorsSplit.splittedArray)
           let notCheck = /^(\s*not\s+)/.exec(operatorsSplit.splittedArray[0])
           let returnVal = {}
           if (notCheck && notCheck[1]) {
@@ -3381,7 +3349,6 @@ function validatingWhereConditions(value, separator, query, strObj, fieldsList, 
             let arr = []
             let func = []
             arr = columnExtract(returnVal.functions[i].trim(), 'where-all', func)
-            // console.log('where-all', arr, returnVal.functions[i].trim(), fun)
             if (func.length === 0) {
               return [
                 {
@@ -3461,11 +3428,10 @@ function validatingWhereConditions(value, separator, query, strObj, fieldsList, 
         }
 
         if (
-          /^\s*(?:\(?\s*not\s+)?(?:(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:(?:"[^\n"]*")|(?:'[^\n']*'))|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*(?:([+\-*\/%^&])\s*(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:(?:"[^\n"]*")|(?:'[^\n']*'))|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*?)*)$/gim.test(
+          /^\s*(?:\(?\s*not\s+)?(?:(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:("|')(?:\\[\s\S]|(?!\2)[^\\]|\2\2)*\2)|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*(?:([+\-*\/%^&])\s*(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:("|')(?:\\[\s\S]|(?!\5)[^\\]|\5\5)*\5)|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*?)*)$/gim.test(
             operatorsSplit.splittedArray[1].trim(),
           )
         ) {
-          // console.log(value, operatorsSplit.splittedArray)
           let notCheck = /^(\s*not\s+)/.exec(operatorsSplit.splittedArray[1])
           let returnVal = {}
           if (notCheck && notCheck[1]) {
@@ -3500,7 +3466,6 @@ function validatingWhereConditions(value, separator, query, strObj, fieldsList, 
             let arr = []
             let func = []
             arr = columnExtract(returnVal.functions[i].trim(), 'where-all', func)
-            // console.log('where-all', arr, returnVal.functions[i].trim(), fun)
             if (func.length === 0) {
               return [
                 {
@@ -3580,11 +3545,10 @@ function validatingWhereConditions(value, separator, query, strObj, fieldsList, 
         }
 
         if (
-          /^\s*(?:\(?\s*not\s+)?(?:(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:(?:"[^\n"]*")|(?:'[^\n']*'))|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*(?:([+\-*\/%^&])\s*(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:(?:"[^\n"]*")|(?:'[^\n']*'))|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*?)*)$/gim.test(
+          /^\s*(?:\(?\s*not\s+)?(?:(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:("|')(?:\\[\s\S]|(?!\2)[^\\]|\2\2)*\2)|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*(?:([+\-*\/%^&])\s*(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:("|')(?:\\[\s\S]|(?!\5)[^\\]|\5\5)*\5)|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*?)*)$/gim.test(
             operatorsSplit.splittedArray[2].trim(),
           )
         ) {
-          // console.log(value, operatorsSplit.splittedArray)
           let notCheck = /^(\s*not\s+)/.exec(operatorsSplit.splittedArray[2])
           let returnVal = {}
           if (notCheck && notCheck[1]) {
@@ -3619,7 +3583,6 @@ function validatingWhereConditions(value, separator, query, strObj, fieldsList, 
             let arr = []
             let func = []
             arr = columnExtract(returnVal.functions[i].trim(), 'where-all', func)
-            // console.log('where-all', arr, returnVal.functions[i].trim(), fun)
             if (func.length === 0) {
               return [
                 {
@@ -3711,14 +3674,12 @@ function validatingWhereConditions(value, separator, query, strObj, fieldsList, 
         ]
       }
     } else if (operatorsSplit.operators === 'like' || operatorsSplit.operators === 'not like') {
-      // console.log('like-----------> ', operatorsSplit)
       if (operatorsSplit.splittedArray.length === 2) {
         if (
-          /^\s*(?:\(?\s*not\s+)?(?:(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:(?:"[^\n"]*")|(?:'[^\n']*'))|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*(?:([+\-*\/%^&])\s*(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:(?:"[^\n"]*")|(?:'[^\n']*'))|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*?)*)$/gim.test(
+          /^\s*(?:\(?\s*not\s+)?(?:(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:("|')(?:\\[\s\S]|(?!\2)[^\\]|\2\2)*\2)|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*(?:([+\-*\/%^&])\s*(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:("|')(?:\\[\s\S]|(?!\5)[^\\]|\5\5)*\5)|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*?)*)$/gim.test(
             operatorsSplit.splittedArray[0].trim(),
           )
         ) {
-          // console.log(value, operatorsSplit.splittedArray)
           let notCheck = /^(\s*not\s+)/.exec(operatorsSplit.splittedArray[0])
           let returnVal = {}
           if (notCheck && notCheck[1]) {
@@ -3753,7 +3714,6 @@ function validatingWhereConditions(value, separator, query, strObj, fieldsList, 
             let arr = []
             let func = []
             arr = columnExtract(returnVal.functions[i].trim(), 'where-all', func)
-            // console.log('where-all', arr, returnVal.functions[i].trim(), fun)
             if (func.length === 0) {
               return [
                 {
@@ -3833,11 +3793,10 @@ function validatingWhereConditions(value, separator, query, strObj, fieldsList, 
         }
 
         if (
-          /^\s*(?:\(?\s*not\s+)?(?:(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:(?:"[^\n"]*")|(?:'[^\n']*'))|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*(?:([+\-*\/%^&])\s*(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:(?:"[^\n"]*")|(?:'[^\n']*'))|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*?)*)$/gim.test(
+          /^\s*(?:\(?\s*not\s+)?(?:(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:("|')(?:\\[\s\S]|(?!\2)[^\\]|\2\2)*\2)|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*(?:([+\-*\/%^&])\s*(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:("|')(?:\\[\s\S]|(?!\5)[^\\]|\5\5)*\5)|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*?)*)$/gim.test(
             operatorsSplit.splittedArray[1].trim(),
           )
         ) {
-          // console.log(value, operatorsSplit.splittedArray)
           let notCheck = /^(\s*not\s+)/.exec(operatorsSplit.splittedArray[1])
           let returnVal = {}
           if (notCheck && notCheck[1]) {
@@ -3872,7 +3831,6 @@ function validatingWhereConditions(value, separator, query, strObj, fieldsList, 
             let arr = []
             let func = []
             arr = columnExtract(returnVal.functions[i].trim(), 'where-all', func)
-            // console.log('where-all', arr, returnVal.functions[i].trim(), fun)
             if (func.length === 0) {
               return [
                 {
@@ -3964,14 +3922,12 @@ function validatingWhereConditions(value, separator, query, strObj, fieldsList, 
         ]
       }
     } else if (operatorsSplit.operators === 'in' || operatorsSplit.operators === 'not in') {
-      // console.log('in-----------> ', operatorsSplit)
       if (operatorsSplit.splittedArray.length === 2) {
         if (
-          /^\s*(?:\(?\s*not\s+)?(?:(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:(?:"[^\n"]*")|(?:'[^\n']*'))|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*(?:([+\-*\/%^&])\s*(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:(?:"[^\n"]*")|(?:'[^\n']*'))|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*?)*)$/gim.test(
+          /^\s*(?:\(?\s*not\s+)?(?:(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:("|')(?:\\[\s\S]|(?!\2)[^\\]|\2\2)*\2)|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*(?:([+\-*\/%^&])\s*(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:("|')(?:\\[\s\S]|(?!\5)[^\\]|\5\5)*\5)|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*?)*)$/gim.test(
             operatorsSplit.splittedArray[0].trim(),
           )
         ) {
-          // console.log(value, operatorsSplit.splittedArray)
           let notCheck = /^(\s*not\s+)/.exec(operatorsSplit.splittedArray[0])
           let returnVal = {}
           if (notCheck && notCheck[1]) {
@@ -4006,7 +3962,6 @@ function validatingWhereConditions(value, separator, query, strObj, fieldsList, 
             let arr = []
             let func = []
             arr = columnExtract(returnVal.functions[i].trim(), 'where-all', func)
-            // console.log('where-all', arr, returnVal.functions[i].trim(), fun)
             if (func.length === 0) {
               return [
                 {
@@ -4090,7 +4045,7 @@ function validatingWhereConditions(value, separator, query, strObj, fieldsList, 
           let arr = splitingQuery(a[1], ',', false, true).splittedArray
           for (let x = 0; x < arr.length; x++) {
             if (
-              /^(?:(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:(?:"[^\n"]*")|(?:'[^\n']*'))|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*(?:([+\-*\/%^&])\s*(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:(?:"[^\n"]*")|(?:'[^\n']*'))|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*?)*)$/gim.test(
+              /^(?:(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:("|')(?:\\[\s\S]|(?!\2)[^\\]|\2\2)*\2)|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*(?:([+\-*\/%^&])\s*(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:("|')(?:\\[\s\S]|(?!\5)[^\\]|\5\5)*\5)|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*?)*)$/gim.test(
                 arr[x].trim(),
               )
             ) {
@@ -4191,7 +4146,7 @@ function validatingWhereConditions(value, separator, query, strObj, fieldsList, 
                   startColumn: strObj.correctStr.length + 1,
                   // endLineNumber: model.getPositionAt(i).lineNumber,
                   endColumn: strObj.correctStr.length + value.length + 1,
-                  message: `"WHERE": ${x.trim() || ''} "in /not in" is INVALID`,
+                  message: `"WHERE": ${arr[x]?.trim() || ''} "in /not in" is INVALID`,
                   severity: monaco.MarkerSeverity.Error,
                   query: value,
                 },
@@ -4231,7 +4186,7 @@ function validatingWhereConditions(value, separator, query, strObj, fieldsList, 
       if (operatorsSplit.splittedArray.length === 1) {
         // else
         if (
-          /^\s*(?:\(?\s*not\s+)?(?:(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:(?:"[^\n"]*")|(?:'[^\n']*'))|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*(?:([+\-*\/%^&])\s*(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:(?:"[^\n"]*")|(?:'[^\n']*'))|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*?)*)$/gim.test(
+          /^\s*(?:\(?\s*not\s+)?(?:(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:("|')(?:\\[\s\S]|(?!\2)[^\\]|\2\2)*\2)|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*(?:([+\-*\/%^&])\s*(?:(?:\(\s*)?((?:[a-zA-Z0-9]+)|(?:\d+)|(?:("|')(?:\\[\s\S]|(?!\5)[^\\]|\5\5)*\5)|(?:@\w+(?:(?:(?:\.\w+)|(?:\[\s*\d+\s*\]))+)?)|(?:(?:\w+|[|~!=%&*+-\/<>^]+)\(\s*.+\s*\)))(?:\s*\))?)\s*?)*)$/gim.test(
             operatorsSplit.splittedArray[0].trim(),
           )
         ) {
@@ -4271,7 +4226,6 @@ function validatingWhereConditions(value, separator, query, strObj, fieldsList, 
             if (fun && fun[1]) {
               arr = columnExtract(returnVal.functions[i].trim(), 'where-all', func)
             }
-            // console.log('where-all', arr, fun)
             if (func.length === 0) {
               return [
                 {
@@ -4407,7 +4361,6 @@ function validatingHavingConditions(value, separator, query, strObj, pos, having
   } else {
     // let opers = value.trim().split(/(<=|>=|==|!=|<|>)/).filter((op) => (op !== undefined && op !== null && !/^\s*$/m.test(op)))
     let opers = splitingQuery(value, '', false, false, 'havingCond').splittedArray
-    // console.log(opers)
     const operators = ['<=', '>=', '==', '!=', '<', '>']
     if (opers.length === 0 || opers[0] === '') {
       return [
@@ -4747,7 +4700,6 @@ function validatingHavingWithSelectAndGroupby(
         }
       }
     }
-    // console.log(fieldsListForHaving, selectFields, selectFullField)
     for (let i = 0; i < havingFullFields.length; i++) {
       if (!fieldsListForHaving.includes(havingFullFields[i][1].toLowerCase().trim())) {
         return [
@@ -4858,6 +4810,7 @@ function validateQuery(model, streams, streamList) {
   let queryArray = []
 
   let groupbyFields = [] // {field: [start, end, isAlias]}
+  let groupbyOps = [] // tree for ops
   let selectFields = [] // {field: [start, end, aliasName]}
   let selectFunction = [] // {func: [start, end, aliasName, ...fields]}
   let selectAggregate = [] // {func: [start, end, aliasName, ...fields]}
@@ -4935,52 +4888,55 @@ function validateQuery(model, streams, streamList) {
         ),
       ]
       if (matches.length > 0) {
-        // console.log(matches[0][2], 'matchemaa', matches, pipePos[k])
-        if (pipes[matches[0][2]][0] === -1) {
-          pipes[matches[0][2]][0] = pipePos[k]
-          pipes[matches[0][2]][1] = matches[0][1].length
-          pipes[matches[0][2]][2] = matches[0][3].length
+        if (
+          pipes[matches[0][2].trim().toLowerCase()] &&
+          pipes[matches[0][2].trim().toLowerCase()][0] === -1
+        ) {
+          pipes[matches[0][2].trim().toLowerCase()][0] = pipePos[k]
+          pipes[matches[0][2].trim().toLowerCase()][1] = matches[0][1].length
+          pipes[matches[0][2].trim().toLowerCase()][2] = matches[0][3].length
 
-          if (matches[0][2].toLowerCase() === 'timeslice') {
+          if (matches[0][2].trim().toLowerCase() === 'timeslice') {
             let errors = checkTimeslice(pipeArr[k], pipePos[k], pipePos.length === k + 1)
             if (errors.length > 0) {
               markers.push(errors[0])
               break
             }
-          } else if (['limit', 'first', 'last'].includes(matches[0][2].toLowerCase())) {
-            pipes['limit'] = JSON.parse(JSON.stringify(pipes[matches[0][2]]))
-            pipes['first'] = JSON.parse(JSON.stringify(pipes[matches[0][2]]))
-            pipes['last'] = JSON.parse(JSON.stringify(pipes[matches[0][2]]))
+          } else if (['limit', 'first', 'last'].includes(matches[0][2].trim().toLowerCase())) {
+            pipes['limit'] = JSON.parse(JSON.stringify(pipes[matches[0][2].trim().toLowerCase()]))
+            pipes['first'] = JSON.parse(JSON.stringify(pipes[matches[0][2].trim().toLowerCase()]))
+            pipes['last'] = JSON.parse(JSON.stringify(pipes[matches[0][2].trim().toLowerCase()]))
             let errors = checkLimitFirstLast(pipeArr[k], pipePos[k], pipePos.length === k + 1)
             if (errors.length > 0) {
               markers.push(errors[0])
               break
             }
-          } else if (matches[0][2].toLowerCase() === 'duration') {
+          } else if (matches[0][2].trim().toLowerCase() === 'duration') {
             let errors = checkDuration(pipeArr[k], pipePos[k], pipePos.length === k + 1)
             if (errors.length > 0) {
               markers.push(errors[0])
               break
             }
-          } else if (matches[0][2].toLowerCase() === 'window') {
+          } else if (matches[0][2].trim().toLowerCase() === 'window') {
             let errors = checkWindow(pipeArr[k], pipePos[k], pipePos.length === k + 1)
             if (errors.length > 0) {
               markers.push(errors[0])
               break
             }
-          } else if (matches[0][2].toLowerCase() === 'groupby') {
+          } else if (matches[0][2].trim().toLowerCase() === 'groupby') {
             let errors = checkGroupby(
               pipeArr[k],
               pipePos[k],
               fieldsList,
               groupbyFields,
+              groupbyOps,
               pipePos.length === k + 1,
             )
             if (errors.length > 0) {
               markers.push(errors[0])
               break
             }
-          } else if (matches[0][2].toLowerCase() === 'select') {
+          } else if (matches[0][2].trim().toLowerCase() === 'select') {
             let errors = checkSelect(
               pipeArr[k],
               pipePos[k],
@@ -4996,7 +4952,7 @@ function validateQuery(model, streams, streamList) {
               markers.push(errors[0])
               break
             }
-          } else if (matches[0][2].toLowerCase() === 'having') {
+          } else if (matches[0][2].trim().toLowerCase() === 'having') {
             let errors = checkHaving(
               pipeArr[k],
               pipePos[k],
@@ -5007,7 +4963,7 @@ function validateQuery(model, streams, streamList) {
               markers.push(errors[0])
               break
             }
-          } else if (matches[0][2].toLowerCase() === 'checkif') {
+          } else if (matches[0][2].trim().toLowerCase() === 'checkif') {
             let errors = validateCheckif(
               pipeArr[k],
               pipePos[k],
@@ -5024,7 +4980,8 @@ function validateQuery(model, streams, streamList) {
             // startLineNumber: model.getPositionAt(i).lineNumber,
             startColumn: pipePos[k] + 1,
             // endLineNumber: model.getPositionAt(i).lineNumber,
-            endColumn: pipePos[k] + 1 + matches[0][1].length + matches[0][2].length + 1,
+            endColumn:
+              pipePos[k] + 1 + matches[0][1].length + matches[0][2].trim().toLowerCase().length + 1,
             message: 'Repeated Pipe',
             severity: monaco.MarkerSeverity.Error,
           })
@@ -5105,6 +5062,7 @@ function validateQuery(model, streams, streamList) {
         pipes,
         fieldsList,
         groupbyFields,
+        groupbyOps,
         selectFields,
         selectAggregate,
         selectAliases,
